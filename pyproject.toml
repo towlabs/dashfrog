@@ -8,11 +8,16 @@ dependencies = [
     "opentelemetry-api>=1.37.0",
     "opentelemetry-exporter-otlp>=1.37.0",
     "opentelemetry-sdk>=1.37.0",
+    "pydantic>=2.11.9",
 ]
 
 [dependency-groups]
 dev = [
+    "bandit>=1.8.6",
     "opentelemetry-exporter-jaeger>=1.11.1",
+    "pyright>=1.1.405",
+    "pytest>=8.4.2",
+    "ruff>=0.13.2",
 ]
 fastapi = [
     "fastapi>=0.118.0",
