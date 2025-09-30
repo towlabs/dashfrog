@@ -1,0 +1,22 @@
+### GET index
+GET 0.0.0.0:8000
+traceparent: 00-868ba4774c4116839619264e2d686819-cbab9e4b446503eb-01
+
+### GET error
+GET 0.0.0.0:8000/error
+
+### GET callback
+GET 0.0.0.0:8000/recall?callback=http%3A%2F%2F0.0.0.0%3A5000%2Ferror
+
+### Redicect check headers
+# @no-redirect
+GET 0.0.0.0:8000/redirect?callback=http%3A%2F%2F0.0.0.0%3A5000%2Ferror
+
+### Post smtg
+POST 0.0.0.0:8000/you
+content-type: application/json
+
+{
+    "name": "test",
+    "age": 125
+}

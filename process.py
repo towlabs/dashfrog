@@ -1,18 +1,19 @@
+from contextlib import contextmanager
 from typing import Self
 
-from opentelemetry.trace import Span
-
 import const
+
+from opentelemetry.trace import Span, SpanKind, Tracer
 
 
 class Process:
     name: str
     __web_provider: str | None
 
-    def __init__(self, name: str, span: Span, web_provider: str | None):
+    def __init__(self, name: str, span: Span, tracer: Tracer, web_provider: str | None):
         self.name = name
         self.__span = span
-
+        self.__tracer = tracer
         self.__web_provider = web_provider
 
         span.set_attribute("process.name", name)
@@ -24,3 +25,8 @@ class Process:
         self.__span.add_event(name, kwargs)
 
         return self
+
+    @contextmanager
+    def step(self, name: str, **kwargs):
+        with self.__tracer.start_span(name, kind=SpanKind.INTERNAL, **kwargs):
+            yield self
