@@ -5,7 +5,9 @@ import httpx
 from pydantic import BaseModel
 from starlette.responses import RedirectResponse
 
-from dashfrog import DashFrog
+from dashfrog_python_sdk import DashFrog
+
+from .db import DemoUser, session
 
 dashfrog = DashFrog("demo.fastapi")
 
@@ -21,7 +23,7 @@ class HelloBudy(BaseModel):
 
 @api.get("/")
 def index():
-    with dashfrog.start_process("hello-world") as process:
+    with dashfrog.new_flow("hello-world") as process:
         process.event("say_hello")
         time.sleep(1)
         process.event("say_goodbye")
@@ -30,20 +32,28 @@ def index():
 
 @api.post("/you")
 def hello(body: HelloBudy):
-    with dashfrog.start_process("say_hello", user_name=body.name, body=body.model_dump_json()):
+    with dashfrog.new_flow(
+        "say_hello", user_name=body.name, body=body.model_dump_json()
+    ):
+        with session() as ses:
+            try:
+                ses.add(DemoUser(name=body.name))
+            except Exception:
+                pass
+
         return {"message": f"Hello {body.name}", **body.model_dump()}
 
 
 @api.get("/error")
 def with_error():
-    with dashfrog.start_process("hello-world") as process:
+    with dashfrog.new_flow("hello-world") as process:
         process.event("say_hello")
         raise Exception("Something went wrong")
 
 
 @api.get("/recall")
 def recall(callback: str):
-    with dashfrog.start_process("callback", recall=callback):
+    with dashfrog.new_flow("callback", recall=callback):
         res = httpx.get(callback)
         if res.status_code != 200:
             return {"error": res.text}
@@ -53,5 +63,5 @@ def recall(callback: str):
 
 @api.get("/redirect")
 def redirect(callback: str):
-    with dashfrog.start_process("callback", recall=callback):
+    with dashfrog.new_flow("callback", recall=callback):
         return RedirectResponse(callback)

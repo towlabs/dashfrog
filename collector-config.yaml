@@ -1,0 +1,46 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+  clickhouse:
+    endpoint: "http://clickhouse:8123"  # Replace with your ClickHouse server address
+    database: "dashfrog"
+    username: "dev"
+    password: "dev-pwd*"
+
+processors:
+  batch:
+    send_batch_size: 1000  # Tune the batch size for more efficient exporting
+    timeout: 1s
+
+service:
+  pipelines:
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters: [clickhouse, debug]
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters:
+        - debug
+        - clickhouse
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters: [clickhouse, debug]

@@ -1,0 +1,26 @@
+services:
+
+  clickhouse:
+    hostname: clickhouse
+    image: clickhouse/clickhouse-server
+    ports:
+      - "9000:9000"
+      - "8443:8443"
+      - "8123:8123"
+    environment:
+      - CLICKHOUSE_USER=dev
+      - CLICKHOUSE_PASSWORD=dev-pwd*
+      - CLICKHOUSE_DB=dashfrog
+
+  collector:
+    build:
+      context: collector
+      dockerfile: Dockerfile
+    depends_on:
+      - clickhouse
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "12001:12001"
+    volumes:
+      - ./collector-config.yaml:/otelcol/collector-config.yaml

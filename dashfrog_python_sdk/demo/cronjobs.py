@@ -1,13 +1,13 @@
 from random import randint
 from time import sleep
 
-from dashfrog import DashFrog, step
+from dashfrog_python_sdk import DashFrog, Flow
 
 dash = DashFrog("demo.cronjobs")
 
 
 def make_cronjobs():
-    with dash.start_process("demo") as process:
+    with dash.new_flow("demo") as process:
         sleep(1 * 10)
         process.event("slept_well")
         classification = classify()
@@ -17,25 +17,29 @@ def make_cronjobs():
 
 
 def another_job():
-    with dash.start_process("job") as process:
+    with dash.new_flow("job") as process:
         sleep(1)
-        with process.step("test"):
+        with process.flow("test"):
             sleep(10)
 
 
-@step("classify")
-def classify():
-    l = [randint(0, 100000) for _ in range(10000)]
-    l.sort()
+@dash.as_flow("classify")
+def classify(*, flow: Flow):
+    with flow.flow("sub") as process:
+        l = [randint(0, 100000) for _ in range(10000)]
+        l.sort()
+        process.event("sorted")
+
+    flow.event("done")
     return l
 
 
-@step("do_things", relevent=False, randomized=True)
+@dash.as_flow("do_things", relevent=False, randomized=True)
 def do_things(l: list[int]):
     return [i * randint(0, 100000) for i in l]
 
 
-@step("fail")
+@dash.as_flow("fail")
 def fail():
     raise Exception("Something went wrong")
 

@@ -1,0 +1,5 @@
+collector_server: http://0.0.0.0
+auto_flow_instrumented: true
+metric_exporter_delay: 1000
+infra:
+  grpc_insecure: true
