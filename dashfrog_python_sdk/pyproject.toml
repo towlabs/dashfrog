@@ -16,6 +16,9 @@ dependencies = [
 ]
 
 [dependency-groups]
+celery = [
+    "opentelemetry-instrumentation-celery>=0.58b0",
+]
 console = [
     "click>=8.3.0",
     "opentelemetry-instrumentation-click>=0.58b0",
@@ -29,12 +32,15 @@ demo = [
 ]
 dev = [
     "bandit>=1.8.6",
+    "celery>=5.5.3",
+    "celery-types>=0.23.0",
     "isort>=6.0.1",
     "opentelemetry-exporter-jaeger>=1.11.1",
     "pyright>=1.1.405",
     "pytest>=8.4.2",
     "ruff>=0.13.2",
     "setuptools>=80.9.0",
+    "sqlalchemy>=2.0.43",
 ]
 fastapi = [
     "fastapi>=0.118.0",
@@ -46,6 +52,15 @@ flask = [
 ]
 httpx = [
     "opentelemetry-instrumentation-httpx>=0.58b0",
+]
+mongo = [
+    "opentelemetry-instrumentation-pymongo>=0.58b0",
+]
+openai = [
+    "opentelemetry-instrumentation-openai>=0.47.3",
+]
+sqlalchemy = [
+    "opentelemetry-instrumentation-sqlalchemy>=0.58b0",
 ]
 
 [tool.setuptools.packages.find]

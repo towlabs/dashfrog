@@ -42,10 +42,28 @@ try:
 except ImportError:
     FlaskInstrumentor = None
 
+try:
+    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+except ImportError:
+    SQLAlchemyInstrumentor = None
+
+try:
+    from opentelemetry.instrumentation.celery import CeleryInstrumentor
+except ImportError:
+    CeleryInstrumentor = None
+try:
+    from opentelemetry.instrumentation.pymongo import PymongoInstrumentor
+except ImportError:
+    PymongoInstrumentor = None
+try:
+    from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+except ImportError:
+    OpenAIInstrumentor = None
 
 if TYPE_CHECKING:  # Only import for type checking as it could lead to import errors when not using all extra features.
     from fastapi import FastAPI
     from flask import Flask
+    from sqlalchemy import Engine
 
 propagate.set_global_textmap(
     CompositePropagator([TraceContextTextMapPropagator(), W3CBaggagePropagator()])
@@ -107,53 +125,7 @@ class DashFrog:
         self.__tracer = trace.get_tracer(__name__)
         self.__meter = metrics.get_meter(__name__)
 
-        RequestsInstrumentor().instrument(request_hook=self.__create_flow_hok)
-        if HTTPXClientInstrumentor:
-            HTTPXClientInstrumentor().instrument(request_hook=self.__create_flow_hook)
-
-    def with_flask(self, flask_app: "Flask") -> Self:
-        """Provide Flask application to instrument."""
-        self.__web_provider = "flask"
-
-        if not FlaskInstrumentor:
-            raise ImportError("Install using 'pip install dashfrog[flask]'.")
-
-        FlaskInstrumentor.instrument_app(
-            flask_app,
-            request_hook=self.__create_flow_hook
-            if self.__config.auto_flow_instrumented
-            else None,
-        )
-
-        @flask_app.after_request
-        def propagate_context(response):
-            propagate.inject(response.headers, context.get_current())
-            return response
-
-        return self
-
-    def with_fastapi(self, fastapi_app: "FastAPI") -> Self:
-        """Provide FastAPI application to instrument."""
-        self.__web_provider = "fastapi"
-
-        if not FastAPIInstrumentor:
-            raise ImportError("Install using 'pip install dashfrog[fast-api]'.")
-
-        FastAPIInstrumentor.instrument_app(
-            fastapi_app,
-            server_request_hook=self.__create_flow_hook
-            if self.__config.auto_flow_instrumented
-            else None,
-        )
-
-        @fastapi_app.middleware("http")
-        async def propagate_context(request, call_next):
-            res = await call_next(request)
-            propagate.inject(res.headers, context.get_current())
-            return res
-
-        return self
-
+    # Features
     @contextmanager
     def new_flow(
         self,
@@ -276,6 +248,107 @@ class DashFrog:
 
         return self
 
+    ### Instrumentations ####
+    #### Web
+    def with_flask(self, flask_app: "Flask") -> Self:
+        """Provide Flask application to instrument."""
+        self.__web_provider = "flask"
+
+        if not FlaskInstrumentor:
+            raise ImportError("Install using 'pip install dashfrog[flask]'.")
+
+        FlaskInstrumentor.instrument_app(
+            flask_app,
+            request_hook=self.__create_flow_hook
+            if self.__config.auto_flow_instrumented
+            else None,
+        )
+
+        @flask_app.after_request
+        def propagate_context(response):
+            propagate.inject(response.headers, context.get_current())
+            return response
+
+        return self
+
+    def with_fastapi(self, fastapi_app: "FastAPI") -> Self:
+        """Provide FastAPI application to instrument."""
+        self.__web_provider = "fastapi"
+
+        if not FastAPIInstrumentor:
+            raise ImportError("Install using 'pip install dashfrog[fast-api]'.")
+
+        FastAPIInstrumentor.instrument_app(
+            fastapi_app,
+            server_request_hook=self.__create_flow_hook
+            if self.__config.auto_flow_instrumented
+            else None,
+        )
+
+        @fastapi_app.middleware("http")
+        async def propagate_context(request, call_next):
+            res = await call_next(request)
+            propagate.inject(res.headers, context.get_current())
+            return res
+
+        return self
+
+    def with_requests(self) -> Self:
+        RequestsInstrumentor().instrument(
+            request_hook=self.__create_flow_hook
+            if self.__config.auto_flow_instrumented
+            else None
+        )
+        return self
+
+    def with_httpx(self) -> Self:
+        if not HTTPXClientInstrumentor:
+            raise ImportError("Install using 'pip install dashfrog[httpx]'.")
+
+        HTTPXClientInstrumentor().instrument(
+            request_hook=self.__create_flow_hook
+            if self.__config.auto_flow_instrumented
+            else None
+        )
+        return self
+
+    ### DB
+    def with_sqlalchemy(self, engine: "Engine") -> Self:
+        if not SQLAlchemyInstrumentor:
+            raise ImportError("Install using 'pip install dashfrog[sqlalchemy]'.")
+
+        SQLAlchemyInstrumentor().instrument(
+            engine=engine,
+        )
+        return self
+
+    def with_mongo_db(self):
+        if not PymongoInstrumentor:
+            raise ImportError("Install using 'pip install dashfrog[sqlalchemy]'.")
+
+        PymongoInstrumentor().instrument()
+        return self
+
+    ### Queue services
+    def with_celery(self) -> Self:
+        """This call must be made after processes are fully initialized as stated in:
+        https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/celery/celery.html#setting-up-tracing
+        You can use the decorator `@worker_process_init.connect(weak=False)`
+        to do so."""
+        if not CeleryInstrumentor:
+            raise ImportError("Install using 'pip install dashfrog[celery]'.")
+
+        CeleryInstrumentor().instrument()
+        return self
+
+    def with_open_ai(self):
+        if not OpenAIInstrumentor:
+            raise ImportError("Install using 'pip install dashfrog[openai]'.")
+
+        OpenAIInstrumentor().instrument()
+        return self
+
+    # Private tooling
     def __create_flow(
         self,
         span: Span,
