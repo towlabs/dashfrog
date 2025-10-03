@@ -23,23 +23,20 @@ def another_job():
             sleep(10)
 
 
-@dash.as_flow("classify")
-def classify(*, flow: Flow):
-    with flow.flow("sub") as process:
-        l = [randint(0, 100000) for _ in range(10000)]
-        l.sort()
-        process.event("sorted")
+@dash.flow("classify")
+def classify():
+    l = [randint(0, 100000) for _ in range(10000)]
+    l.sort()
 
-    flow.event("done")
     return l
 
 
-@dash.as_flow("do_things", relevent=False, randomized=True)
+@dash.flow("do_things", relevent=False, randomized=True)
 def do_things(l: list[int]):
     return [i * randint(0, 100000) for i in l]
 
 
-@dash.as_flow("fail")
+@dash.flow("fail")
 def fail():
     raise Exception("Something went wrong")
 

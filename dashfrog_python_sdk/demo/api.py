@@ -7,12 +7,13 @@ from starlette.responses import RedirectResponse
 
 from dashfrog_python_sdk import DashFrog
 
-from .db import DemoUser, session
+from .db import DemoUser, engine, session
 
 dashfrog = DashFrog("demo.fastapi")
+obs = dashfrog.observable("test", "something to observe", "Km2", tenant="Tower")
 
 api = FastAPI(title="DashFrog demo")
-dashfrog = dashfrog.with_fastapi(api)
+dashfrog = dashfrog.with_fastapi(api).with_httpx().with_sqlalchemy(engine)
 
 
 class HelloBudy(BaseModel):
@@ -24,6 +25,7 @@ class HelloBudy(BaseModel):
 @api.get("/")
 def index():
     with dashfrog.new_flow("hello-world") as process:
+        obs.observe(1)
         process.event("say_hello")
         time.sleep(1)
         process.event("say_goodbye")
@@ -35,19 +37,20 @@ def hello(body: HelloBudy):
     with dashfrog.new_flow(
         "say_hello", user_name=body.name, body=body.model_dump_json()
     ):
-        with session() as ses:
-            try:
+        obs.observe(10)
+        try:
+            with session() as ses:
                 ses.add(DemoUser(name=body.name))
-            except Exception:
-                pass
+        except Exception:
+            pass
 
         return {"message": f"Hello {body.name}", **body.model_dump()}
 
 
 @api.get("/error")
 def with_error():
-    with dashfrog.new_flow("hello-world") as process:
-        process.event("say_hello")
+    obs.observe(-5)
+    with dashfrog.new_flow("error"):
         raise Exception("Something went wrong")
 
 

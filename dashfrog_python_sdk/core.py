@@ -19,6 +19,18 @@ def get_file_name(file_name: str) -> str:
     return file_name.split(".")[0]
 
 
+def clean_methods(val: str) -> str:
+    return (
+        val.replace("GET", "")
+        .replace("POST", "")
+        .replace("PUT", "")
+        .replace("PATCH", "")
+        .replace("OPTION", "")
+        .replace("DELETE", "")
+        .strip()
+    )
+
+
 class Config(BaseSettings):
     """
     Dashfrog configuration data.
@@ -36,11 +48,19 @@ class Config(BaseSettings):
         grpc_collector_port: int = 4317
         grpc_insecure: bool = False
 
+    class AutoFlow(BaseModel):
+        label_key: str
+        web_value: str  # fast_api, flask & web servers
+        http_value: str  # request/httpx
+        tasks_value: str  # celery
+
     collector_server: str
     metric_exporter_delay: int = 3000
-    auto_flow_instrumented: bool = True
+    auto_flow_instrumented: bool = False
+    debug: bool = False
 
     infra: Infra = Infra()
+    auto_flow: AutoFlow | None = None
 
     model_config = SettingsConfigDict(
         env_prefix="dashfrog_",
@@ -85,6 +105,6 @@ class Observable:
     metric: Histogram
     default_labels: dict = field(default_factory=dict)
 
-    def value(self, value: int | float, **labels):
+    def observe(self, value: int | float, **labels):
         """Add value to observable metric."""
         self.metric.record(value, {**self.default_labels, **labels})

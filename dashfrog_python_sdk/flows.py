@@ -6,32 +6,21 @@ from dashfrog_python_sdk import core
 from opentelemetry.trace import Span, SpanKind, Tracer
 
 
-class Flow:
-    """Flow is a thread of events happening during a watched process."""
-
+class BaseSpan:
     name: str
-    __web_provider: str | None
+    __span: Span
 
-    def __init__(
-        self,
-        span: Span,
-        tracer: Tracer,
-        name: str,
-        description: str | None = None,
-        web_provider: str | None = None,
-    ):
+    def __init__(self, span: Span, name: str, **labels):
         self.name = name
         self.__span = span
-        self.__tracer = tracer
-        self.__web_provider = web_provider
-
-        span.set_attribute("flow.name", name)
-        if description:
-            span.set_attribute("flow.description", description)
 
         span.set_attribute("app.open_tel.helper", core.DASHFROG_TRACE_KEY)
-        if self.__web_provider:
-            span.set_attribute("process.provider", self.__web_provider)
+
+        for key, value in labels.items():
+            span.set_attribute(key, value)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self.name!r})"
 
     def event(self, name: str, description: str | None = None, **labels) -> Self:
         """Add event to flow"""
@@ -42,6 +31,27 @@ class Flow:
 
         return self
 
+
+class Flow(BaseSpan):
+    """Flow is a thread of events happening during a watched process."""
+
+    name: str
+
+    def __init__(
+        self,
+        span: Span,
+        tracer: Tracer,
+        name: str,
+        description: str | None = None,
+        **labels,
+    ):
+        super().__init__(span, name, **labels)
+        self.__tracer = tracer
+
+        span.set_attribute("flow.name", name)
+        if description:
+            span.set_attribute("flow.description", description)
+
     @contextmanager
     def flow(
         self, name: str, description: str | None = None, **kwargs
@@ -49,4 +59,20 @@ class Flow:
         """Start a child flow"""
 
         with self.__tracer.start_span(name, kind=SpanKind.INTERNAL, **kwargs) as span:
-            yield Flow(span, self.__tracer, name, description, self.__web_provider)
+            yield Flow(span, self.__tracer, name, description)
+
+
+class Debug(BaseSpan):
+    def __init__(self, span: Span, name, description: str | None = None, **labels):
+        super().__init__(span, name, **labels)
+        span.set_attribute("debug.name", name)
+        if description:
+            span.set_attribute("debug.description", description)
+
+
+class TechContext(BaseSpan):
+    def __init__(self, span: Span, name, description: str | None = None, **labels):
+        super().__init__(span, name, **labels)
+        span.set_attribute("tech_ctx.name", name)
+        if description:
+            span.set_attribute("tech_ctx.description", description)

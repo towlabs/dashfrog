@@ -3,7 +3,7 @@ name = "dashfrog_python_sdk"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.9,<3.13"
 dependencies = [
     "opentelemetry-api>=1.37.0",
     "opentelemetry-exporter-otlp>=1.37.0",
@@ -20,7 +20,7 @@ celery = [
     "opentelemetry-instrumentation-celery>=0.58b0",
 ]
 console = [
-    "click>=8.3.0",
+    "click>=8.0.0",
     "opentelemetry-instrumentation-click>=0.58b0",
 ]
 demo = [
