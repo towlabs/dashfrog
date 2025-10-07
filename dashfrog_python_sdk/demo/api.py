@@ -7,13 +7,16 @@ from starlette.responses import RedirectResponse
 
 from dashfrog_python_sdk import DashFrog
 
-from .db import DemoUser, engine, session
+from .db import DemoUser, session
 
 dashfrog = DashFrog("demo.fastapi")
+dashfrog2 = DashFrog("demo.fastapi2")
+
 obs = dashfrog.observable("test", "something to observe", "Km2", tenant="Tower")
 
 api = FastAPI(title="DashFrog demo")
-dashfrog = dashfrog.with_fastapi(api).with_httpx().with_sqlalchemy(engine)
+dashfrog = dashfrog.with_fastapi(api)
+dashfrog2 = dashfrog2.with_httpx()
 
 
 class HelloBudy(BaseModel):
@@ -24,7 +27,7 @@ class HelloBudy(BaseModel):
 
 @api.get("/")
 def index():
-    with dashfrog.new_flow("hello-world") as process:
+    with dashfrog.step("hello-world") as process:
         obs.observe(1)
         process.event("say_hello")
         time.sleep(1)
@@ -34,9 +37,7 @@ def index():
 
 @api.post("/you")
 def hello(body: HelloBudy):
-    with dashfrog.new_flow(
-        "say_hello", user_name=body.name, body=body.model_dump_json()
-    ):
+    with dashfrog.flow("say_hello", user_name=body.name, body=body.model_dump_json()):
         obs.observe(10)
         try:
             with session() as ses:
@@ -50,21 +51,35 @@ def hello(body: HelloBudy):
 @api.get("/error")
 def with_error():
     obs.observe(-5)
-    with dashfrog.new_flow("error"):
-        raise Exception("Something went wrong")
+    with dashfrog.step("step4"):
+        with dashfrog.flow("error"):
+            with dashfrog.step("step5"):
+                raise Exception("Something went wrong")
 
 
 @api.get("/recall")
 def recall(callback: str):
-    with dashfrog.new_flow("callback", recall=callback):
-        res = httpx.get(callback)
-        if res.status_code != 200:
-            return {"error": res.text}
+    with dashfrog.flow("bhou callback", recall=callback):
+        pass
 
-        return res.json()
+    with dashfrog2.flow("callback", recall=callback):
+        with dashfrog.step("step1"):
+            with dashfrog.step("step2"):
+                with dashfrog.step("step3"):
+                    res = httpx.get(callback)
+                    if res.status_code != 200:
+                        return {"error": res.text}
+
+                    return res.json()
 
 
 @api.get("/redirect")
 def redirect(callback: str):
-    with dashfrog.new_flow("callback", recall=callback):
+    with dashfrog.flow("callback", recall=callback):
         return RedirectResponse(callback)
+
+# For development only
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("api:api", host="0.0.0.0", port=8080, reload=True)  # nosec

@@ -3,14 +3,14 @@ name = "backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "axiom-py>=0.9.1",
     "clickhouse-connect>=0.9.2",
-    "fastapi[uvicorn]>=0.118.0",
+    "fastapi>=0.118.0",
     "orjson>=3.11.3",
     "pydantic>=2.11.9",
-    "sentry-sdk>=2.39.0",
+    "pydantic-settings>=2.11.0",
     "structlog>=25.4.0",
     "uvicorn>=0.37.0",
 ]
@@ -83,3 +83,8 @@ typeCheckingMode = "standard"
 [tool.bandit]
 exclude_dirs =  ["tests", ".venv"]
 skips = ["B101"]
+
+
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"

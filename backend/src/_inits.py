@@ -11,6 +11,7 @@ def setup_logging(
     client: Client,
     log_level: int = logging.INFO,
     env: str = "prod",
+    with_axiom: bool = False,
 ) -> BoundLogger:
     """
     Set up logging configuration with Axiom handler and global exception handling.
@@ -38,8 +39,13 @@ def setup_logging(
         ),
         structlog.dev.set_exc_info,
         structlog.processors.TimeStamper(fmt="iso", key="_time", utc=True),
-        AxiomProcessor(client, "dashfrog-backend"),
     ]
+
+    if with_axiom:
+        processors.append(
+            AxiomProcessor(client, "dashfrog-backend"),
+        )
+
     if env in ("dev", "local", "container"):
         processors.append(structlog.dev.ConsoleRenderer())
 

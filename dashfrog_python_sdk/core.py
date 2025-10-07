@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from os import environ
 
 from pydantic import BaseModel
@@ -31,6 +32,32 @@ def clean_methods(val: str) -> str:
     )
 
 
+class SupportedInstrumentation(str, Enum):
+    HTTPX = "httpx"
+    REQUESTS = "requests"
+    FASTAPI = "fastapi"
+    FLASK = "flask"
+    CELERY = "celery"
+    AWS_LAMBDA = "aws_lambda"
+
+    def group(self) -> str:
+        match self:
+            case SupportedInstrumentation.HTTPX:
+                return "http"
+            case SupportedInstrumentation.REQUESTS:
+                return "http"
+            case SupportedInstrumentation.FASTAPI:
+                return "web"
+            case SupportedInstrumentation.FLASK:
+                return "web"
+            case SupportedInstrumentation.CELERY:
+                return "tasks"
+            case SupportedInstrumentation.AWS_LAMBDA:
+                return "tasks"
+            case _:
+                raise ValueError(f"Unsupported instrumentation: {self}")
+
+
 class Config(BaseSettings):
     """
     Dashfrog configuration data.
@@ -56,11 +83,13 @@ class Config(BaseSettings):
 
     collector_server: str
     metric_exporter_delay: int = 3000
-    auto_flow_instrumented: bool = False
+    auto_flow_instrumented: list[SupportedInstrumentation] = []  # use keys
+    auto_steps_instrumented: list[SupportedInstrumentation] = []
     debug: bool = False
 
     infra: Infra = Infra()
-    auto_flow: AutoFlow | None = None
+    auto_flows: AutoFlow | None = None
+    auto_steps: AutoFlow | None = None
 
     model_config = SettingsConfigDict(
         env_prefix="dashfrog_",
@@ -80,7 +109,7 @@ class Config(BaseSettings):
     )
 
     @classmethod
-    def settings_customise_sources(
+    def settings_customise_sources(  # type: ignore[override] passed as kwargs in underling code
         cls,
         settings_cls: type[BaseSettings],
         env_settings: PydanticBaseSettingsSource,

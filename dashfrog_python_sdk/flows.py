@@ -3,7 +3,7 @@ from typing import Generator, Self
 
 from dashfrog_python_sdk import core
 
-from opentelemetry.trace import Span, SpanKind, Tracer
+from opentelemetry.trace import Span, Tracer
 
 
 class BaseSpan:
@@ -17,7 +17,7 @@ class BaseSpan:
         span.set_attribute("app.open_tel.helper", core.DASHFROG_TRACE_KEY)
 
         for key, value in labels.items():
-            span.set_attribute(key, value)
+            span.set_attribute(f"label.{key}", value)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.name!r})"
@@ -53,13 +53,22 @@ class Flow(BaseSpan):
             span.set_attribute("flow.description", description)
 
     @contextmanager
-    def flow(
+    def step(
         self, name: str, description: str | None = None, **kwargs
-    ) -> Generator["Flow", None, None]:
+    ) -> Generator["Step", None, None]:
         """Start a child flow"""
 
-        with self.__tracer.start_span(name, kind=SpanKind.INTERNAL, **kwargs) as span:
-            yield Flow(span, self.__tracer, name, description)
+        with self.__tracer.start_span(name, **kwargs) as span:
+            yield Step(span, name, description)
+
+
+class Step(BaseSpan):
+    def __init__(self, span: Span, name, description: str | None = None, **labels):
+        super().__init__(span, name, **labels)
+
+        span.set_attribute("step.name", name)
+        if description:
+            span.set_attribute("step.description", description)
 
 
 class Debug(BaseSpan):
@@ -70,9 +79,9 @@ class Debug(BaseSpan):
             span.set_attribute("debug.description", description)
 
 
-class TechContext(BaseSpan):
+class Context(BaseSpan):
     def __init__(self, span: Span, name, description: str | None = None, **labels):
         super().__init__(span, name, **labels)
-        span.set_attribute("tech_ctx.name", name)
+        span.set_attribute("context.name", name)
         if description:
-            span.set_attribute("tech_ctx.description", description)
+            span.set_attribute("context.description", description)
