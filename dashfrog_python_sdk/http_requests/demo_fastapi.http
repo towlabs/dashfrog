@@ -6,7 +6,7 @@ GET 0.0.0.0:8000
 GET 0.0.0.0:8000/error
 
 ### GET callback
-GET 0.0.0.0:8000/recall?callback=http%3A%2F%2F0.0.0.0%3A8000%2Ferror
+GET 0.0.0.0:8000/recall?callback=http%3A%2F%2F0.0.0.0%3A5000%2F
 
 ### Redicect check headers
 # @no-redirect

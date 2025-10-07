@@ -11,7 +11,10 @@ class Flows:
         self.__client = client
 
     def list(self, ctx: Context, *filters: StoreFilter) -> list[entities.Flow]:
-        query = "SELECT * FROM dashfrog.flows WHERE"
+        query = """SELECT
+                 name, description, labels, timestamp, trace_id, span_id, parent_id,
+                 service_name, global_state, status, status_message 
+                 FROM dashfrog.flows WHERE"""
 
         params = {}
 

@@ -1,16 +1,10 @@
 collector_server: http://0.0.0.0
-auto_flow_instrumented: [fastapi]
-auto_step_instrumented: [request, httpx, celery]
-auto_flows:
+auto_steps_instrumented: [fastapi, celery]
+auto_steps:
   label_key: "origin"
   web_value: "API"
   http_value: "InnerCall"
   tasks_value: "ASYNC"
-auto_steps:
-  label_key: "step"
-  web_value: "RECALL"
-  http_value: "RECALL"
-  tasks_value: "ASYNC"
-metric_exporter_delay: 1000
+metric_exporter_delay: 10000 # 10s
 infra:
   grpc_insecure: true

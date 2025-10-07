@@ -88,7 +88,6 @@ class Config(BaseSettings):
     debug: bool = False
 
     infra: Infra = Infra()
-    auto_flows: AutoFlow | None = None
     auto_steps: AutoFlow | None = None
 
     model_config = SettingsConfigDict(
@@ -98,14 +97,8 @@ class Config(BaseSettings):
         env_parse_enums=True,
         extra="ignore",
         env_file="dashfrog.env",
-        json_file=(
-            get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog")
-            + ".json"
-        ),
-        yaml_file=(
-            get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog")
-            + ".yaml"
-        ),
+        json_file=(get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog") + ".json"),
+        yaml_file=(get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog") + ".yaml"),
     )
 
     @classmethod

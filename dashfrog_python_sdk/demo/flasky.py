@@ -20,7 +20,7 @@ class HelloBudy(BaseModel):
 
 @api.get("/")
 def index():
-    with dashfrog.new_flow("hello-world") as process:
+    with dashfrog.step("hello-world") as process:
         process.event("say_hello")
         time.sleep(1)
         process.event("say_goodbye")
@@ -30,13 +30,13 @@ def index():
 @api.post("/you")
 def hello():
     body = request.get_json()
-    with dashfrog.new_flow("say_hello", user_name=body["name"], body=body):
+    with dashfrog.flow("say_hello", user_name=body["name"], body=body):
         return {"message": f"Hello {body['name']}", **body}
 
 
 @api.get("/error")
 def with_error():
-    with dashfrog.new_flow("hello-world") as process:
+    with dashfrog.flow("hello-world") as process:
         process.event("say_hello")
         raise Exception("Something went wrong")
 
@@ -47,7 +47,7 @@ def recall():
     if not callback:
         raise ValueError("Missing callback")
 
-    with dashfrog.new_flow("callback", recall=callback):
+    with dashfrog.flow("callback", recall=callback):
         res = requests.get(callback)
         if res.status_code != 200:
             return {"error": res.text}

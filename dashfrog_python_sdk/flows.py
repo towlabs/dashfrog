@@ -3,6 +3,7 @@ from typing import Generator, Self
 
 from dashfrog_python_sdk import core
 
+from opentelemetry import baggage
 from opentelemetry.trace import Span, Tracer
 
 
@@ -53,9 +54,7 @@ class Flow(BaseSpan):
             span.set_attribute("flow.description", description)
 
     @contextmanager
-    def step(
-        self, name: str, description: str | None = None, **kwargs
-    ) -> Generator["Step", None, None]:
+    def step(self, name: str, description: str | None = None, **kwargs) -> Generator["Step", None, None]:
         """Start a child flow"""
 
         with self.__tracer.start_span(name, **kwargs) as span:
@@ -67,8 +66,14 @@ class Step(BaseSpan):
         super().__init__(span, name, **labels)
 
         span.set_attribute("step.name", name)
+
         if description:
             span.set_attribute("step.description", description)
+
+        src_flow = baggage.get_baggage("flow_name")
+
+        if src_flow:
+            span.set_attribute("label.flow.name", str(src_flow))
 
 
 class Debug(BaseSpan):
@@ -78,6 +83,10 @@ class Debug(BaseSpan):
         if description:
             span.set_attribute("debug.description", description)
 
+        src_flow = baggage.get_baggage("flow_name")
+        if src_flow:
+            span.set_attribute("label.flow.name", str(src_flow))
+
 
 class Context(BaseSpan):
     def __init__(self, span: Span, name, description: str | None = None, **labels):
@@ -85,3 +94,7 @@ class Context(BaseSpan):
         span.set_attribute("context.name", name)
         if description:
             span.set_attribute("context.description", description)
+
+        src_flow = baggage.get_baggage("flow_name")
+        if src_flow:
+            span.set_attribute("label.flow.name", str(src_flow))

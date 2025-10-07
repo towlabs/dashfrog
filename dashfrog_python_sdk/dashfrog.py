@@ -1,11 +1,12 @@
+from collections.abc import Generator
 from contextlib import contextmanager
 from logging import warning
-from typing import TYPE_CHECKING, Any, Generator, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from .core import Config, Observable, SupportedInstrumentation, clean_methods
 from .flows import Context, Debug, Flow, Step
 
-from opentelemetry import context, propagate
+from opentelemetry import baggage, context, propagate
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
@@ -66,7 +67,7 @@ if TYPE_CHECKING:  # Only import for type checking as it could lead to import er
 class DashFrog:
     """DataFrog setup open telemetry tacking and provide direct entrypoints for flows."""
 
-    __sat_global_trace_provider: bool = False
+    __set_global_trace_provider: bool = False
 
     def __init__(
         self,
@@ -116,11 +117,11 @@ class DashFrog:
 
                 global_trace_provider = trace_provider
                 set_tracer_provider(global_trace_provider)
-                DashFrog.__sat_global_trace_provider = True
+                DashFrog.__set_global_trace_provider = True
 
-        if not DashFrog.__sat_global_trace_provider and hasattr(global_trace_provider, "add_span_processor"):
+        if not DashFrog.__set_global_trace_provider and hasattr(global_trace_provider, "add_span_processor"):
             global_trace_provider.add_span_processor(BatchSpanProcessor(span_exporter))  # type: ignore[reportAttributeAccessIssue]
-            DashFrog.__sat_global_trace_provider = True
+            DashFrog.__set_global_trace_provider = True
 
         meter_provider = MeterProvider(metric_readers=[reader], resource=resource)
 
@@ -140,8 +141,14 @@ class DashFrog:
         **labels,
     ) -> Generator[Flow, None, None]:
         """Start a new Flow of events. Use `step` to create an inside step."""
-        with self.__tracer.start_as_current_span(name) as span:
+
+        ctx = baggage.set_baggage("flow_name", name)
+        tkn = context.attach(ctx)
+
+        with self.__tracer.start_as_current_span(name, context=ctx) as span:
             yield self.__create_flow(span, name, description, log_start, log_kwargs, log_context, **labels)
+
+        context.detach(tkn)
 
     @contextmanager
     def step(
@@ -326,9 +333,7 @@ class DashFrog:
         return fn
 
     def __with_hook(self, kind: SupportedInstrumentation):
-        if kind in self.__config.auto_flow_instrumented:
-            return self.__create_flow_hook(kind.group())
-        elif kind in self.__config.auto_steps_instrumented:
-            return self.__create_auto_step_hook(kind.group())
+        if kind not in self.__config.auto_steps_instrumented:
+            return None
 
-        return None
+        return self.__create_auto_step_hook(kind.group())
