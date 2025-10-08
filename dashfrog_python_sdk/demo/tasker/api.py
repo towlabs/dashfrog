@@ -1,3 +1,4 @@
+from random import randint
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -54,9 +55,7 @@ def create_user(user: schemas.UserCreate, db: Annotated[Session, Depends(get_db)
 
 
 @app.get("/users", response_model=list[schemas.User])
-def list_users(
-    db: Annotated[Session, Depends(get_db)], skip: int = 0, limit: int = 100
-):
+def list_users(db: Annotated[Session, Depends(get_db)], skip: int = 0, limit: int = 100):
     """List all users"""
 
     users = db.query(User).offset(skip).limit(limit).all()
@@ -98,9 +97,9 @@ def update_user(
 
         with dashfrog.step("trigger_ticket_update", auto_end=False, auto_start=False):
             # Trigger Celery task to update user info on all tickets
-            task = update_user_info_on_tickets.delay(user_id)
+            update_user_info_on_tickets.apply_async(args=(user_id,), countdown=randint(10, 300))
 
-        return user
+    return user
 
 
 @app.delete("/users/{user_id}", status_code=204)
@@ -113,9 +112,7 @@ def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
 
         # Check if user has tickets
         tickets_count = (
-            db.query(Ticket)
-            .filter((Ticket.creator_id == user_id) | (Ticket.assignee_id == user_id))
-            .count()
+            db.query(Ticket).filter((Ticket.creator_id == user_id) | (Ticket.assignee_id == user_id)).count()
         )
 
         if tickets_count > 0:
@@ -132,9 +129,7 @@ def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
 
 
 @app.post("/tickets", response_model=schemas.Ticket, status_code=201)
-def create_ticket(
-    ticket: schemas.TicketCreate, db: Annotated[Session, Depends(get_db)]
-):
+def create_ticket(ticket: schemas.TicketCreate, db: Annotated[Session, Depends(get_db)]):
     """Create a new ticket"""
     with dashfrog.flow("create_ticket", title=ticket.title, auto_end=False):
         with dashfrog.step("validate_users"):
@@ -229,9 +224,7 @@ def update_ticket(
                 if assignee_id:
                     assignee = db.query(User).filter(User.id == assignee_id).first()
                     if not assignee:
-                        raise HTTPException(
-                            status_code=404, detail="Assignee not found"
-                        )
+                        raise HTTPException(status_code=404, detail="Assignee not found")
                     ticket.assignee_display_name = assignee.display_name
                     ticket.assignee_avatar = assignee.avatar
                 else:

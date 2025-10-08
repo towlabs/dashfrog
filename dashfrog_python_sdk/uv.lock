@@ -318,6 +318,7 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
     { name = "setuptools" },
+    { name = "shortuuid" },
     { name = "sqlalchemy" },
     { name = "wheel" },
 ]
@@ -385,6 +386,7 @@ dev = [
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "ruff", specifier = ">=0.13.2" },
     { name = "setuptools", specifier = ">=80.9.0" },
+    { name = "shortuuid", specifier = ">=1.0.13" },
     { name = "sqlalchemy", specifier = ">=2.0.43" },
     { name = "wheel", specifier = ">=0.45.1" },
 ]

@@ -3,6 +3,7 @@ from contextlib import AbstractContextManager, contextmanager
 from types import TracebackType
 from typing import Any
 
+import shortuuid
 from structlog import get_logger
 
 from dashfrog_python_sdk import core
@@ -45,12 +46,15 @@ class BaseSpan(AbstractContextManager):
         """Return `self` upon entering the runtime context."""
 
         ctx = baggage.set_baggage(f"current_{self._kind}", self.name)
+        ctx = baggage.set_baggage(f"current_{self._kind}_id", str(shortuuid.uuid()), ctx)
         self.__ctx_token = context.attach(ctx)
 
         logger = get_logger(kind=self._kind, name=self.name, attached_context=baggage.get_all())
-        logger.info("creating object", kind=self._kind, name=self.name, labels=self.__attributes)
+        logger.info(
+            f"creating object {self._kind}::{self.name}", kind=self._kind, name=self.name, labels=self.__attributes
+        )
         if self.__auto_start:
-            logger.info("starting object", kind=self._kind, name=self.name)
+            logger.info(f"starting object {self._kind}::{self.name}", kind=self._kind, name=self.name)
 
         return self
 
@@ -64,7 +68,14 @@ class BaseSpan(AbstractContextManager):
         logger = get_logger(kind=self._kind, name=self.name, attached_context=baggage.get_all())
 
         if self.__auto_end or exc_value is not None:
-            logger.info("ending object", kind=self._kind, name=self.name, with_error=exc_value is not None)
+            if exc_value is not None:
+                logger.error(f"ending object {self._kind}::{self.name} with error")  # , exc_info=exc_value)
+            else:
+                logger.info(
+                    f"ending object  {self._kind}::{self.name}",
+                    kind=self._kind,
+                    name=self.name,
+                )
 
         context.detach(self.__ctx_token)
         return None
@@ -81,9 +92,9 @@ class BaseSpan(AbstractContextManager):
 
         name = ctx.get(f"current_{cls._kind}")
         if not name:
-            logger.warning("Cannot start: no current defined")
+            logger.warning(f"Cannot start: no current {cls._kind} defined")
 
-        logger.info("starting object", kind=cls._kind, name=name)
+        logger.info(f"starting object: {cls._kind}::{name}", kind=cls._kind, name=name)
 
         return None
 
@@ -96,9 +107,9 @@ class BaseSpan(AbstractContextManager):
 
         name = ctx.get(f"current_{cls._kind}")
         if not name:
-            logger.warning("Cannot end: no current defined")
+            logger.warning(f"Cannot end: no current {cls._kind} defined")
 
-        logger.info("ending object", kind=cls._kind, name=name)
+        logger.info(f"ending object: {cls._kind}::{name}", kind=cls._kind, name=name)
 
         return None
 

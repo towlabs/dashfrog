@@ -81,12 +81,20 @@ class Config(BaseSettings):
         http_value: str  # request/httpx
         tasks_value: str  # celery
 
+    class Database(BaseModel):
+        host: str = "0.0.0.0"
+        user: str = "dev"
+        database: str = "dashfrog"
+        port: int | None = None
+        password: str
+
     collector_server: str
     metric_exporter_delay: int = 3000
     auto_flow_instrumented: list[SupportedInstrumentation] = []  # use keys
     auto_steps_instrumented: list[SupportedInstrumentation] = []
     debug: bool = False
 
+    clickhouse: Database = Database(password="dev-pwd*")
     infra: Infra = Infra()
     auto_steps: AutoFlow | None = None
 

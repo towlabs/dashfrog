@@ -14,12 +14,6 @@ from .flows import Flow
 processors = [
     structlog.processors.add_log_level,
     structlog.processors.StackInfoRenderer(),
-    structlog.processors.CallsiteParameterAdder(
-        [
-            CallsiteParameter.FUNC_NAME,
-            CallsiteParameter.MODULE,
-        ],
-    ),
     structlog.dev.set_exc_info,
     structlog.processors.TimeStamper(fmt="iso", key="_time", utc=True),
     structlog.dev.ConsoleRenderer(),
