@@ -12,6 +12,19 @@ services:
       - CLICKHOUSE_PASSWORD=dev-pwd*
       - CLICKHOUSE_DB=dashfrog
 
+  redis:
+    hostname: redis
+    image: redis:6.2.6-alpine
+    ports:
+      - "6379:6379"
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    restart: always
+    environment:
+    - REDIS_HOSTS=local:redis:6379
+    ports:
+    - "8081:8081"
   collector:
     build:
       context: collector

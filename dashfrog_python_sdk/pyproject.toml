@@ -1,5 +1,5 @@
 [project]
-name = "dashfrog_python_sdk"
+name = "dashfrog-python-sdk"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -13,6 +13,7 @@ dependencies = [
     "pydantic>=2.11.9",
     "pydantic-settings>=2.11.0",
     "shortuuid>=1.0.13",
+    "structlog>=25.4.0",
 ]
 
 [dependency-groups]
@@ -33,11 +34,13 @@ demo = [
     "flask-cli>=0.4.0",
     "httpx>=0.28.1",
     "sqlalchemy>=2.0.43",
+    "redis>=5.2.2",
 ]
 dev = [
     "bandit>=1.8.6",
     "celery>=5.5.3",
     "celery-types>=0.23.0",
+    "dashfrog-python-sdk",
     "isort>=6.0.1",
     "opentelemetry-exporter-jaeger>=1.11.1",
     "pdoc3>=0.11.6",
@@ -46,6 +49,7 @@ dev = [
     "ruff>=0.13.2",
     "setuptools>=80.9.0",
     "sqlalchemy>=2.0.43",
+    "wheel>=0.45.1",
 ]
 fastapi = [
     "fastapi>=0.118.0",
@@ -67,10 +71,6 @@ openai = [
 sqlalchemy = [
     "opentelemetry-instrumentation-sqlalchemy>=0.58b0",
 ]
-
-[tool.setuptools.packages.find]
-exclude = ["docs*", "tests*", "demo*"]
-
 
 [tool.ruff]
 line-length = 120
@@ -135,5 +135,20 @@ exclude_dirs =  ["tests", ".venv", "demo"]
 skips = ["B101"]
 
 [build-system]
-requires = ["setuptools>=42"]
+requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.uv]
+package = true
+
+[tool.setuptools]
+packages = ["dashfrog_python_sdk"]
+
+[tool.setuptools.package-dir]
+dashfrog_python_sdk = "."
+
+[tool.setuptools.package-data]
+dashfrog_python_sdk = ["py.typed"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["demo*", "tests*", "http_requests*", "*.db", "*.yaml"]

@@ -1,19 +1,34 @@
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Self
+from logging import warning
+from typing import TYPE_CHECKING, Any, Self
 
 from .core import Config, Observable, SupportedInstrumentation, clean_methods
 from .flows import Flow, Step
 
-from opentelemetry import context, propagate
+from opentelemetry import baggage, context, propagate
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
     OTLPMetricExporter as HTTPMetricExporter,
+)
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+    OTLPSpanExporter as HTTPSpanExporter,
 )
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics._internal.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider as SdkTracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace import (
+    NoOpTracerProvider,
+    ProxyTracerProvider,
+    Span,
+    TracerProvider,
+    get_tracer_provider,
+    set_tracer_provider,
+)
 
 # Extra imports for optional instrumentations
 try:
@@ -52,10 +67,13 @@ if TYPE_CHECKING:  # Only import for type checking as it could lead to import er
 class DashFrog:
     """DataFrog setup open telemetry tacking and provide direct entrypoints for flows."""
 
+    __set_global_trace_provider: bool = False
+
     def __init__(
         self,
         service_name: str,
         config: Config | None = None,
+        global_trace_provider: TracerProvider | None = None,
         **labels,
     ):
         config = config or Config()
@@ -73,10 +91,19 @@ class DashFrog:
         http_server = f"{config.collector_server}:{config.infra.http_collector_port}/v1"
         grpc_server = f"{config.collector_server}:{config.infra.grpc_collector_port}"
 
+        span_exporter = (
+            HTTPSpanExporter(endpoint=f"{http_server}/traces")
+            if config.infra.disable_grpc
+            else OTLPSpanExporter(
+                endpoint=grpc_server, insecure=config.infra.grpc_insecure
+            )
+        )
         metric_exporter = (
             HTTPMetricExporter(endpoint=f"{http_server}/metrics")
             if config.infra.disable_grpc
-            else OTLPMetricExporter(endpoint=grpc_server, insecure=config.infra.grpc_insecure)
+            else OTLPMetricExporter(
+                endpoint=grpc_server, insecure=config.infra.grpc_insecure
+            )
         )
 
         reader = PeriodicExportingMetricReader(
@@ -84,12 +111,33 @@ class DashFrog:
             export_interval_millis=3000,  # Export every 3 seconds
         )
 
+        trace_provider = SdkTracerProvider(resource=resource)
+        trace_provider.add_span_processor(BatchSpanProcessor(span_exporter))
+
+        if not global_trace_provider:
+            global_trace_provider = get_tracer_provider()
+            if isinstance(
+                global_trace_provider, (NoOpTracerProvider, ProxyTracerProvider)
+            ):
+                warning(
+                    "No global trace provider provided, creating and setting default one."
+                )
+
+                global_trace_provider = trace_provider
+                set_tracer_provider(global_trace_provider)
+                DashFrog.__set_global_trace_provider = True
+
+        if not DashFrog.__set_global_trace_provider and hasattr(
+            global_trace_provider, "add_span_processor"
+        ):
+            global_trace_provider.add_span_processor(BatchSpanProcessor(span_exporter))  # type: ignore[reportAttributeAccessIssue]
+            DashFrog.__set_global_trace_provider = True
+
         meter_provider = MeterProvider(metric_readers=[reader], resource=resource)
 
+        self.__trace_provider = trace_provider
+        self.__tracer = trace_provider.get_tracer("dashfrog")
         self.__meter = meter_provider.get_meter("dashfrog")
-
-        self.flows = Flow
-        self.steps = Step
 
     # Features
     @contextmanager
@@ -97,25 +145,33 @@ class DashFrog:
         self,
         name: str,
         description: str | None = None,
-        auto_end: bool = True,
+        log_start: bool = False,
+        log_kwargs: bool = False,
+        log_context: dict[str, Any] = {},
         **labels,
     ) -> Generator[Flow, None, None]:
         """Start a new Flow of events. Use `step` to create an inside step."""
-        with Flow(name, description, auto_end=auto_end, **labels) as flow:
-            yield flow
+
+        ctx = baggage.set_baggage("flow_name", name)
+        tkn = context.attach(ctx)
+
+        with self.__tracer.start_as_current_span(name, context=ctx) as span:
+            yield self.__create_flow(
+                span, name, description, log_start, log_kwargs, log_context, **labels
+            )
+
+        context.detach(tkn)
 
     @contextmanager
     def step(
         self,
         name: str,
         description: str | None = None,
-        auto_start: bool = True,
-        auto_end: bool = True,
         **labels,
     ):
         """Start a new step inside the existing flow. Step does not nest with steps."""
-        with Step(name, description, auto_end=auto_end, auto_start=auto_start, **labels) as step:
-            yield step
+        with self.__tracer.start_span(name) as span:
+            yield Step(span, name, description, **labels)
 
     def observable(
         self,
@@ -126,7 +182,9 @@ class DashFrog:
     ) -> Observable:
         """Observe metrics. /!\\ observable metrics are identified by the name, description and unit tuple."""
 
-        return Observable(self.__meter.create_histogram(name, unit, description), labels)
+        return Observable(
+            self.__meter.create_histogram(name, unit, description), labels
+        )
 
     ### Instrumentation ####
     #### Web
@@ -137,6 +195,7 @@ class DashFrog:
 
         FlaskInstrumentor.instrument_app(
             flask_app,
+            tracer_provider=self.__trace_provider,
             request_hook=self.__with_hook(SupportedInstrumentation.FLASK),
         )
 
@@ -154,6 +213,7 @@ class DashFrog:
 
         FastAPIInstrumentor.instrument_app(
             fastapi_app,
+            tracer_provider=self.__trace_provider,
             server_request_hook=self.__with_hook(SupportedInstrumentation.FASTAPI),
         )
 
@@ -167,6 +227,7 @@ class DashFrog:
 
     def with_requests(self) -> Self:
         RequestsInstrumentor().instrument(
+            tracer_provider=self.__trace_provider,
             request_hook=self.__with_hook(SupportedInstrumentation.REQUESTS),
         )
         return self
@@ -176,6 +237,7 @@ class DashFrog:
             raise ImportError("Install using 'pip install dashfrog[httpx]'.")
 
         HTTPXClientInstrumentor().instrument(
+            tracer_provider=self.__trace_provider,
             request_hook=self.__with_hook(SupportedInstrumentation.HTTPX),
         )
         return self
@@ -190,6 +252,7 @@ class DashFrog:
             raise ImportError("Install using 'pip install dashfrog[celery]'.")
 
         CeleryInstrumentor().instrument(
+            tracer_provider=self.__trace_provider,
             request_hook=self.__with_hook(SupportedInstrumentation.CELERY),
         )
         return self
@@ -198,14 +261,35 @@ class DashFrog:
         if not AwsLambdaInstrumentor or not BotocoreInstrumentor:
             raise ImportError("Install using 'pip install dashfrog[aws]'.")
 
-        BotocoreInstrumentor().instrument()
+        BotocoreInstrumentor().instrument(tracer_provider=self.__trace_provider)
         AwsLambdaInstrumentor().instrument(
+            tracer_provider=self.__trace_provider,
             request_hook=self.__with_hook(SupportedInstrumentation.AWS_LAMBDA),
         )
 
         return self
 
     # Private tooling
+    def __create_flow(
+        self,
+        span: Span,
+        name: str,
+        description: str | None = None,
+        log_start: bool = False,
+        log_kwargs: bool = False,
+        log_context: dict[str, Any] = {},
+        **labels,
+    ):
+        flow = Flow(span, self.__tracer, name, description, **labels)
+        if log_start:
+            ctx = {"name": name, **log_context}
+            if log_kwargs:
+                ctx.update(labels)
+
+            span.add_event("process.start", ctx)
+
+        return flow
+
     def __create_auto_step_hook(self, kind: str):
         kind = f"{kind}_value"
         val = (
@@ -219,7 +303,7 @@ class DashFrog:
             label[self.__config.auto_steps.label_key] = val
 
         def fn(span, _):
-            Step(clean_methods(getattr(span, "name")), **label)
+            Step(span, clean_methods(getattr(span, "name")), **label)
 
         return fn
 
