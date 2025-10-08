@@ -1,5 +1,5 @@
 collector_server: http://0.0.0.0
-auto_steps_instrumented: [fastapi, celery]
+auto_steps_instrumented: []
 auto_steps:
   label_key: "origin"
   web_value: "API"

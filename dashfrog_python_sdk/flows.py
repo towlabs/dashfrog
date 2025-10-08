@@ -1,56 +1,83 @@
 from collections.abc import Generator
 from contextlib import AbstractContextManager, contextmanager
+from datetime import UTC, datetime
+from logging import warning
 from types import TracebackType
 from typing import Any
 
+import shortuuid
 from structlog import get_logger
 
-from dashfrog_python_sdk import core
+from . import entities, stores
 
 from opentelemetry import baggage, context
-from opentelemetry.util.types import AttributeValue
+from opentelemetry.trace import get_current_span, get_tracer
+from opentelemetry.trace.span import INVALID_SPAN
 
 
 class BaseSpan(AbstractContextManager):
     name: str
+    identifier: str
+    initialized: bool = False
 
-    __attributes: dict[str, AttributeValue]
-    __ctx_token: Any
     _kind: str
+    _store: stores.AbstractStore
 
     def __init__(
         self,
-        name: str,
-        description: str | None = None,
+        entity: entities.Base,
+        identifier: str,
+        initialized: bool = False,
         auto_start: bool = True,
         auto_end: bool = True,
-        ctx: dict[str, AttributeValue] | None = None,
-        **labels: AttributeValue,
     ) -> None:
-        self.name = name
+        entity.labels = {key: str(val) for key, val in entity.labels.items()}
+        self.name = entity.name
+        self.identifier = identifier
+        self.initialized = initialized
+
         self.__auto_end = auto_end
         self.__auto_start = auto_start
-
-        attributes = {"app.open_tel.helper": core.DASHFROG_TRACE_KEY, **labels}
-
-        if description:
-            attributes[f"{self._kind}.description"] = description
-
-        if ctx:
-            attributes.update(ctx)
-
-        self.__attributes = attributes
+        self.__ctx_token: Any = None
+        self.__entity = entity
 
     def __enter__(self):
         """Return `self` upon entering the runtime context."""
 
-        ctx = baggage.set_baggage(f"current_{self._kind}", self.name)
-        self.__ctx_token = context.attach(ctx)
+        if not self.initialized:
+            ctx = baggage.set_baggage(
+                f"current_{self._kind}_id",
+                self.identifier,
+                baggage.set_baggage(f"current_{self._kind}", self.name),
+            )
+            self.__ctx_token = context.attach(ctx)
 
         logger = get_logger(kind=self._kind, name=self.name, attached_context=baggage.get_all())
-        logger.info("creating object", kind=self._kind, name=self.name, labels=self.__attributes)
-        if self.__auto_start:
-            logger.info("starting object", kind=self._kind, name=self.name)
+
+        if not self.initialized:
+            logger.info(
+                f"creating object {self._kind}::{self.name}",
+                kind=self._kind,
+                name=self.name,
+            )
+
+            self._store.insert(self.__entity)
+            self.initialized = True
+
+        if self.__auto_start and self.__entity.status in (
+            entities.Status.WAITING,
+            entities.Status.UNSET,
+        ):
+            logger.info(
+                f"starting object {self._kind}::{self.name}",
+                kind=self._kind,
+                name=self.name,
+            )
+            if self.__entity.started_at is None:
+                self.__entity.started_at = datetime.now(UTC)
+
+            self.__entity.status = entities.Status.UNSET
+            self._store.insert(self.__entity)
 
         return self
 
@@ -64,52 +91,31 @@ class BaseSpan(AbstractContextManager):
         logger = get_logger(kind=self._kind, name=self.name, attached_context=baggage.get_all())
 
         if self.__auto_end or exc_value is not None:
-            logger.info("ending object", kind=self._kind, name=self.name, with_error=exc_value is not None)
+            self.__entity.ended_at = datetime.now(UTC)
+            if self.__entity.started_at:
+                self.__entity.duration = int((self.__entity.ended_at - self.__entity.started_at).total_seconds() * 1000)
 
-        context.detach(self.__ctx_token)
+            if exc_value is not None:
+                logger.error(f"ending object {self._kind}::{self.name} with error")  # , exc_info=exc_value)
+                self.__entity.status = entities.Status.FAILED
+                self.__entity.status_message = str(exc_value)
+            else:
+                logger.info(
+                    f"ending object  {self._kind}::{self.name}",
+                    kind=self._kind,
+                    name=self.name,
+                )
+                self.__entity.status = entities.Status.SUCCESS
+
+            self._store.insert(self.__entity)
+
+        if self.__ctx_token:
+            context.detach(self.__ctx_token)
+
         return None
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.name!r})"
-
-    @classmethod
-    def start(cls):
-        # TODO get flow from storage when enabled
-
-        ctx = baggage.get_all()
-        logger = get_logger(kind=cls._kind, attached_context=ctx)
-
-        name = ctx.get(f"current_{cls._kind}")
-        if not name:
-            logger.warning("Cannot start: no current defined")
-
-        logger.info("starting object", kind=cls._kind, name=name)
-
-        return None
-
-    @classmethod
-    def end(cls):
-        # TODO get flow from storage when enabled
-
-        ctx = baggage.get_all()
-        logger = get_logger(kind=cls._kind, attached_context=ctx)
-
-        name = ctx.get(f"current_{cls._kind}")
-        if not name:
-            logger.warning("Cannot end: no current defined")
-
-        logger.info("ending object", kind=cls._kind, name=name)
-
-        return None
-
-    # def event(self, name: str, description: str | None = None, **labels) -> Self:
-    #     """Add event to flow"""
-    #     if description:
-    #         labels["description"] = description
-    #
-    #     self.__span.add_event(name, labels)
-    #
-    #     return self
 
 
 class Flow(BaseSpan):
@@ -117,22 +123,58 @@ class Flow(BaseSpan):
 
     name: str
     _kind = "flow"
+    _store = stores.Flows()
 
     def __init__(
         self,
         name: str,
+        service_name: str,
         description: str | None = None,
         auto_end: bool = True,
+        from_context: bool = False,
         **labels,
     ):
-        current_baggage = baggage.get_all()
+        def __init():
+            current_baggage = baggage.get_all()
+            trace_id = str(span.get_span_context().trace_id)
 
-        ctx = {}
-        src_flow = current_baggage.get(f"current_{Flow._kind}")
-        if src_flow:
-            ctx[f"{self._kind}.src.name"] = str(src_flow)
+            if from_context:
+                _flow = entities.Flow(
+                    name=str(current_baggage.get(f"current_{Flow._kind}_id", "")),
+                    trace_id=trace_id,
+                    created_at=datetime.now(UTC),
+                )
+            else:
+                src_flow = current_baggage.get(f"current_{Flow._kind}_id")
+                if src_flow:
+                    labels[f"{self._kind}.src.name"] = str(src_flow)
+                    warning(f"Flow must not be nested. {name} => {src_flow}")
 
-        super().__init__(name, description, auto_end=auto_end, ctx=ctx, **labels)
+                _flow = entities.Flow(
+                    name=name,
+                    service_name=service_name,
+                    description=description,
+                    trace_id=trace_id,
+                    created_at=datetime.now(UTC),
+                    labels=labels,
+                )
+
+            return _flow
+
+        span = get_current_span()
+        if span == INVALID_SPAN:
+            with get_tracer("dashfrog").start_as_current_span(name) as span:
+                flow = __init()
+        else:
+            flow = __init()
+
+        super().__init__(
+            flow,
+            flow.name,
+            auto_end=auto_end,
+            initialized=from_context,
+            auto_start=(not from_context),
+        )
 
     @contextmanager
     def step(self, name: str, description: str | None = None, **labels) -> Generator["Step", None, None]:
@@ -144,6 +186,7 @@ class Flow(BaseSpan):
 
 class Step(BaseSpan):
     _kind = "step"
+    _store = stores.Steps()
 
     def __init__(
         self,
@@ -151,17 +194,47 @@ class Step(BaseSpan):
         description: str | None = None,
         auto_start: bool = True,
         auto_end: bool = True,
+        from_context: bool = False,
         **labels,
     ):
-        current_baggage = baggage.get_all()
+        def __init():
+            trace_id = str(span.get_span_context().trace_id)
+            current_baggage = baggage.get_all()
+            src_flow = str(current_baggage.get(f"current_{Flow._kind}_id"))
 
-        ctx = {}
-        src_flow = current_baggage.get(f"current_{Flow._kind}")
-        if src_flow:
-            ctx[f"{Flow._kind}.name"] = str(src_flow)
+            if from_context:
+                _step = entities.Step(
+                    id=str(current_baggage.get(f"current_{Step._kind}_id", "")),
+                    for_flow=str(src_flow),
+                    trace_id=trace_id,
+                )
+            else:
+                src_step_id = current_baggage.get(f"current_{self._kind}_id")
 
-        src_step = current_baggage.get(f"current_{self._kind}")
-        if src_step:
-            ctx[f"{self._kind}.src.name"] = str(src_step)
+                _step = entities.Step(
+                    id=shortuuid.uuid(),
+                    for_flow=src_flow,
+                    parent_id=str(src_step_id) if src_step_id else None,
+                    name=name,
+                    description=description,
+                    status=entities.Status.WAITING,
+                    trace_id=trace_id,
+                    labels=labels,
+                )
 
-        super().__init__(name, description, auto_start=auto_start, auto_end=auto_end, ctx=ctx, **labels)
+            return _step
+
+        span = get_current_span()
+        if span == INVALID_SPAN:
+            with get_tracer("dashfrog").start_as_current_span(name) as span:
+                step = __init()
+        else:
+            step = __init()
+
+        super().__init__(
+            step,
+            step.id,
+            auto_start=auto_start,
+            auto_end=auto_end,
+            initialized=from_context,
+        )

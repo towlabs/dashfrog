@@ -2,7 +2,16 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Self
 
-from .core import Config, Observable, SupportedInstrumentation, clean_methods
+import clickhouse_connect
+
+from .core import (
+    Config,
+    Observable,
+    SupportedInstrumentation,
+    clean_methods,
+    clickhouse_client,
+    set_singletons,
+)
 from .flows import Flow, Step
 
 from opentelemetry import context, propagate
@@ -14,6 +23,13 @@ from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics._internal.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.trace import (
+    NoOpTracerProvider,
+    ProxyTracerProvider,
+    get_tracer_provider,
+    set_tracer_provider,
+)
 
 # Extra imports for optional instrumentations
 try:
@@ -60,6 +76,16 @@ class DashFrog:
     ):
         config = config or Config()
         self.__config = config
+        self.service_name = service_name
+
+        if not clickhouse_client:
+            set_singletons(
+                clickhouse_connect.get_client(
+                    host=self.__config.clickhouse.host,
+                    user=self.__config.clickhouse.user,
+                    password=self.__config.clickhouse.password,
+                )
+            )
 
         resource = Resource.create(
             attributes={
@@ -76,7 +102,9 @@ class DashFrog:
         metric_exporter = (
             HTTPMetricExporter(endpoint=f"{http_server}/metrics")
             if config.infra.disable_grpc
-            else OTLPMetricExporter(endpoint=grpc_server, insecure=config.infra.grpc_insecure)
+            else OTLPMetricExporter(
+                endpoint=grpc_server, insecure=config.infra.grpc_insecure
+            )
         )
 
         reader = PeriodicExportingMetricReader(
@@ -88,8 +116,9 @@ class DashFrog:
 
         self.__meter = meter_provider.get_meter("dashfrog")
 
-        self.flows = Flow
-        self.steps = Step
+        trace_provider = get_tracer_provider()
+        if isinstance(trace_provider, (NoOpTracerProvider, ProxyTracerProvider)):
+            set_tracer_provider(TracerProvider(resource=resource))
 
     # Features
     @contextmanager
@@ -101,7 +130,9 @@ class DashFrog:
         **labels,
     ) -> Generator[Flow, None, None]:
         """Start a new Flow of events. Use `step` to create an inside step."""
-        with Flow(name, description, auto_end=auto_end, **labels) as flow:
+        with Flow(
+            name, self.service_name, description, auto_end=auto_end, **labels
+        ) as flow:
             yield flow
 
     @contextmanager
@@ -114,7 +145,30 @@ class DashFrog:
         **labels,
     ):
         """Start a new step inside the existing flow. Step does not nest with steps."""
-        with Step(name, description, auto_end=auto_end, auto_start=auto_start, **labels) as step:
+        with Step(
+            name, description, auto_end=auto_end, auto_start=auto_start, **labels
+        ) as step:
+            yield step
+
+    @contextmanager
+    def current_flow(
+        self,
+        auto_end: bool = True,
+    ) -> Generator[Flow, None, None]:
+        """Start a new Flow of events. Use `step` to create an inside step."""
+        with Flow("", self.service_name, auto_end=auto_end, from_context=True) as flow:
+            yield flow
+
+    @contextmanager
+    def current_step(
+        self,
+        auto_start: bool = True,
+        auto_end: bool = True,
+    ):
+        """Start a new step inside the existing flow. Step does not nest with steps."""
+        with Step(
+            "", auto_end=auto_end, auto_start=auto_start, from_context=True
+        ) as step:
             yield step
 
     def observable(
@@ -126,7 +180,9 @@ class DashFrog:
     ) -> Observable:
         """Observe metrics. /!\\ observable metrics are identified by the name, description and unit tuple."""
 
-        return Observable(self.__meter.create_histogram(name, unit, description), labels)
+        return Observable(
+            self.__meter.create_histogram(name, unit, description), labels
+        )
 
     ### Instrumentation ####
     #### Web

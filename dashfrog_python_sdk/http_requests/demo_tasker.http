@@ -1,0 +1,49 @@
+### Create user
+POST 0.0.0.0:8000/users
+Content-Type: application/json
+
+{"username": "alice", "display_name": "Alice", "email": "alice@example.com"}
+
+### Create user 2
+POST 0.0.0.0:8000/users
+Content-Type: application/json
+
+{"username": "bobdyl", "display_name": "Boby", "email": "boby@example.com"}
+
+
+### Create ticket with assign
+POST 0.0.0.0:8000/tickets
+Content-Type: application/json
+
+{
+    "title": "Fix authentication bug",
+    "description": "Users are logged out randomly",
+    "creator_id": 2,
+    "assignee_id": 1
+  }
+
+### Update ticket
+PATCH 0.0.0.0:8000/tickets/3
+Content-Type: application/json
+
+{
+  "status": "in_progress"
+  }
+
+### update boby profile => has celery callback
+PATCH 0.0.0.0:8000/users/2
+Content-Type: application/json
+
+{"display_name": "Bob Morane"}
+
+### Read ticket
+GET 0.0.0.0:8000/tickets/1
+
+### RESET
+DELETE 0.0.0.0:8000/users/2
+
+###
+DELETE 0.0.0.0:8000/users/1
+
+###
+DELETE 0.0.0.0:8000/tickets/1

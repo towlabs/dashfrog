@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from os import environ
 
+from clickhouse_connect.driver.client import Client
 from pydantic import BaseModel
 from pydantic_settings import (
     BaseSettings,
@@ -81,12 +82,20 @@ class Config(BaseSettings):
         http_value: str  # request/httpx
         tasks_value: str  # celery
 
+    class Database(BaseModel):
+        host: str = "0.0.0.0"
+        user: str = "dev"
+        database: str = "dashfrog"
+        port: int | None = None
+        password: str
+
     collector_server: str
     metric_exporter_delay: int = 3000
     auto_flow_instrumented: list[SupportedInstrumentation] = []  # use keys
     auto_steps_instrumented: list[SupportedInstrumentation] = []
     debug: bool = False
 
+    clickhouse: Database = Database(password="dev-pwd*")
     infra: Infra = Infra()
     auto_steps: AutoFlow | None = None
 
@@ -130,3 +139,20 @@ class Observable:
     def observe(self, value: int | float, **labels):
         """Add value to observable metric."""
         self.metric.record(value, {**self.default_labels, **labels})
+
+
+# Singletons
+clickhouse_client: Client | None = None
+
+
+def set_singletons(client: Client):
+    global clickhouse_client
+    if not clickhouse_client:
+        clickhouse_client = client
+
+
+def get_clickhouse() -> Client:
+    if not clickhouse_client:
+        raise UnboundLocalError("Clickhouse not initialized")
+
+    return clickhouse_client
