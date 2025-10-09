@@ -1,0 +1,83 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-prometheus
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: prometheus
+spec:
+  replicas: {{ .Values.prometheus.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "dashfrog_kube.selectorLabels" . | nindent 6 }}
+      component: prometheus
+  template:
+    metadata:
+      labels:
+        {{- include "dashfrog_kube.selectorLabels" . | nindent 8 }}
+        component: prometheus
+    spec:
+      {{- with .Values.serviceAccount }}
+      serviceAccountName: {{ include "dashfrog_kube.serviceAccountName" $ }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.prometheus.securityContext | nindent 8 }}
+      containers:
+        - name: prometheus
+          image: "{{ .Values.prometheus.image.repository }}:{{ .Values.prometheus.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.prometheus.image.pullPolicy }}
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yaml"
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.console.libraries=/etc/prometheus/console_libraries"
+            - "--web.console.templates=/etc/prometheus/consoles"
+            - "--storage.tsdb.retention.time={{ .Values.prometheus.config.retention }}"
+            - "--web.enable-lifecycle"
+          ports:
+            - name: prometheus
+              containerPort: {{ .Values.prometheus.config.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.prometheus.resources | nindent 12 }}
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus
+            {{- if .Values.prometheus.persistence.enabled }}
+            - name: prometheus-data
+              mountPath: /prometheus
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: prometheus
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: prometheus
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: {{ include "dashfrog_kube.fullname" . }}-prometheus-config
+        {{- if .Values.prometheus.persistence.enabled }}
+        - name: prometheus-data
+          persistentVolumeClaim:
+            claimName: {{ include "dashfrog_kube.fullname" . }}-prometheus-pvc
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

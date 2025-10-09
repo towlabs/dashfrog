@@ -1,0 +1,17 @@
+{{- if .Values.collector.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "dashfrog_kube.fullname" . }}-test-connection"
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "dashfrog_kube.fullname" . }}-collector:{{ .Values.collector.service.ports.debug }}']
+  restartPolicy: Never
+{{- end }}

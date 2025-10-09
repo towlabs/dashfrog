@@ -1,0 +1,27 @@
+{{- if .Values.clickhouse.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-clickhouse
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: clickhouse
+spec:
+  type: {{ .Values.clickhouse.service.type }}
+  ports:
+    - port: {{ .Values.clickhouse.service.ports.clickhouse }}
+      targetPort: clickhouse
+      protocol: TCP
+      name: clickhouse
+    - port: {{ .Values.clickhouse.service.ports.http }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.clickhouse.service.ports.https }}
+      targetPort: https
+      protocol: TCP
+      name: https
+  selector:
+    {{- include "dashfrog_kube.selectorLabels" . | nindent 4 }}
+    component: clickhouse
+{{- end }}

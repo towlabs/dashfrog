@@ -37,6 +37,7 @@ services:
       - "9090:9090"
 
   collector:
+    image: ghcr.io/towlabs/dashfrog/collector:latest
     build:
       context: collector
       dockerfile: Dockerfile
@@ -46,5 +47,6 @@ services:
       - "4317:4317"
       - "4318:4318"
       - "12001:12001"
+      - "13133:13133"
     volumes:
       - ./collector-config.yaml:/otelcol/collector-config.yaml

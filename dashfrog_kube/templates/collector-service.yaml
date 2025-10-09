@@ -1,0 +1,31 @@
+{{- if .Values.collector.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-collector
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: collector
+spec:
+  type: {{ .Values.collector.service.type }}
+  ports:
+    - port: {{ .Values.collector.service.ports.otlpGrpc }}
+      targetPort: otlp-grpc
+      protocol: TCP
+      name: otlp-grpc
+    - port: {{ .Values.collector.service.ports.otlpHttp }}
+      targetPort: otlp-http
+      protocol: TCP
+      name: otlp-http
+    - port: {{ .Values.collector.service.ports.prometheus }}
+      targetPort: prometheus
+      protocol: TCP
+      name: prometheus
+    - port: {{ .Values.collector.service.ports.healthCheck }}
+      targetPort: health-check
+      protocol: TCP
+      name: health-check
+  selector:
+    {{- include "dashfrog_kube.selectorLabels" . | nindent 4 }}
+    component: collector
+{{- end }}

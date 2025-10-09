@@ -1,0 +1,53 @@
+{{- if .Values.collector.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-collector-config
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: collector
+data:
+  collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:{{ .Values.collector.config.otlpGrpcPort }}
+          http:
+            endpoint: 0.0.0.0:{{ .Values.collector.config.otlpHttpPort }}
+
+    exporters:
+      debug:
+        verbosity: detailed
+        sampling_initial: 5
+        sampling_thereafter: 200
+      prometheus:
+        endpoint: "0.0.0.0:{{ .Values.collector.config.prometheusPort }}"
+        # namespace: dashfrog
+        enable_open_metrics: true
+        resource_to_telemetry_conversion:
+          enabled: true
+    processors:
+      batch:
+        send_batch_size: 1000  # Tune the batch size for more efficient exporting
+        timeout: 1s
+
+    extensions:
+      health_check:
+        endpoint: "0.0.0.0:{{ .Values.collector.config.healthCheckPort }}"
+        path: "/ping"
+        check_collector_pipeline:
+          enabled: true
+          interval: "5m"
+          exporter_failure_threshold: 5
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers:
+            - otlp
+          exporters:
+            - debug
+            - prometheus
+{{- end }}

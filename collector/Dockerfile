@@ -14,7 +14,6 @@ FROM gcr.io/distroless/base:latest
 ARG USER_UID=10001
 USER ${USER_UID}
 
-#COPY ../collector-config.yaml /otelcol/collector-config.yaml
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --chmod=755 --from=build-stage /build/otelcol-dashfrog /otelcol
 

@@ -1,0 +1,91 @@
+{{- if .Values.clickhouse.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-clickhouse
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: clickhouse
+spec:
+  replicas: {{ .Values.clickhouse.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "dashfrog_kube.selectorLabels" . | nindent 6 }}
+      component: clickhouse
+  template:
+    metadata:
+      labels:
+        {{- include "dashfrog_kube.selectorLabels" . | nindent 8 }}
+        component: clickhouse
+    spec:
+      {{- with .Values.serviceAccount }}
+      serviceAccountName: {{ include "dashfrog_kube.serviceAccountName" $ }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.clickhouse.securityContext | nindent 8 }}
+      containers:
+        - name: clickhouse
+          image: "{{ .Values.clickhouse.image.repository }}:{{ .Values.clickhouse.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.clickhouse.image.pullPolicy }}
+          ports:
+            - name: clickhouse
+              containerPort: {{ .Values.clickhouse.config.port }}
+              protocol: TCP
+            - name: http
+              containerPort: {{ .Values.clickhouse.config.httpPort }}
+              protocol: TCP
+            - name: https
+              containerPort: {{ .Values.clickhouse.config.httpsPort }}
+              protocol: TCP
+          env:
+            - name: CLICKHOUSE_USER
+              value: "{{ .Values.clickhouse.config.user }}"
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dashfrog_kube.fullname" . }}-secret
+                  key: clickhouse-password
+            - name: CLICKHOUSE_DB
+              value: "{{ .Values.clickhouse.config.database }}"
+          resources:
+            {{- toYaml .Values.clickhouse.resources | nindent 12 }}
+          {{- if .Values.clickhouse.persistence.enabled }}
+          volumeMounts:
+            - name: clickhouse-data
+              mountPath: /var/lib/clickhouse
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        {{- if .Values.clickhouse.persistence.enabled }}
+        - name: clickhouse-data
+          persistentVolumeClaim:
+            claimName: {{ include "dashfrog_kube.fullname" . }}-clickhouse-pvc
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

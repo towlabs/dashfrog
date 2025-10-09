@@ -1,0 +1,19 @@
+{{- if .Values.prometheus.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-prometheus
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: prometheus
+spec:
+  type: {{ .Values.prometheus.service.type }}
+  ports:
+    - port: {{ .Values.prometheus.service.port }}
+      targetPort: prometheus
+      protocol: TCP
+      name: prometheus
+  selector:
+    {{- include "dashfrog_kube.selectorLabels" . | nindent 4 }}
+    component: prometheus
+{{- end }}

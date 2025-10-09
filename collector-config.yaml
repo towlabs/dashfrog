@@ -22,7 +22,17 @@ processors:
     send_batch_size: 1000  # Tune the batch size for more efficient exporting
     timeout: 1s
 
+extensions:
+  health_check:
+    endpoint: "0.0.0.0:13133"
+    path: "/ping"
+    check_collector_pipeline:
+      enabled: true
+      interval: "5m"
+      exporter_failure_threshold: 5
+
 service:
+  extensions: [health_check]
   pipelines:
     metrics:
       receivers:

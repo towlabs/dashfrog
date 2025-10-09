@@ -1,0 +1,18 @@
+{{- if and .Values.clickhouse.enabled .Values.clickhouse.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-clickhouse-pvc
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: clickhouse
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.clickhouse.persistence.size }}
+  {{- if .Values.clickhouse.persistence.storageClass }}
+  storageClassName: {{ .Values.clickhouse.persistence.storageClass }}
+  {{- end }}
+{{- end }}

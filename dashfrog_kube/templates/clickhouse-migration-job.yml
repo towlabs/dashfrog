@@ -1,0 +1,82 @@
+{{- if .Values.clickhouse.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-clickhouse-migration
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: clickhouse-migration
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 300  # Clean up after 5 minutes
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "dashfrog_kube.selectorLabels" . | nindent 8 }}
+        component: clickhouse-migration
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.serviceAccount }}
+      serviceAccountName: {{ include "dashfrog_kube.serviceAccountName" $ }}
+      {{- end }}
+      containers:
+        - name: migration
+          image: "{{ .Values.clickhouse.image.repository }}:{{ .Values.clickhouse.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.clickhouse.image.pullPolicy }}
+          env:
+            - name: CLICKHOUSE_USER
+              value: "{{ .Values.clickhouse.config.user }}"
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dashfrog_kube.fullname" . }}-secret
+                  key: clickhouse-password
+            - name: CLICKHOUSE_DB
+              value: "{{ .Values.clickhouse.config.database }}"
+            - name: CLICKHOUSE_HOST
+              value: "{{ include "dashfrog_kube.fullname" . }}-clickhouse"
+            - name: CLICKHOUSE_PORT
+              value: "{{ .Values.clickhouse.config.port }}"
+          command: ["/bin/bash"]
+          args: 
+            - "-c"
+            - |
+              set -e
+              echo "Waiting for ClickHouse to be ready at $CLICKHOUSE_HOST:$CLICKHOUSE_PORT..."
+              
+              # Wait for ClickHouse to be available (up to 5 minutes)
+              for i in {1..60}; do
+                if clickhouse-client --host "$CLICKHOUSE_HOST" --port "$CLICKHOUSE_PORT" --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" --query "SELECT 1" >/dev/null 2>&1; then
+                  echo "ClickHouse is ready!"
+                  break
+                fi
+                if [ $i -eq 60 ]; then
+                  echo "ERROR: ClickHouse did not become ready in time"
+                  exit 1
+                fi
+                echo "Attempt $i/60: ClickHouse is not ready yet. Waiting..."
+                sleep 5
+              done
+              
+              # Create database if it doesn't exist
+              echo "Creating database '$CLICKHOUSE_DB' if not exists..."
+              clickhouse-client --host "$CLICKHOUSE_HOST" --port "$CLICKHOUSE_PORT" --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" --query "CREATE DATABASE IF NOT EXISTS $CLICKHOUSE_DB"
+              
+              # Run migrations
+              echo "Running migrations..."
+              clickhouse-client --host "$CLICKHOUSE_HOST" --port "$CLICKHOUSE_PORT" --user "$CLICKHOUSE_USER" --password "$CLICKHOUSE_PASSWORD" --database "$CLICKHOUSE_DB" --multiquery < /migrations/init_db.up.sql
+              
+              echo "✅ Migrations completed successfully!"
+          volumeMounts:
+            - name: clickhouse-migrations
+              mountPath: /migrations
+              readOnly: true
+      volumes:
+        - name: clickhouse-migrations
+          configMap:
+            name: {{ include "dashfrog_kube.fullname" . }}-clickhouse-migrations
+{{- end }}
