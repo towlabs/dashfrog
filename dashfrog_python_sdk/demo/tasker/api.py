@@ -21,6 +21,7 @@ app = FastAPI(
 dashfrog = DashFrog("demo.tasker.api")
 dashfrog.with_fastapi(app).with_celery()
 
+some_mether = dashfrog.observable("test", "ntg to tes", "Km2", tenant="Tower")
 
 # Initialize database
 init_db()
@@ -50,6 +51,7 @@ def create_user(user: schemas.UserCreate, db: Annotated[Session, Depends(get_db)
             db.add(db_user)
             db.commit()
             db.refresh(db_user)
+            some_mether.observe(1)
 
         return db_user
 

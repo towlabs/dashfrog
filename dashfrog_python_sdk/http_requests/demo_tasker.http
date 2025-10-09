@@ -2,7 +2,7 @@
 POST 0.0.0.0:8000/users
 Content-Type: application/json
 
-{"username": "alice", "display_name": "Alice", "email": "alice@example.com"}
+{"username": "aaaaa", "display_name": "Alizzeazce", "email": "aliaaace@example.com"}
 
 ### Create user 2
 POST 0.0.0.0:8000/users

@@ -11,12 +11,12 @@ exporters:
     verbosity: detailed
     sampling_initial: 5
     sampling_thereafter: 200
-  clickhouse:
-    endpoint: "http://clickhouse:8123"  # Replace with your ClickHouse server address
-    database: "dashfrog"
-    username: "dev"
-    password: "dev-pwd*"
-
+  prometheus:
+    endpoint: "0.0.0.0:9090"
+    # namespace: dashfrog
+    enable_open_metrics: true
+    resource_to_telemetry_conversion:
+      enabled: true
 processors:
   batch:
     send_batch_size: 1000  # Tune the batch size for more efficient exporting
@@ -24,23 +24,9 @@ processors:
 
 service:
   pipelines:
-    traces:
-      receivers:
-        - otlp
-      processors:
-        - batch
-      exporters: [clickhouse, debug]
     metrics:
       receivers:
         - otlp
-      processors:
-        - batch
       exporters:
         - debug
-        - clickhouse
-    logs:
-      receivers:
-        - otlp
-      processors:
-        - batch
-      exporters: [clickhouse, debug]
+        - prometheus

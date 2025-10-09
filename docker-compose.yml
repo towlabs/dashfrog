@@ -22,15 +22,26 @@ services:
     image: rediscommander/redis-commander:latest
     restart: always
     environment:
-    - REDIS_HOSTS=local:redis:6379
+      - REDIS_HOSTS=local:redis:6379
     ports:
-    - "8081:8081"
+      - "8081:8081"
+
+  prometheus:
+    hostname: prometheus
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yaml:/prometheus.yaml
+    command:
+      - "--config.file=/prometheus.yaml"
+    ports:
+      - "9090:9090"
+
   collector:
     build:
       context: collector
       dockerfile: Dockerfile
     depends_on:
-      - clickhouse
+      - prometheus
     ports:
       - "4317:4317"
       - "4318:4318"
