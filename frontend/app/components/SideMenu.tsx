@@ -1,0 +1,225 @@
+'use client'
+
+import { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { cn } from '@/lib/utils'
+import { useNotebookTitle } from './notebook-title-context'
+import { Button } from '@/components/ui/button'
+import SearchDialog from './SearchDialog'
+import {
+  Home,
+  Search,
+  ChartScatter,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  User,
+  Hash,
+  Plus,
+  Zap,
+  Calendar,
+  BookOpen
+} from 'lucide-react'
+
+const topMenuItems = [
+  { id: 'home', label: 'Home', icon: Home, href: '/' },
+  { id: 'search', label: 'Search', icon: Search, href: '/search', shortcut: '⌘K' },
+  { id: 'catalog', label: 'Data Catalog', icon: BookOpen, href: '/catalog' },
+  { id: 'events', label: 'Calendar', icon: Calendar, href: '/events' },
+]
+
+
+// Sample notebooks data - in real app this would come from API
+const notebooks = [
+  { id: 'performance', name: 'Performance Analysis', href: '/notebook/performance' },
+  { id: 'errors', name: 'Error Investigation', href: '/notebook/errors' },
+  { id: 'analytics', name: 'User Behavior', href: '/notebook/analytics' },
+  { id: 'conversion', name: 'Conversion Funnel', href: '/notebook/conversion' },
+  { id: 'monitoring', name: 'System Health', href: '/notebook/monitoring' },
+]
+
+export default function SideMenu() {
+  const pathname = useLocation().pathname
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const { currentNotebookTitle } = useNotebookTitle()
+
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed)
+  }
+
+  return (
+    <aside
+      className={cn(
+        "relative flex h-screen flex-col border-r transition-all duration-300",
+        isCollapsed ? "w-16" : "w-64",
+        "hidden md:flex"
+      )}
+      style={{ backgroundColor: '#f9f8f7' }}
+    >
+      <div className="flex h-14 items-center border-b px-3">
+        <div className={cn(
+          "flex items-center gap-2 transition-all",
+          isCollapsed && "justify-center"
+        )}>
+          <Package className="h-6 w-6" />
+          {!isCollapsed && (
+            <span className="font-semibold">
+              {pathname.startsWith('/notebook/') && currentNotebookTitle ? currentNotebookTitle : 'DashFrog'}
+            </span>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-auto h-8 w-8"
+          onClick={toggleCollapse}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+          <span className="sr-only">Toggle sidebar</span>
+        </Button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        <nav className="space-y-1 p-2">
+          {/* Top Menu Items */}
+          {topMenuItems.map((item) => {
+            const Icon = item.icon
+            const isActive = pathname === item.href
+            const isSearchItem = item.id === 'search'
+
+            if (isSearchItem) {
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setSearchOpen(true)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent w-full text-left",
+                    isCollapsed && "justify-center px-2"
+                  )}
+                  style={{ color: '#5f5e5b' }}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {!isCollapsed && (
+                    <>
+                      <span className="flex-1">{item.label}</span>
+                      {item.shortcut && (
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {item.shortcut}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </button>
+              )
+            }
+
+            return (
+              <Link
+                key={item.id}
+                to={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent",
+                  isActive && "bg-accent text-accent-foreground",
+                  isCollapsed && "justify-center px-2"
+                )}
+                style={{ color: isActive ? undefined : '#5f5e5b' }}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {!isCollapsed && (
+                  <>
+                    <span className="flex-1">{item.label}</span>
+                    {item.shortcut && (
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {item.shortcut}
+                      </span>
+                    )}
+                  </>
+                )}
+              </Link>
+            )
+          })}
+
+          {/* Separator */}
+          <div className="py-2">
+            <div className="border-t border-border" />
+          </div>
+
+          {/* Notebooks Section */}
+          {!isCollapsed && (
+            <div className="group px-3 py-1 flex items-center justify-between">
+              <h3 className="text-xs font-medium" style={{ color: '#5f5e5b' }}>
+                Notebooks
+              </h3>
+              <button
+                className="opacity-0 group-hover:opacity-100 hover:bg-accent rounded p-1 transition-all"
+                title="Add notebook"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+          {notebooks.map((notebook) => {
+            const isNotebookActive = pathname === notebook.href
+            return (
+              <Link
+                key={notebook.id}
+                to={notebook.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent",
+                  isNotebookActive && "bg-accent text-accent-foreground",
+                  isCollapsed && "justify-center px-2"
+                )}
+                style={{ color: isNotebookActive ? undefined : '#5f5e5b' }}
+              >
+                <Hash className="h-4 w-4 shrink-0 text-muted-foreground" />
+                {!isCollapsed && <span className="flex-1">{notebook.name}</span>}
+              </Link>
+            )
+          })}
+
+        </nav>
+      </div>
+
+      {/* Bottom Section - Settings and Avatar */}
+      <div className="mt-auto border-t border-border">
+        <div className="space-y-1 p-2">
+          <Link
+            to="/settings"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent",
+              pathname === '/settings' && "bg-accent text-accent-foreground",
+              isCollapsed && "justify-center px-2"
+            )}
+            style={{ color: pathname === '/settings' ? undefined : '#5f5e5b' }}
+          >
+            <Settings className="h-4 w-4 shrink-0" />
+            {!isCollapsed && <span>Settings</span>}
+          </Link>
+
+          <div className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent",
+            isCollapsed && "justify-center px-2"
+          )}>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <User className="h-4 w-4" />
+            </div>
+            {!isCollapsed && (
+              <div className="flex flex-col">
+                <span className="text-sm font-medium" style={{ color: '#5f5e5b' }}>John Doe</span>
+                <span className="text-xs" style={{ color: '#5f5e5b' }}>john@example.com</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+    </aside>
+  )
+}

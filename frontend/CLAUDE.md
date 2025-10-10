@@ -1,0 +1,2 @@
+- Use shadcn/ui for basic components (eg. Drawer, Dialog, Card, ...)
+- Use tailwind v4 syntax

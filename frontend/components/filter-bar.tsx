@@ -1,0 +1,103 @@
+'use client'
+
+import { useState } from 'react'
+import { Search } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { AddFilterDropdown } from '@/components/add-filter-dropdown'
+import { FilterTag } from '@/components/filter-tag'
+
+interface Filter {
+  id: string
+  column: string
+  operator: 'equals' | 'contains' | 'starts_with'
+  value: string
+}
+
+interface FilterBarProps {
+  searchTerm: string
+  onSearchChange: (value: string) => void
+  searchPlaceholder?: string
+  filters: Filter[]
+  onFiltersChange: (filters: Filter[]) => void
+  availableColumns: { value: string; label: string }[]
+  getValueOptions?: (column: string) => string[]
+}
+
+export function FilterBar({
+  searchTerm,
+  onSearchChange,
+  searchPlaceholder = 'Search...',
+  filters,
+  onFiltersChange,
+  availableColumns,
+  getValueOptions
+}: FilterBarProps) {
+  const [showSearchInput, setShowSearchInput] = useState(false)
+
+  const handleUpdateFilter = (updatedFilter: Filter) => {
+    onFiltersChange(filters.map(f => f.id === updatedFilter.id ? updatedFilter : f))
+  }
+
+  const handleRemoveFilter = (id: string) => {
+    onFiltersChange(filters.filter(f => f.id !== id))
+  }
+
+  const handleAddFilter = (column: string) => {
+    const newFilter: Filter = {
+      id: `${column}-${Date.now()}`,
+      column,
+      operator: 'equals',
+      value: ''
+    }
+    onFiltersChange([...filters, newFilter])
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex items-center gap-2">
+        {filters.map(f => (
+          <FilterTag
+            key={f.id}
+            filter={f}
+            onUpdate={handleUpdateFilter}
+            onRemove={handleRemoveFilter}
+            columnOptions={[]}
+            valueOptions={getValueOptions ? getValueOptions(f.column) : []}
+          />
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        {showSearchInput ? (
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder={searchPlaceholder}
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onBlur={() => {
+                if (!searchTerm) {
+                  setShowSearchInput(false)
+                }
+              }}
+              className="h-8 border-0 bg-transparent placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-0"
+              autoFocus
+            />
+          </div>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-muted-foreground"
+            onClick={() => setShowSearchInput(true)}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        )}
+        <AddFilterDropdown
+          availableColumns={availableColumns}
+          onAddFilter={handleAddFilter}
+        />
+      </div>
+    </div>
+  )
+}
