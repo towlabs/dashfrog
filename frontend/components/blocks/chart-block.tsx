@@ -3,17 +3,20 @@
 import { createReactBlockSpec } from '@blocknote/react'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
-import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { MoreHorizontal } from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { MetricQueryBuilder } from '@/components/metric-query-builder'
+import type { Metric, Operation } from '@/components/metric-types'
+import { MultiSelect } from '@/components/ui/multi-select'
+import { Separator } from '@/components/ui/separator'
+import { useTimeWindow } from '@/components/time-window-context'
+import { useCallback, useState, useEffect } from 'react'
 
-const demoData = Array.from({ length: 12 }, (_, i) => ({
-  x: `M${i + 1}`,
-  y: Math.round(50 + 30 * Math.sin(i / 2)),
-}))
+type ChartDataPoint = {
+  x: string
+  y: number
+}
 
 export const createChartBlock = createReactBlockSpec(
   {
@@ -22,209 +25,258 @@ export const createChartBlock = createReactBlockSpec(
     // @ts-ignore
     propSchema: {
       grid: { default: true },
-      title: { default: 'Chart' },
-      legend: { default: true },
-      // JSON string containing an array of time series: [{ id, name, metric, color }]
-      series: { default: '' },
+      title: { default: 'Line Chart' },
+      showTitle: { default: false },
+      legend: { default: false },
+      // JSON string: the selected metric object (e.g., {"name": "response_time", ...})
+      selectedMetric: { default: '' },
+      // JSON string: array of filter objects (e.g., [{"label": "status", "operator": "=", "value": "200"}])
+      filters: { default: '' },
+      // JSON string: the selected operation object for statistics
+      operation: { default: '' },
+      // JSON array of label names to group by: ["status", "endpoint"]
+      groupBy: { default: '' },
+      // whether the settings sheet is open
       open: { default: false },
     },
     content: 'none',
   },
   {
     render: ({ block, editor }) => {
+      // Access the time window from context
+      const timeWindow = useTimeWindow()
+
       const grid = (block.props as any).grid !== false
-      const title = (block.props as any).title || 'Chart'
-      const open = Boolean((block.props as any).open)
+      const title = (block.props as any).title || 'Line Chart'
+      const showTitle = (block.props as any).showTitle !== false
       const legend = (block.props as any).legend !== false
 
-      type Series = { id: string; name: string; metric: string; color: string }
-      const parseSeries = (): Series[] => {
+      // Parse selectedMetric from JSON string
+      const parseSelectedMetric = () => {
         try {
-          const s = (block.props as any).series
-          if (s && typeof s === 'string') {
-            const arr = JSON.parse(s)
-            if (Array.isArray(arr)) return arr as Series[]
+          const m = (block.props as any).selectedMetric
+          if (m && typeof m === 'string') {
+            return JSON.parse(m)
+          }
+        } catch {}
+        return null
+      }
+
+      // Parse filters from JSON string
+      const parseFilters = () => {
+        try {
+          const f = (block.props as any).filters
+          if (f && typeof f === 'string') {
+            return JSON.parse(f)
           }
         } catch {}
         return []
       }
 
-      const series = parseSeries()
-      const effectiveSeries: Series[] = series.length > 0
-        ? series
-        : [{ id: 's-1', name: 'Series 1', metric: 'value', color: 'var(--color-chart-1)' }]
+      // Parse operation from JSON string
+      const parseOperation = (): Operation | null => {
+        try {
+          const op = (block.props as any).operation
+          if (op && typeof op === 'string') {
+            return JSON.parse(op) as Operation
+          }
+        } catch {}
+        return null
+      }
 
-      const updateProps = (next: Partial<{ grid: boolean; title: string; legend: boolean }>) => {
-        editor.updateBlock(block, { props: { ...(block.props as any), ...next } } as any)
+      const selectedMetricValue = parseSelectedMetric()
+      const filtersValue = parseFilters()
+      const selectedOperationValue = parseOperation()
+
+      const parseGroupBy = (): string[] => {
+        try {
+          const g = (block.props as any).groupBy
+          if (g && typeof g === 'string') {
+            const arr = JSON.parse(g)
+            if (Array.isArray(arr)) return arr as string[]
+          }
+        } catch {}
+        return []
       }
-      const updateSeries = (next: Series[]) => {
-        editor.updateBlock(block, { props: { ...(block.props as any), series: JSON.stringify(next) } } as any)
+
+      const groupBy = parseGroupBy()
+
+      // State for chart data
+      const [chartData, setChartData] = useState<ChartDataPoint[]>([])
+      const [isLoading, setIsLoading] = useState(false)
+
+      // Mock API call - will be replaced with real API later
+      const fetchChartData = useCallback(async (
+        metric: any,
+        filters: any[],
+        groupBy: string[],
+        timeWindow: { start: Date; end: Date }
+      ) => {
+        setIsLoading(true)
+
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        // Generate mock data based on time window
+        const dataPoints = 12
+        const seed = Date.now() % 100000
+        const rand = (n: number) => {
+          // simple LCG for deterministic-but-changing randomness
+          const a = 1664525
+          const c = 1013904223
+          const m = 2 ** 32
+          const val = (a * (seed + n) + c) % m
+          return val / m
+        }
+        const mockData = Array.from({ length: dataPoints }, (_, i) => ({
+          x: `M${i + 1}`,
+          y: Math.round(40 + 40 * rand(i) + 8 * Math.sin(i / 2)),
+        }))
+
+        setChartData(mockData)
+        setIsLoading(false)
+      }, [])
+
+      // Fetch data whenever dependencies change
+      useEffect(() => {
+        if (selectedMetricValue) {
+          fetchChartData(selectedMetricValue, filtersValue, groupBy, timeWindow)
+        }
+      }, [
+        (block.props as any).selectedMetric, // Use the JSON string directly
+        (block.props as any).filters, // Use the JSON string directly
+        (block.props as any).operation, // Use the JSON string directly
+        (block.props as any).groupBy, // Use the JSON string directly
+        timeWindow.start.getTime(),
+        timeWindow.end.getTime(),
+        fetchChartData
+      ])
+
+      // Get available labels from the selected metric
+      const getAvailableLabels = (): string[] => {
+        if (!selectedMetricValue) return []
+        return selectedMetricValue.labels || []
       }
+
+      // Memoize updateProps to prevent creating new function on every render
+      const updateProps = useCallback((next: Partial<{ grid: boolean; title: string; showTitle: boolean; legend: boolean; selectedMetric: string; filters: string; operation: string; groupBy: string; }>) => {
+        // Always exclude 'open' from being persisted to block props
+        editor.updateBlock(block, { props: next } as any)
+      }, [editor, block])
+
+      const updateGroupBy = (labels: string[]) => {
+        updateProps({ groupBy: JSON.stringify(labels) })
+      }
+
+      // Memoize callbacks to prevent infinite loops
+      const handleMetricChange = useCallback((metric: any) => {
+        updateProps({ selectedMetric: metric ? JSON.stringify(metric) : '' })
+      }, [updateProps])
+
+      const handleFiltersChange = useCallback((filters: any[]) => {
+        updateProps({ filters: JSON.stringify(filters) })
+      }, [updateProps])
+
+      const handleOperationChange = useCallback((operation: Operation | null) => {
+        updateProps({ operation: operation ? JSON.stringify(operation) : '' })
+      }, [updateProps])
 
       return (
         <div className="w-full max-w-full relative">
-          {String(title || '').trim() !== '' && (
+          {showTitle && String(title || '').trim() !== '' && (
             <div className="text-sm font-medium mb-2">{title}</div>
           )}
           <ChartContainer config={{ value: { label: 'Value', color: 'var(--color-chart-1)' } }} className="h-[220px] w-full">
-            <LineChart data={demoData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
               {grid && <CartesianGrid strokeDasharray="3 3" />}
               <XAxis dataKey="x" tickLine={false} axisLine={false} tickMargin={8} />
               <YAxis tickLine={false} axisLine={false} tickMargin={8} width={30} />
               <ChartTooltip content={<ChartTooltipContent />} />
-              {effectiveSeries.map((s, idx) => (
-                <Line
-                  key={s.id}
-                  type="monotone"
-                  dataKey="y"
-                  stroke={s.color || 'var(--color-chart-1)'}
-                  strokeWidth={2}
-                  dot={false}
-                  strokeDasharray={idx % 2 === 1 ? '6 4' : undefined}
-                />
-              ))}
+              <Line
+                type="monotone"
+                dataKey="y"
+                stroke="var(--color-chart-1)"
+                strokeWidth={2}
+                dot={false}
+              />
             </LineChart>
           </ChartContainer>
 
-          {legend && (
+          {legend && groupBy.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-              {effectiveSeries.map((s) => (
-                <div key={`legend-${s.id}`} className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color || color }} />
-                  <span className="font-medium text-foreground">{s.name}</span>
-                </div>
-              ))}
+              <div className="flex items-center gap-1">
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'var(--color-chart-1)' }} />
+                <span className="font-medium text-foreground">Group 1</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'var(--color-chart-2)' }} />
+                <span className="font-medium text-foreground">Group 2</span>
+              </div>
             </div>
           )}
 
           {/* Settings Drawer */}
-          <Sheet open={open} onOpenChange={(v) => editor.updateBlock(block, { props: { ...(block.props as any), open: Boolean(v) } } as any)}>
+          <Sheet open={Boolean((block.props as any).open)}
+          onOpenChange={(v) => {
+            editor.updateBlock(block, { props: { open: Boolean(v) } } as any)
+          }}>
             <SheetContent className="w-[360px] sm:max-w-none p-0 flex h-full flex-col">
               <div className="border-b p-6">
                 <SheetHeader>
-                  <SheetTitle>Chart Settings</SheetTitle>
+                  <SheetTitle>Settings</SheetTitle>
                 </SheetHeader>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                <div className="space-y-1">
-                  <div className="text-xs text-muted-foreground">Title</div>
-                  <Input value={title} onChange={(e) => updateProps({ title: e.target.value })} />
-                </div>
-                {/* no chart-level color; colors are per series */}
-                <div className="flex items-center gap-2">
-                  <Checkbox checked={grid} onCheckedChange={(v) => updateProps({ grid: Boolean(v) })} />
-                  <span className="text-sm">Show grid</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox checked={legend} onCheckedChange={(v) => updateProps({ legend: Boolean(v) })} />
-                  <span className="text-sm">Show legend</span>
+              <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                {/* Display Section */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Display</h3>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground font-medium">Title</label>
+                    <Input value={title} onChange={(e) => updateProps({ title: e.target.value })} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={showTitle} onCheckedChange={(v) => updateProps({ showTitle: Boolean(v) })} />
+                    <label className="text-sm cursor-pointer">Show title</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={grid} onCheckedChange={(v) => updateProps({ grid: Boolean(v) })} />
+                    <label className="text-sm cursor-pointer">Show grid</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={legend} onCheckedChange={(v) => updateProps({ legend: Boolean(v) })} />
+                    <label className="text-sm cursor-pointer">Show legend</label>
+                  </div>
                 </div>
 
-                {/* Time Series Editor */}
-                <div className="space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">Time series</div>
-                  <div className="space-y-3">
-                    {effectiveSeries.map((s, idx) => (
-                      <div key={s.id} className="rounded-md border p-3 space-y-2">
-                        <div className="space-y-1">
-                          <div className="text-xs text-muted-foreground">Name</div>
-                          <Input
-                            value={s.name}
-                            onChange={(e) => {
-                              const next = [...effectiveSeries]
-                              next[idx] = { ...s, name: e.target.value }
-                              updateSeries(next)
-                            }}
-                            placeholder="Series name"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-xs text-muted-foreground">Metric</div>
-                          <Input
-                            value={s.metric}
-                            onChange={(e) => {
-                              const next = [...effectiveSeries]
-                              next[idx] = { ...s, metric: e.target.value }
-                              updateSeries(next)
-                            }}
-                            placeholder="e.g. response_time_ms"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-xs text-muted-foreground">Color</div>
-                          <Select
-                            value={s.color}
-                            onValueChange={(v) => {
-                              const next = [...effectiveSeries]
-                              next[idx] = { ...s, color: v }
-                              updateSeries(next)
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="var(--color-chart-1)">
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-block h-0.5 w-6 rounded-full" style={{ background: 'var(--color-chart-1)' }} />
-                                  <span>Red</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="var(--color-chart-2)">
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-block h-0.5 w-6 rounded-full" style={{ background: 'var(--color-chart-2)' }} />
-                                  <span>Blue</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="var(--color-chart-3)">
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-block h-0.5 w-6 rounded-full" style={{ background: 'var(--color-chart-3)' }} />
-                                  <span>Green</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="var(--color-chart-4)">
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-block h-0.5 w-6 rounded-full" style={{ background: 'var(--color-chart-4)' }} />
-                                  <span>Yellow</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="var(--color-chart-5)">
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-block h-0.5 w-6 rounded-full" style={{ background: 'var(--color-chart-5)' }} />
-                                  <span>Orange</span>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex justify-end pt-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              const next = effectiveSeries.filter((x) => x.id !== s.id)
-                              updateSeries(next)
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="pt-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const id = `s-${Date.now()}`
-                        const colorVar = `var(--color-chart-${(effectiveSeries.length % 5) + 1})`
-                        const next = [...effectiveSeries, { id, name: `Series ${effectiveSeries.length + 1}`, metric: 'value', color: colorVar }]
-                        updateSeries(next)
-                      }}
-                    >
-                      Add series
-                    </Button>
+                <Separator className="my-4" />
+
+                {/* Data Section */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Data</h3>
+                  <MetricQueryBuilder
+                    selectedMetric={selectedMetricValue}
+                    onMetricChange={handleMetricChange}
+                    selectedOperation={selectedOperationValue}
+                    onOperationChange={handleOperationChange}
+                    filters={filtersValue}
+                    onFiltersChange={handleFiltersChange}
+                  />
+                </div>
+
+                <Separator className="my-4" />
+
+                {/* Group Section */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium text-muted-foreground">Group</h3>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground font-medium">Split by</label>
+                    <MultiSelect
+                      options={getAvailableLabels().map(label => ({ value: label, label }))}
+                      value={groupBy}
+                      onChange={updateGroupBy}
+                      placeholder="Select labels to group by..."
+                      searchPlaceholder="Search labels..."
+                    />
                   </div>
                 </div>
               </div>
