@@ -698,7 +698,12 @@ export default function EventsPage() {
 
                 {/* Rich Text Editor */}
                 <div className="min-h-[400px]">
-                  <ClientBlockNote />
+                  <ClientBlockNote
+                    timeWindow={{
+                      start: eventStartDate || new Date(),
+                      end: eventEndDate || new Date(),
+                    }}
+                  />
                 </div>
               </div>
             </div>

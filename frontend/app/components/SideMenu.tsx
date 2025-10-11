@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { useNotebookTitle } from './notebook-title-context'
+import { useNotebooks } from './notebooks-context'
 import { Button } from '@/components/ui/button'
 import SearchDialog from './SearchDialog'
+import { notebookStorage } from '@/lib/notebook-storage'
 import {
   Home,
   Search,
@@ -22,6 +23,8 @@ import {
   BookOpen,
   Tags
 } from 'lucide-react'
+import { v4 as uuidv4 } from 'uuid'
+
 
 const topMenuItems = [
   { id: 'home', label: 'Home', icon: Home, href: '/' },
@@ -29,16 +32,6 @@ const topMenuItems = [
   { id: 'catalog', label: 'Data Catalog', icon: BookOpen, href: '/catalog' },
   { id: 'labels', label: 'Labels', icon: Tags, href: '/labels' },
   { id: 'events', label: 'Calendar', icon: Calendar, href: '/events' },
-]
-
-
-// Sample notebooks data - in real app this would come from API
-const notebooks = [
-  { id: 'performance', name: 'Performance Analysis', href: '/notebook/performance' },
-  { id: 'errors', name: 'Error Investigation', href: '/notebook/errors' },
-  { id: 'analytics', name: 'User Behavior', href: '/notebook/analytics' },
-  { id: 'conversion', name: 'Conversion Funnel', href: '/notebook/conversion' },
-  { id: 'monitoring', name: 'System Health', href: '/notebook/monitoring' },
 ]
 
 interface SideMenuProps {
@@ -49,8 +42,24 @@ interface SideMenuProps {
 export default function SideMenu({ isCollapsed: controlledCollapsed, onToggleCollapse }: SideMenuProps = {}) {
   const pathname = useLocation().pathname
   const [internalCollapsed, setInternalCollapsed] = useState(false)
+  const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
-  const { currentNotebookTitle } = useNotebookTitle()
+  const { notebooks, refreshNotebooks } = useNotebooks()
+
+  const handleCreateNotebook = () => {
+    const newNotebook = notebookStorage.create({
+      title: 'Untitled Notebook',
+      description: '',
+      locked: false,
+      timeWindow: {
+        type: 'relative',
+        metadata: { value: '24h' }
+      },
+      blockNoteId: uuidv4(),
+    })
+    refreshNotebooks()
+    navigate(`/notebook/${newNotebook.id}`)
+  }
 
   // Use controlled state if provided, otherwise use internal state
   const isCollapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed
@@ -81,7 +90,7 @@ export default function SideMenu({ isCollapsed: controlledCollapsed, onToggleCol
           <Package className="h-6 w-6" />
           {!isCollapsed && (
             <span className="font-semibold">
-              {pathname.startsWith('/notebook/') && currentNotebookTitle ? currentNotebookTitle : 'DashFrog'}
+              DashFrog
             </span>
           )}
         </div>
@@ -171,32 +180,48 @@ export default function SideMenu({ isCollapsed: controlledCollapsed, onToggleCol
               <h3 className="text-xs font-medium" style={{ color: '#5f5e5b' }}>
                 Notebooks
               </h3>
-              <button
-                className="opacity-0 group-hover:opacity-100 hover:bg-accent rounded p-1 transition-all"
-                title="Add notebook"
-              >
-                <Plus className="h-3 w-3" />
-              </button>
+              {notebooks.length > 0 && (
+                <button
+                  onClick={handleCreateNotebook}
+                  className="opacity-0 group-hover:opacity-100 hover:bg-accent rounded p-1 transition-all"
+                  title="Add notebook"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              )}
             </div>
           )}
-          {notebooks.map((notebook) => {
-            const isNotebookActive = pathname === notebook.href
-            return (
-              <Link
-                key={notebook.id}
-                to={notebook.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent",
-                  isNotebookActive && "bg-accent text-accent-foreground",
-                  isCollapsed && "justify-center px-2"
-                )}
-                style={{ color: isNotebookActive ? undefined : '#5f5e5b' }}
+          {notebooks.length === 0 ? (
+            !isCollapsed && (
+              <Button
+                onClick={handleCreateNotebook}
+                variant="outline"
+                className="mx-2 my-1 flex w-[calc(100%-1rem)] items-center justify-center gap-2 px-3 py-2"
               >
-                <Hash className="h-4 w-4 shrink-0 text-muted-foreground" />
-                {!isCollapsed && <span className="flex-1">{notebook.name}</span>}
-              </Link>
+                <Plus className="h-4 w-4 text-muted-foreground" />
+                Create new notebook
+              </Button>
             )
-          })}
+          ) : (
+            notebooks.map((notebook) => {
+              const isNotebookActive = pathname === `/notebook/${notebook.id}`
+              return (
+                <Link
+                  key={notebook.id}
+                  to={`/notebook/${notebook.id}`}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent",
+                    isNotebookActive && "bg-accent text-accent-foreground",
+                    isCollapsed && "justify-center px-2"
+                  )}
+                  style={{ color: isNotebookActive ? undefined : '#5f5e5b' }}
+                >
+                  <Hash className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  {!isCollapsed && <span className="flex-1">{notebook.title}</span>}
+                </Link>
+              )
+            })
+          )}
 
         </nav>
       </div>

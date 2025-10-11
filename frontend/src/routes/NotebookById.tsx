@@ -1,11 +1,51 @@
 import Notebook from '@/app/components/Notebook'
-import { useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { notebookStorage } from '@/lib/notebook-storage'
+import { useNotebooks } from '@/app/components/notebooks-context'
+import type { NotebookData } from '@/lib/notebook-types'
 
 export default function NotebookById() {
   const { id } = useParams<{ id: string }>()
-  return (
-    <Notebook title={id ? 'Untitled' : 'Untitled'} description="" />
-  )
+  const [notebook, setNotebook] = useState<NotebookData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const { refreshNotebooks, setCurrentNotebookId } = useNotebooks()
+
+  const loadNotebook = () => {
+    if (!id) return
+
+    setIsLoading(true)
+    try {
+      // Load notebook from storage
+      const loaded = notebookStorage.load(id)
+      if (loaded) {
+        setNotebook(loaded)
+        setCurrentNotebookId(id)
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadNotebook()
+
+    return () => {
+      setCurrentNotebookId(undefined)
+    }
+  }, [id, setCurrentNotebookId])
+
+  const handleUpdate = () => {
+    // Reload the notebook from storage and refresh the sidebar
+    loadNotebook()
+    refreshNotebooks()
+  }
+
+  if (!id) {
+    return <Navigate to="/" />
+  }
+
+  return <Notebook notebook={notebook} isLoading={isLoading} onUpdate={handleUpdate} />
 }
 
 
