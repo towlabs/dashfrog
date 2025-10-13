@@ -25,8 +25,11 @@ from opentelemetry.sdk.metrics._internal.export import PeriodicExportingMetricRe
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import (
+    INVALID_SPAN,
     NoOpTracerProvider,
     ProxyTracerProvider,
+    get_current_span,
+    get_tracer,
     get_tracer_provider,
     set_tracer_provider,
 )
@@ -102,9 +105,7 @@ class DashFrog:
         metric_exporter = (
             HTTPMetricExporter(endpoint=f"{http_server}/metrics")
             if config.infra.disable_grpc
-            else OTLPMetricExporter(
-                endpoint=grpc_server, insecure=config.infra.grpc_insecure
-            )
+            else OTLPMetricExporter(endpoint=grpc_server, insecure=config.infra.grpc_insecure)
         )
 
         reader = PeriodicExportingMetricReader(
@@ -130,10 +131,15 @@ class DashFrog:
         **labels,
     ) -> Generator[Flow, None, None]:
         """Start a new Flow of events. Use `step` to create an inside step."""
-        with Flow(
-            name, self.service_name, description, auto_end=auto_end, **labels
-        ) as flow:
-            yield flow
+
+        span = get_current_span()
+        if span == INVALID_SPAN:
+            with get_tracer("dashfrog").start_as_current_span(name) as span:
+                with Flow(name, self.service_name, description, auto_end=auto_end, **labels) as flow:
+                    yield flow
+        else:
+            with Flow(name, self.service_name, description, auto_end=auto_end, **labels) as flow:
+                yield flow
 
     @contextmanager
     def step(
@@ -145,10 +151,15 @@ class DashFrog:
         **labels,
     ):
         """Start a new step inside the existing flow. Step does not nest with steps."""
-        with Step(
-            name, description, auto_end=auto_end, auto_start=auto_start, **labels
-        ) as step:
-            yield step
+
+        span = get_current_span()
+        if span == INVALID_SPAN:
+            with get_tracer("dashfrog").start_as_current_span(name) as span:
+                with Step(name, description, auto_end=auto_end, auto_start=auto_start, **labels) as step:
+                    yield step
+        else:
+            with Step(name, description, auto_end=auto_end, auto_start=auto_start, **labels) as step:
+                yield step
 
     @contextmanager
     def current_flow(
@@ -166,9 +177,7 @@ class DashFrog:
         auto_end: bool = True,
     ):
         """Start a new step inside the existing flow. Step does not nest with steps."""
-        with Step(
-            "", auto_end=auto_end, auto_start=auto_start, from_context=True
-        ) as step:
+        with Step("", auto_end=auto_end, auto_start=auto_start, from_context=True) as step:
             yield step
 
     def observable(
@@ -180,9 +189,7 @@ class DashFrog:
     ) -> Observable:
         """Observe metrics. /!\\ observable metrics are identified by the name, description and unit tuple."""
 
-        return Observable(
-            self.__meter.create_histogram(name, unit, description), labels
-        )
+        return Observable(self.__meter.create_histogram(name, unit, description), labels)
 
     ### Instrumentation ####
     #### Web

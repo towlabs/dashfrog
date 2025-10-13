@@ -1,10 +1,15 @@
-collector_server: http://0.0.0.0
+collector_server: http://localhost
 auto_steps_instrumented: []
 auto_steps:
   label_key: "origin"
   web_value: "API"
   http_value: "InnerCall"
   tasks_value: "ASYNC"
+clickhouse:
+  database: dashfrog
+  host: localhost
+  user: clickhouse
+  password: change-me-password
 metric_exporter_delay: 10000 # 10s
 infra:
   grpc_insecure: true

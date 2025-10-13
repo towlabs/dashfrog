@@ -52,7 +52,12 @@ class BaseSpan(AbstractContextManager):
             )
             self.__ctx_token = context.attach(ctx)
 
-        logger = get_logger(kind=self._kind, name=self.name, attached_context=baggage.get_all())
+        logger = get_logger(
+            kind=self._kind,
+            name=self.name,
+            attached_context=baggage.get_all(),
+            trace_id=self.__entity.trace_id,
+        )
 
         if not self.initialized:
             logger.info(
@@ -88,15 +93,22 @@ class BaseSpan(AbstractContextManager):
         traceback: TracebackType | None,
     ):
         """Raise any exception triggered within the runtime context."""
-        logger = get_logger(kind=self._kind, name=self.name, attached_context=baggage.get_all())
+        logger = get_logger(
+            kind=self._kind, name=self.name, attached_context=baggage.get_all()
+        )
 
         if self.__auto_end or exc_value is not None:
             self.__entity.ended_at = datetime.now(UTC)
             if self.__entity.started_at:
-                self.__entity.duration = int((self.__entity.ended_at - self.__entity.started_at).total_seconds() * 1000)
+                self.__entity.duration = int(
+                    (self.__entity.ended_at - self.__entity.started_at).total_seconds()
+                    * 1000
+                )
 
             if exc_value is not None:
-                logger.error(f"ending object {self._kind}::{self.name} with error")  # , exc_info=exc_value)
+                logger.error(
+                    f"ending object {self._kind}::{self.name} with error"
+                )  # , exc_info=exc_value)
                 self.__entity.status = entities.Status.FAILED
                 self.__entity.status_message = str(exc_value)
             else:
@@ -162,11 +174,7 @@ class Flow(BaseSpan):
             return _flow
 
         span = get_current_span()
-        if span == INVALID_SPAN:
-            with get_tracer("dashfrog").start_as_current_span(name) as span:
-                flow = __init()
-        else:
-            flow = __init()
+        flow = __init()
 
         super().__init__(
             flow,
@@ -177,7 +185,9 @@ class Flow(BaseSpan):
         )
 
     @contextmanager
-    def step(self, name: str, description: str | None = None, **labels) -> Generator["Step", None, None]:
+    def step(
+        self, name: str, description: str | None = None, **labels
+    ) -> Generator["Step", None, None]:
         """Start a child flow"""
 
         with Step(name, description, **labels) as step:
@@ -227,6 +237,11 @@ class Step(BaseSpan):
         span = get_current_span()
         if span == INVALID_SPAN:
             with get_tracer("dashfrog").start_as_current_span(name) as span:
+                get_logger(
+                    kind="step",
+                    name=name,
+                    trace_id=str(span.get_span_context().trace_id),
+                ).error("no current span")
                 step = __init()
         else:
             step = __init()
