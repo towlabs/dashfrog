@@ -12,12 +12,13 @@ export default function LayoutClient({
   children: React.ReactNode
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false)
 
   return (
     <NotebookTitleProvider>
       <div className="relative flex min-h-screen">
-        {/* Desktop Sidebar */}
-        <SideMenu />
+        {/* Desktop Sidebar - Fixed */}
+        <SideMenu isCollapsed={sidebarCollapsed} onToggleCollapse={setSidebarCollapsed} />
 
         {/* Mobile Sidebar */}
         <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -26,8 +27,8 @@ export default function LayoutClient({
           </DrawerContent>
         </Drawer>
 
-        {/* Main Content */}
-        <div className="flex flex-1 flex-col">
+        {/* Main Content - With left margin to account for fixed sidebar */}
+        <div className={`flex flex-1 flex-col transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
           <Header onMenuClick={() => setMobileMenuOpen(true)} />
           <main className="flex-1 overflow-y-auto">
             {children}

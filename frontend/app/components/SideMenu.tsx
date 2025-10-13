@@ -39,20 +39,33 @@ const notebooks = [
   { id: 'monitoring', name: 'System Health', href: '/notebook/monitoring' },
 ]
 
-export default function SideMenu() {
+interface SideMenuProps {
+  isCollapsed?: boolean
+  onToggleCollapse?: (collapsed: boolean) => void
+}
+
+export default function SideMenu({ isCollapsed: controlledCollapsed, onToggleCollapse }: SideMenuProps = {}) {
   const pathname = useLocation().pathname
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [internalCollapsed, setInternalCollapsed] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const { currentNotebookTitle } = useNotebookTitle()
 
+  // Use controlled state if provided, otherwise use internal state
+  const isCollapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed
+
   const toggleCollapse = () => {
-    setIsCollapsed(!isCollapsed)
+    const newCollapsed = !isCollapsed
+    if (onToggleCollapse) {
+      onToggleCollapse(newCollapsed)
+    } else {
+      setInternalCollapsed(newCollapsed)
+    }
   }
 
   return (
     <aside
       className={cn(
-        "relative flex h-screen flex-col border-r transition-all duration-300",
+        "fixed left-0 top-0 flex h-screen flex-col border-r transition-all duration-300 z-30",
         isCollapsed ? "w-16" : "w-64",
         "hidden md:flex"
       )}

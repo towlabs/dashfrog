@@ -34,7 +34,7 @@ Content-Type: application/json
 PATCH 0.0.0.0:8000/users/2
 Content-Type: application/json
 
-{"display_name": "Bob Morane"}
+{"display_name": "Bob cafard"}
 
 ### Read ticket
 GET 0.0.0.0:8000/tickets/1

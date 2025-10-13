@@ -14,12 +14,12 @@ clickhouse:
   image:
     repository: clickhouse/clickhouse-server
     pullPolicy: IfNotPresent
-    tag: "latest"  # Use specific version in production
-  
+    tag: "latest"
+
   # ClickHouse configuration - MUST BE CHANGED
   config:
-    user: "clickhouse"
-    password: "CHANGE-ME-SECURE-PASSWORD"  # MUST be changed!
+    user: "tower-ch"
+    password: "3cqG0IT1EuOdlLlZNM3zrkhWH"  # MUST be changed!
     database: "dashfrog"
     port: 9000
     httpPort: 8123
@@ -46,7 +46,7 @@ clickhouse:
   persistence:
     enabled: true
     size: 50Gi  # Adjust based on your data volume
-    storageClass: "fast-ssd"  # Use fast storage for production
+    storageClass: "standard"  # Use fast storage for production
   
   # Security context
   securityContext:
@@ -89,7 +89,7 @@ prometheus:
   persistence:
     enabled: true
     size: 20Gi  # Adjust based on your retention needs
-    storageClass: "fast-ssd"  # Use fast storage for production
+    storageClass: "standard"  # Use fast storage for production
   
   # Security context
   securityContext:
@@ -100,12 +100,12 @@ prometheus:
 # Collector Configuration - Production
 collector:
   enabled: true
-  replicaCount: 2  # Run multiple replicas for high availability
+  replicaCount: 1  # Run multiple replicas for high availability
   
   image:
-    repository: "your-registry/dashfrog-collector"  # REQUIRED - your custom image
+    repository: "ghcr.io/towlabs/dashfrog/collector"  # Must be provided - your custom collector image
     pullPolicy: IfNotPresent
-    tag: "v1.0.0"  # Use specific version tag
+    tag: "latest"
   
   # Collector configuration
   config:

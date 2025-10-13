@@ -8,8 +8,8 @@ auto_steps:
 clickhouse:
   database: dashfrog
   host: localhost
-  user: clickhouse
-  password: change-me-password
+  user: tower-ch
+  password: 3cqG0IT1EuOdlLlZNM3zrkhWH
 metric_exporter_delay: 10000 # 10s
 infra:
   grpc_insecure: true

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -50,124 +50,15 @@ import {
   PopoverContent,
 } from '@/components/ui/popover'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
-import { Search, Download, RefreshCcw, Workflow, TrendingUp, Package, Clock, CheckCircle2, XCircle, PlayCircle, Calendar, ChevronDown, Plus, Edit3 } from 'lucide-react'
-import { FilterBar } from '@/components/filter-bar'
+import { Search, Download, RefreshCcw, Workflow, TrendingUp, Package, Clock, CheckCircle2, XCircle, PlayCircle, Calendar, ChevronDown, Plus, Edit3, Loader2 } from 'lucide-react'
+import {FilterBar, op_to_request} from '@/components/filter-bar'
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ReferenceLine } from 'recharts'
-
-// Sample Workflows data
-const sampleWorkflows = [
-  {
-    id: 1,
-    name: 'Order Processing',
-    description: 'Handles incoming orders from checkout to fulfillment',
-    lastRun: '2024-01-15 14:30:00',
-    status: 'success' as const,
-    labels: { tenant: 'acme', environment: 'production' },
-    rules: [
-      {
-        id: 'workflow-rule-1',
-        name: 'Workflow Failure Alert',
-        description: 'Send alert when workflow fails',
-        condition: 'greater' as const,
-        threshold: 0,
-        duration: 0,
-        action: 'email' as const,
-        status: 'active' as const,
-        ruleType: 'event' as const,
-        event: 'fail' as const
-      },
-      {
-        id: 'workflow-rule-2',
-        name: 'Long Running Alert',
-        description: 'Alert when workflow runs longer than 30 minutes',
-        condition: 'greater' as const,
-        threshold: 0,
-        duration: 0,
-        action: 'slack' as const,
-        status: 'active' as const,
-        ruleType: 'duration' as const,
-        maxDuration: 30
-      },
-      {
-        id: 'workflow-rule-3',
-        name: 'Daily Schedule Check',
-        description: 'Alert if workflow hasn\'t completed by 9 AM daily',
-        condition: 'greater' as const,
-        threshold: 0,
-        duration: 0,
-        action: 'email' as const,
-        status: 'active' as const,
-        ruleType: 'schedule' as const,
-        expectedTime: '09:00'
-      }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Order Processing',
-    description: 'Handles incoming orders from checkout to fulfillment',
-    lastRun: '2024-01-14 16:22:00',
-    status: 'failed' as const,
-    labels: { tenant: 'foo', environment: 'production' },
-  },
-  {
-    id: 3,
-    name: 'Customer Onboarding',
-    description: 'New customer registration and verification workflow',
-    lastRun: '2024-01-14 10:15:00',
-    status: 'success' as const,
-    labels: { tenant: 'acme', environment: 'production' },
-  },
-  {
-    id: 4,
-    name: 'Inventory Sync',
-    description: 'Synchronizes inventory across warehouses and online channels',
-    lastRun: '2024-01-13 16:45:00',
-    status: 'failed' as const,
-    labels: { tenant: 'acme', environment: 'staging' },
-  },
-  {
-    id: 5,
-    name: 'Payment Reconciliation',
-    description: 'Daily reconciliation of payment transactions',
-    lastRun: '2024-01-12 09:00:00',
-    status: 'success' as const,
-    labels: { tenant: 'foo', environment: 'production' },
-  },
-  {
-    id: 6,
-    name: 'Email Campaign',
-    description: 'Automated marketing email campaign workflow',
-    lastRun: '2024-01-11 13:20:00',
-    status: 'running' as const,
-    labels: { tenant: 'bar', environment: 'production' },
-  },
-  {
-    id: 7,
-    name: 'Data Backup',
-    description: 'Nightly backup of critical business data',
-    lastRun: '2024-01-10 23:00:00',
-    status: 'success' as const,
-    labels: { tenant: 'acme', environment: 'production' },
-  },
-  {
-    id: 8,
-    name: 'Health Check Monitoring',
-    description: 'Monitors system health and sends alerts',
-    lastRun: '2024-01-09 08:30:00',
-    status: 'failed' as const,
-    labels: { tenant: 'foo', environment: 'staging' },
-  },
-  {
-    id: 9,
-    name: 'Report Generation',
-    description: 'Weekly business intelligence report generation',
-    lastRun: '2024-01-08 12:00:00',
-    status: 'success' as const,
-    labels: { tenant: 'bar', environment: 'production' },
-  },
-]
+import { Flows } from '@/src/services/api/flows'
+import type { Flow } from '@/src/types/flow'
+import type { Step } from '@/src/types/step'
+import type { Filter } from '@/src/types/filter'
+import { StepTimeline } from '@/components/step-timeline'
 
 // Sample Metrics data
 const sampleMetrics = [
@@ -373,11 +264,11 @@ const chartConfig: ChartConfig = {
     label: "Total Runs",
     color: "#3b82f6",
   },
-  successful: {
+  SUCCESS: {
     label: "Successful",
     color: "#10b981",
   },
-  failed: {
+  FAILED: {
     label: "Failed",
     color: "#ef4444",
   },
@@ -404,6 +295,36 @@ const generateRunHistory = () => {
       failed: Math.floor(Math.random() * 3),
     })
   }
+  return data
+}
+
+// Generate run history data from real Flow data
+const generateRunHistoryFromFlows = (flows: Flow[]) => {
+  const data = []
+  const now = new Date()
+  
+  // Group flows by hour over the last 24 hours
+  for (let i = 23; i >= 0; i--) {
+    const hourStart = new Date(now.getTime() - i * 60 * 60 * 1000)
+    const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000)
+    
+    const flowsInHour = flows.filter(flow => {
+      if (!flow.created_at) return false
+      const flowTime = new Date(flow.created_at)
+      return flowTime >= hourStart && flowTime < hourEnd
+    })
+    
+    const successful = flowsInHour.filter(f => f.status === 'SUCCESS' || f.status === 'completed').length
+    const failed = flowsInHour.filter(f => f.status === 'FAILED' || f.status === 'failed').length
+    
+    data.push({
+      time: hourStart.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      runs: flowsInHour.length,
+      successful,
+      failed,
+    })
+  }
+  
   return data
 }
 
@@ -448,85 +369,6 @@ const generateMetricHistory = (metricName: string, thresholds?: { warning?: numb
   }
   return data
 }
-
-// Sample recent runs data with major business steps
-const generateRecentRuns = () => [
-  {
-    id: 'run-1',
-    startTime: '2024-01-15 14:28:00',
-    endTime: '2024-01-15 14:30:00',
-    duration: '2m 0s',
-    status: 'success',
-    totalDurationMs: 120000,
-    steps: [
-      { id: 'step-1', name: 'Order Validation', startMs: 0, durationMs: 5000, status: 'success' },
-      { id: 'step-2', name: 'Inventory Check', startMs: 5000, durationMs: 40000, status: 'success' },
-      { id: 'step-3', name: 'Payment Processing', startMs: 45000, durationMs: 45000, status: 'success' },
-      { id: 'step-4', name: 'Customer Notification', startMs: 90000, durationMs: 25000, status: 'success' },
-      { id: 'step-5', name: 'Order Completion', startMs: 115000, durationMs: 5000, status: 'success' },
-    ]
-  },
-  {
-    id: 'run-2',
-    startTime: '2024-01-15 14:15:00',
-    endTime: '2024-01-15 14:17:30',
-    duration: '2m 30s',
-    status: 'success',
-    totalDurationMs: 150000,
-    steps: [
-      { id: 'step-1', name: 'Order Validation', startMs: 0, durationMs: 3000, status: 'success' },
-      { id: 'step-2', name: 'Inventory Check', startMs: 3000, durationMs: 52000, status: 'success' },
-      { id: 'step-3', name: 'Payment Processing', startMs: 55000, durationMs: 55000, status: 'success' },
-      { id: 'step-4', name: 'Customer Notification', startMs: 110000, durationMs: 35000, status: 'success' },
-      { id: 'step-5', name: 'Order Completion', startMs: 145000, durationMs: 5000, status: 'success' },
-    ]
-  },
-  {
-    id: 'run-3',
-    startTime: '2024-01-15 14:00:00',
-    endTime: '2024-01-15 14:01:45',
-    duration: '1m 45s',
-    status: 'failed',
-    totalDurationMs: 105000,
-    steps: [
-      { id: 'step-1', name: 'Order Validation', startMs: 0, durationMs: 4000, status: 'success' },
-      { id: 'step-2', name: 'Inventory Check', startMs: 4000, durationMs: 31000, status: 'success' },
-      { id: 'step-3', name: 'Payment Processing', startMs: 35000, durationMs: 45000, status: 'failed', error: 'Payment declined' },
-      { id: 'step-4', name: 'Customer Notification', startMs: 80000, durationMs: 0, status: 'skipped' },
-      { id: 'step-5', name: 'Order Cancellation', startMs: 80000, durationMs: 25000, status: 'success' },
-    ]
-  },
-  {
-    id: 'run-4',
-    startTime: '2024-01-15 13:45:00',
-    endTime: '2024-01-15 13:47:20',
-    duration: '2m 20s',
-    status: 'success',
-    totalDurationMs: 140000,
-    steps: [
-      { id: 'step-1', name: 'Order Validation', startMs: 0, durationMs: 2000, status: 'success' },
-      { id: 'step-2', name: 'Inventory Check', startMs: 2000, durationMs: 46000, status: 'success' },
-      { id: 'step-3', name: 'Payment Processing', startMs: 48000, durationMs: 47000, status: 'success' },
-      { id: 'step-4', name: 'Customer Notification', startMs: 95000, durationMs: 35000, status: 'success' },
-      { id: 'step-5', name: 'Order Completion', startMs: 130000, durationMs: 10000, status: 'success' },
-    ]
-  },
-  {
-    id: 'run-5',
-    startTime: '2024-01-15 13:30:00',
-    endTime: '2024-01-15 13:32:10',
-    duration: '2m 10s',
-    status: 'success',
-    totalDurationMs: 130000,
-    steps: [
-      { id: 'step-1', name: 'Order Validation', startMs: 0, durationMs: 3000, status: 'success' },
-      { id: 'step-2', name: 'Inventory Check', startMs: 3000, durationMs: 37000, status: 'success' },
-      { id: 'step-3', name: 'Payment Processing', startMs: 40000, durationMs: 45000, status: 'success' },
-      { id: 'step-4', name: 'Customer Notification', startMs: 85000, durationMs: 40000, status: 'success' },
-      { id: 'step-5', name: 'Order Completion', startMs: 125000, durationMs: 5000, status: 'success' },
-    ]
-  },
-]
 
 
 // Helper function to render steps in a simple waterfall view
@@ -603,18 +445,22 @@ const renderSteps = (steps: any[], totalDuration: number) => {
   })
 }
 
-type ActiveFilter = { id: string; column: string; operator: 'equals' | 'contains' | 'starts_with'; value: string }
+type ActiveFilter = { id: string; column: string; operator: 'equals' | 'contains' | 'not_equals' | 'in' | 'not_in'; value: string }
 
 export default function CatalogPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('workflows')
-  const [workflows, setWorkflows] = useState<Workflow[]>(sampleWorkflows)
+  const [workflows, setWorkflows] = useState<Workflow[]>([])
+  const [flows, setFlows] = useState<Flow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const normalizeLabels = (arr: any[]) => arr.map((m) => ({ ...m, labels: Object.fromEntries(Object.entries(m.labels).filter(([_, v]) => typeof v === 'string')) }))
   const [metrics, setMetrics] = useState<Metric[]>(normalizeLabels(sampleMetrics) as Metric[])
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null)
+  const [selectedWorkflow, setSelectedWorkflow] = useState<Flow | null>(null)
   const [runHistory, setRunHistory] = useState<any[]>([])
   const [recentRuns, setRecentRuns] = useState<any[]>([])
+  const [expandedFlowTraceId, setExpandedFlowTraceId] = useState<string | null>(null)
   const [timeWindow, setTimeWindow] = useState('24h')
   const [customDateRange, setCustomDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: undefined,
@@ -638,9 +484,160 @@ export default function CatalogPage() {
     expectedTime: '09:00',
     maxDuration: 30
   })
-  const [expandedRun, setExpandedRun] = useState<string | null>(null)
+
   const [metricChartTab, setMetricChartTab] = useState<'count' | 'value'>('value')
   const [filters, setFilters] = useState<ActiveFilter[]>([])
+  const [flowSteps, setFlowSteps] = useState<Step[]>([])
+  const [loadingSteps, setLoadingSteps] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false)
+  const loadMoreTriggerRef = React.useRef<HTMLDivElement>(null)
+
+  // Helper function to convert timeWindow to date range params
+  const getDateRangeFromTimeWindow = (): { from_date?: string; to_date?: string } => {
+    const now = new Date()
+    let fromDate: Date | undefined
+    let toDate: Date = now
+
+    switch (timeWindow) {
+      case '15m':
+        fromDate = new Date(now.getTime() - 15 * 60 * 1000)
+        break
+      case '30m':
+        fromDate = new Date(now.getTime() - 30 * 60 * 1000)
+        break
+      case '1h':
+        fromDate = new Date(now.getTime() - 60 * 60 * 1000)
+        break
+      case '24h':
+        fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        break
+      case '7d':
+        fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case '30d':
+        fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        break
+      case 'custom':
+        if (customDateRange.from && customDateRange.to) {
+          fromDate = customDateRange.from
+          toDate = customDateRange.to
+        }
+        break
+    }
+
+    const dateRange: { from_date?: string; to_date?: string } = {}
+    if (fromDate) {
+      dateRange.from_date = fromDate.toISOString()
+    }
+    dateRange.to_date = toDate.toISOString()
+
+    return dateRange
+  }
+
+  useEffect(() => {
+    const fetchFlows = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Convert UI filters to API filters
+        const apiFilters: Filter[] = []
+
+        // Add search term as name filter if present
+        if (searchTerm) {
+          apiFilters.push({
+            key: 'name',
+            value: searchTerm,
+            op: op_to_request['contains'],
+            is_label: false
+          })
+        }
+
+        // Add label filters from filter bar
+        filters.forEach(f => {
+          apiFilters.push({
+            key: f.column,
+            value: f.value,
+            op: op_to_request[f.operator],
+            is_label: true
+          })
+        })
+
+        const response = await Flows.latest(apiFilters.length > 0 ? apiFilters : undefined)
+        setFlows(response.data)
+      } catch (err) {
+        console.error('Failed to fetch flows:', err)
+        setError('Failed to load flows')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFlows()
+  }, [searchTerm, filters])
+
+  // Reload workflow history when time window changes
+  useEffect(() => {
+    const reloadWorkflowHistory = async () => {
+      if (!selectedWorkflow) return
+
+      try {
+        setLoadingHistory(true)
+        setCurrentPage(1) // Reset to first page when filters change
+
+        // Convert flow labels to filters
+        const filters: Filter[] = Object.entries(selectedWorkflow.labels).map(([key, value]) => ({
+          key,
+          value: String(value),
+          op: '=',
+          is_label: true
+        }))
+
+        // Get date range from time window
+        const dateRange = getDateRangeFromTimeWindow()
+
+        // Load workflow history using flow name, labels as filters, and date range as query params
+        const historyResponse = await Flows.history(selectedWorkflow.name, filters, { page: 1, nb_items: 7 }, dateRange)
+        setRecentRuns(historyResponse.data.items || [])
+        setTotalPages(historyResponse.data.total_pages)
+        setCurrentPage(historyResponse.data.page)
+      } catch (err) {
+        console.error('Failed to reload workflow history:', err)
+        setRecentRuns([selectedWorkflow]) // Show at least the current flow
+      } finally {
+        setLoadingHistory(false)
+      }
+    }
+
+    reloadWorkflowHistory()
+  }, [timeWindow, customDateRange, selectedWorkflow])
+
+  // Intersection observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0]
+        if (first.isIntersecting && !loadingMoreHistory && currentPage < totalPages) {
+          loadMoreHistory()
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    )
+
+    const currentRef = loadMoreTriggerRef.current
+    if (currentRef) {
+      observer.observe(currentRef)
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef)
+      }
+    }
+  }, [currentPage, totalPages, loadingMoreHistory])
 
   const getTimeWindowLabel = () => {
     switch (timeWindow) {
@@ -665,18 +662,6 @@ export default function CatalogPage() {
         return 'Custom Range'
       default: return 'Last 24 Hours'
     }
-  }
-
-  // Group workflows by name for rowspan
-  const groupWorkflowsByName = (workflows: Workflow[]) => {
-    const grouped: { [key: string]: Workflow[] } = {}
-    workflows.forEach(workflow => {
-      if (!grouped[workflow.name]) {
-        grouped[workflow.name] = []
-      }
-      grouped[workflow.name].push(workflow)
-    })
-    return grouped
   }
 
   // Group metrics by name for rowspan
@@ -714,17 +699,24 @@ export default function CatalogPage() {
     return result
   }
 
-  const filteredWorkflows: Workflow[] = applyFilters<Workflow>(workflows)
   const filteredMetrics: Metric[] = applyFilters<Metric>(metrics)
 
   // Group filtered data
-  const groupedWorkflows = groupWorkflowsByName(filteredWorkflows)
   const groupedMetrics = groupMetricsByName(filteredMetrics)
 
-  const handleRefresh = () => {
-    // Refresh data
-    setWorkflows([...sampleWorkflows])
-    setMetrics(normalizeLabels(sampleMetrics) as Metric[])
+  const handleRefresh = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await Flows.latest()
+      setFlows(response.data)
+      setMetrics(normalizeLabels(sampleMetrics) as Metric[])
+    } catch (err) {
+      console.error('Failed to refresh flows:', err)
+      setError('Failed to refresh flows')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleExport = () => {
@@ -732,17 +724,116 @@ export default function CatalogPage() {
   }
 
 
-  const handleWorkflowClick = (workflow: Workflow) => {
-    setSelectedWorkflow(workflow)
-    setRunHistory(generateRunHistory())
-    setRecentRuns(generateRecentRuns())
-    setIsSheetOpen(true)
+  const handleWorkflowClick = async (flow: Flow) => {
+    try {
+      setSelectedWorkflow(flow)
+      setIsSheetOpen(true)
+      setExpandedFlowTraceId(null) // Reset expanded flow
+      setLoadingHistory(true)
+      setCurrentPage(1) // Reset to first page
+
+      // Convert flow labels to filters
+      const filters: Filter[] = Object.entries(flow.labels).map(([key, value]) => ({
+        key,
+        value: String(value),
+        op: '=',
+        is_label: true
+      }))
+
+      // Get date range from time window
+      const dateRange = getDateRangeFromTimeWindow()
+
+      // Load workflow history using flow name, labels as filters, and date range as query params
+      const historyResponse = await Flows.history(flow.name, filters, { page: 1, nb_items: 20 }, dateRange)
+      setRecentRuns(historyResponse.data.items || [])
+      setTotalPages(historyResponse.data.total_pages)
+      setCurrentPage(historyResponse.data.page)
+    } catch (err) {
+      console.error('Failed to load workflow history:', err)
+      setRecentRuns([flow]) // Show at least the current flow
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  const loadMoreHistory = async () => {
+    if (!selectedWorkflow || loadingMoreHistory || currentPage >= totalPages) return
+
+    try {
+      setLoadingMoreHistory(true)
+
+      // Convert flow labels to filters
+      const filters: Filter[] = Object.entries(selectedWorkflow.labels).map(([key, value]) => ({
+        key,
+        value: String(value),
+        op: '=',
+        is_label: true
+      }))
+
+      // Get date range from time window
+      const dateRange = getDateRangeFromTimeWindow()
+
+      // Load next page
+      const nextPage = currentPage + 1
+      const historyResponse = await Flows.history(selectedWorkflow.name, filters, { page: nextPage, nb_items: 20 }, dateRange)
+
+      // Append new items to existing ones
+      setRecentRuns(prev => [...prev, ...historyResponse.data.items])
+      setCurrentPage(historyResponse.data.page)
+    } catch (err) {
+      console.error('Failed to load more history:', err)
+    } finally {
+      setLoadingMoreHistory(false)
+    }
   }
 
   const handleMetricClick = (metric: Metric) => {
     setSelectedMetric(metric)
     setMetricHistory(generateMetricHistory(metric.name, metric.thresholds))
     setIsMetricSheetOpen(true)
+  }
+
+  const handleFlowRowClick = async (flow: Flow) => {
+    // Toggle expanded state
+    if (expandedFlowTraceId === flow.trace_id) {
+      setExpandedFlowTraceId(null)
+      setFlowSteps([])
+      return
+    }
+
+    setExpandedFlowTraceId(flow.trace_id)
+    setLoadingSteps(true)
+
+    try {
+      const stepsResponse = await Flows.getSteps(flow.name, flow.trace_id)
+      console.log('Steps loaded for', flow.trace_id, ':', stepsResponse.data)
+      setFlowSteps(stepsResponse.data)
+    } catch (err) {
+      console.error('Failed to load flow steps:', err)
+      setFlowSteps([])
+    } finally {
+      setLoadingSteps(false)
+    }
+  }
+
+  const handleLabelClick = (e: React.MouseEvent, key: string, value: string) => {
+    e.stopPropagation() // Prevent row click
+
+    // Check if filter already exists
+    const existingFilter = filters.find(f => f.column === key && f.value === value && f.operator === 'equals')
+    if (existingFilter) {
+      return // Filter already exists, don't add duplicate
+    }
+
+    // Add new equals filter
+    const newFilter: ActiveFilter = {
+      id: `${key}-${Date.now()}`,
+      column: key,
+      operator: 'equals',
+      value: value
+    }
+
+    setFilters([...filters, newFilter])
   }
 
   const handleAddRule = () => {
@@ -927,8 +1018,13 @@ export default function CatalogPage() {
         searchPlaceholder={`Search ${activeTab}...`}
         filters={filters}
         onFiltersChange={setFilters}
-        availableColumns={([...new Set((activeTab === 'workflows' ? workflows : (metrics as any)).flatMap((wf: any) => Object.keys(wf.labels))) ] as string[]).map((col) => ({ value: col, label: col }))}
-        getValueOptions={(column) => [...new Set((activeTab === 'workflows' ? workflows : (metrics as any)).flatMap((w: any) => Object.keys(w.labels)).includes(column) ? (activeTab === 'workflows' ? workflows : (metrics as any)).map((w: any) => w.labels[column]).filter(Boolean) as string[] : [])]}
+        availableColumns={([...new Set((activeTab === 'workflows' ? flows : (metrics as any)).flatMap((wf: any) => Object.keys(wf.labels))) ] as string[]).map((col) => ({ value: col, label: col }))}
+        getValueOptions={(column) => {
+          const items = activeTab === 'workflows' ? flows : (metrics as any)
+          const values = [...new Set(items.map((w: any) => w.labels[column]).filter(Boolean) as string[])]
+          // Return undefined instead of empty array to enable manual input
+          return values.length > 0 ? values : undefined as any
+        }}
       />
 
       {/* Tab Content */}
@@ -946,48 +1042,78 @@ export default function CatalogPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredWorkflows.length === 0 ? (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Loading flows...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-red-500">
+                      {error}
+                    </TableCell>
+                  </TableRow>
+                ) : flows.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-gray-500">
-                      No workflows found
+                      No flows found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredWorkflows.map((workflow) => (
+                  flows.map((flow, index) => (
                     <TableRow
-                      key={`workflow-${workflow.id}`}
+                      key={`flow-${flow.trace_id}-${index}`}
                       className="group hover:bg-muted/50 cursor-pointer"
-                      onClick={() => handleWorkflowClick(workflow)}>
+                      onClick={() => handleWorkflowClick(flow)}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-gray-500" />
-                          {workflow.name}
+                          {flow.name}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
-                        {workflow.description}
+                        {flow.description || 'No description available'}
                       </TableCell>
                       <TableCell className="text-sm">
                         <div className="flex gap-1 flex-wrap">
-                          {Object.entries(workflow.labels).map(([key, value]) => (
-                            <span key={`${workflow.id}-label-${key}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                          {Object.entries(flow.labels).map(([key, value]) => (
+                            <span
+                              key={`${flow.trace_id}-label-${key}`}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
+                              onClick={(e) => handleLabelClick(e, key, value)}
+                            >
                               {key}: {value}
                             </span>
                           ))}
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
+                            service: {flow.service_name}
+                          </span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700">
+                            duration: {Math.round(flow.duration / 1000)}s
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-gray-600">
                         <div className="flex items-center gap-2">
                           <div className={`w-2 h-2 rounded-full ${
-                            workflow.status === 'success' ? 'bg-green-500' :
-                            workflow.status === 'failed' ? 'bg-red-500' :
+                            flow.status === 'completed' || flow.status === 'SUCCESS' ? 'bg-green-500' :
+                            flow.status === 'failed' || flow.status === 'FAILED' ? 'bg-red-500' :
                             'bg-blue-500'
                           }`}></div>
-                          {new Date(workflow.lastRun).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
+                          <div className="flex flex-col">
+                            <span>{flow.created_at ? new Date(flow.created_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 'Unknown'}</span>
+                            <span className="text-xs text-muted-foreground capitalize">{flow.status}</span>
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1036,7 +1162,11 @@ export default function CatalogPage() {
                       <TableCell className="text-sm">
                         <div className="flex gap-1 flex-wrap">
                           {Object.entries(metric.labels).map(([key, value]) => (
-                            <span key={`${metric.id}-label-${key}`} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                            <span
+                              key={`${metric.id}-label-${key}`}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
+                              onClick={(e) => handleLabelClick(e, key, value)}
+                            >
                               {key}: {value}
                             </span>
                           ))}
@@ -1066,17 +1196,24 @@ export default function CatalogPage() {
                 <SheetHeader className="p-0 flex-1">
                   <SheetTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5" />
-                    {selectedWorkflow.name}
+                    {selectedWorkflow.name} - History
                   </SheetTitle>
                   <div className="flex gap-1 flex-wrap mb-2">
                     {Object.entries(selectedWorkflow.labels).map(([key, value]) => (
-                      <span key={key} className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+                      <span
+                        key={key}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
+                        onClick={(e) => handleLabelClick(e, key, value)}
+                      >
                         {key}: {value}
                       </span>
                     ))}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
+                      service: {selectedWorkflow.service_name}
+                    </span>
                   </div>
                   <SheetDescription>
-                    {selectedWorkflow.description}
+                    {selectedWorkflow.description || 'No description available'}
                   </SheetDescription>
                 </SheetHeader>
 
@@ -1172,112 +1309,139 @@ export default function CatalogPage() {
                 {/* Recent Runs Table */}
                 <div>
                   <h4 className="text-sm font-medium mb-3">Recent Runs</h4>
-                  <div className="border rounded-lg">
-                    <Table>
+                  {loadingHistory ? (
+                    <div className="border rounded-lg p-8">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <span>Loading workflow history...</span>
+                      </div>
+                    </div>
+                  ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table className="table-fixed">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[18%]">Status</TableHead>
-                          <TableHead className="w-[28%]">Start Time</TableHead>
-                          <TableHead className="w-[28%]">End Time</TableHead>
-                          <TableHead className="w-[18%]">Duration</TableHead>
-                          <TableHead className="w-[8%]"></TableHead>
+                          <TableHead className="w-[20%]">Status</TableHead>
+                          <TableHead className="w-[30%]">Start Time</TableHead>
+                          <TableHead className="w-[30%]">End Time</TableHead>
+                          <TableHead className="w-[20%]">Duration</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {recentRuns.map((run: any) => (
-                          <React.Fragment key={run.id}>
+                        {recentRuns.map((flow: Flow, index: number) => (
+                          <React.Fragment key={`${flow.trace_id}-${index}`}>
                             <TableRow
                               className="cursor-pointer hover:bg-muted/50"
-                              onClick={() => setExpandedRun(expandedRun === run.id ? null : run.id)}
+                              onClick={() => handleFlowRowClick(flow)}
                             >
                               <TableCell>
                                 <div className="flex items-center gap-1">
-                                  {run.status === 'success' ? (
+                                  {flow.status === 'SUCCESS' || flow.status === 'completed' ? (
                                     <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                  ) : run.status === 'failed' ? (
+                                  ) : flow.status === 'FAILED' || flow.status === 'failed' ? (
                                     <XCircle className="h-3 w-3 text-red-500" />
                                   ) : (
                                     <PlayCircle className="h-3 w-3 text-blue-500" />
                                   )}
                                   <span className={`text-xs capitalize ${
-                                    run.status === 'success'
+                                    flow.status === 'SUCCESS' || flow.status === 'completed'
                                       ? 'text-green-600'
-                                      : run.status === 'failed'
+                                      : flow.status === 'FAILED' || flow.status === 'failed'
                                       ? 'text-red-600'
                                       : 'text-blue-600'
                                   }`}>
-                                    {run.status}
+                                    {flow.status.toLowerCase()}
                                   </span>
+                                  {expandedFlowTraceId === flow.trace_id && (
+                                    <ChevronDown className="h-3 w-3 ml-1" />
+                                  )}
+                                  {expandedFlowTraceId !== flow.trace_id && (
+                                    <ChevronDown className="h-3 w-3 ml-1 -rotate-90" />
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell className="text-xs">
-                                {run.startTime}
+                                {flow.created_at ? new Date(flow.created_at).toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }) : 'Unknown'}
                               </TableCell>
                               <TableCell className="text-xs">
-                                {run.endTime}
+                                {flow.ended_at ? new Date(flow.ended_at).toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }) : 'N/A'}
                               </TableCell>
                               <TableCell className="text-xs font-mono">
-                                {run.duration}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <ChevronDown className={`h-3 w-3 transition-transform ${
-                                  expandedRun === run.id ? 'rotate-180' : ''
-                                }`} />
+                                {Math.round(flow.duration / 1000)}s
                               </TableCell>
                             </TableRow>
-                            {expandedRun === run.id && (
+                            {expandedFlowTraceId === flow.trace_id && (
                               <TableRow>
-                                <TableCell colSpan={5} className="p-0">
-                                  <div className="bg-muted/30">
-                                    <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b">
-                                      <h5 className="text-xs font-medium"></h5>
-                                      <span className="text-xs text-muted-foreground">Total: {run.duration}</span>
-                                    </div>
-
-                                    {/* Time scale header */}
-                                    <div className="flex items-center h-6 text-xs text-muted-foreground border-b">
-                                      <div className="flex-shrink-0 w-48 px-3">
-                                        <span className="font-medium">Step</span>
-                                      </div>
-                                      <div className="flex-1 flex relative">
-                                        {[...Array(11)].map((_, i) => (
-                                          <div key={i} className="flex-1 text-center">
-                                            <span className="text-xs">
-                                              {((run.totalDurationMs / 10) * i / 1000).toFixed(1)}s
-                                            </span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                      <div className="flex-shrink-0 w-20 text-right pr-2">
-                                        <span className="font-medium">Duration</span>
-                                      </div>
-                                    </div>
-
-                                    {/* Steps with error messages */}
-                                    <div className="py-1">
-                                      {run.steps.map((step: any) => (
-                                        <div key={step.id}>
-                                          {renderSteps([step], run.totalDurationMs)}
-                                          {step.error && (
-                                            <div className="px-3 -mt-1 mb-1 ml-48">
-                                              <span className="text-xs text-red-600">⚠ {step.error}</span>
-                                            </div>
-                                          )}
+                                <TableCell colSpan={4} className="p-0">
+                                  <div className="p-4 bg-muted/30 max-w-full">
+                                    <h5 className="text-sm font-medium mb-3">Flow Steps</h5>
+                                    {loadingSteps ? (
+                                      <div className="p-8">
+                                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                          <Loader2 className="h-5 w-5 animate-spin" />
+                                          <span className="text-sm">Loading steps...</span>
                                         </div>
-                                      ))}
-                                    </div>
+                                      </div>
+                                    ) : (
+                                      <div className="overflow-x-auto max-w-full">
+                                        <StepTimeline
+                                          steps={flowSteps}
+                                          workflowCreatedAt={flow.created_at}
+                                          workflowEndedAt={flow.ended_at}
+                                          workflowLabels={flow.labels}
+                                        />
+                                      </div>
+                                    )}
                                   </div>
                                 </TableCell>
                               </TableRow>
                             )}
                           </React.Fragment>
                         ))}
+                          <TableRow
+                              className="hover:bg-muted/50" >
+                              <TableCell colspan={4} className="p-0">
+                                  {currentPage >= totalPages && !loadingMoreHistory && (
+                                      <div className="p-4 text-center border-t">
+                                          No more history available
+                                      </div>
+                                  )}
+                              </TableCell>
+                          </TableRow>
                       </TableBody>
                     </Table>
+                    {/* Infinite scroll trigger - invisible element that triggers load when scrolled into view */}
+                    {currentPage < totalPages && (
+                      <div
+                        ref={loadMoreTriggerRef}
+                        className="h-20 flex items-center justify-center"
+                      >
+                        {loadingMoreHistory && (
+                          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm">Loading more...</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
+                  )}
                 </div>
 
-                {/* Rules */}
+                {/* Rules section commented out - Flow objects don't have rules */}
+                {/* 
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium">Notification Rules</h4>
@@ -1291,35 +1455,12 @@ export default function CatalogPage() {
                     </Button>
                   </div>
                   <div className="space-y-3">
-                    {selectedWorkflow?.rules?.map((rule) => (
-                      <div
-                        key={rule.id}
-                        onClick={() => handleEditRule(rule, true)}
-                        className="p-3 rounded-lg border bg-card hover:bg-accent/50 cursor-pointer transition-colors group"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              rule.status === 'active'
-                                ? rule.action === 'email' ? 'bg-green-500' : rule.action === 'slack' ? 'bg-blue-500' : 'bg-orange-500'
-                                : 'bg-gray-400'
-                            }`}></div>
-                            <span className="text-sm font-medium">{rule.name}</span>
-                            <Edit3 className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                          <span className="text-xs text-muted-foreground capitalize">{rule.status}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {rule.description}
-                        </p>
-                      </div>
-                    )) || (
-                      <div className="text-center py-6 text-sm text-muted-foreground">
-                        No rules configured. Click "Add Rule" to create one.
-                      </div>
-                    )}
+                    <div className="text-center py-6 text-sm text-muted-foreground">
+                      Rules are not available for Flow objects.
+                    </div>
                   </div>
                 </div>
+                */}
 
               </div>
 

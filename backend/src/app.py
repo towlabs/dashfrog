@@ -7,12 +7,15 @@ from clickhouse_connect.driver import Client as ClickhouseClient
 from pydantic import BaseModel
 from structlog.stdlib import BoundLogger
 
-from adapters.stores import Flows as FlowsStore
-from api.routes import API, flows
-from domain.usecases import Flows
 from src._inits import setup_logging
+from src.adapters.stores import (
+    Flows as FlowsStore,
+    Steps as StepsStore,
+)
+from src.api.routes import API, flows, steps
 from src.context import ENV, RELEASE
 from src.core import Config
+from src.domain.usecases import Flows, Steps
 
 
 @dataclass
@@ -45,6 +48,7 @@ class Application(BaseApplication[Config]):
             host=self.configuration.click_house.host,
             user=self.configuration.click_house.user,
             password=self.configuration.click_house.password,
+            autogenerate_session_id=False,
         )
 
         self.axiom_client = (
@@ -62,13 +66,15 @@ class Application(BaseApplication[Config]):
 
         ## Deps
         flow_store = FlowsStore(self.clickhouse_client)
+        step_store = StepsStore(self.clickhouse_client)
 
         self.usecases = {
             "flows": Flows(flow_store, self.logger),
+            "steps": Steps(step_store, self.logger),
         }
 
     def log(self, name: str, **kwargs) -> BoundLogger:
         return self.logger.bind(name=name, **kwargs)
 
     def init_web(self):
-        API(flows.Flows(self.usecases["flows"]))
+        API(flows.Flows(self.usecases["flows"]), steps.Steps(self.usecases["steps"]))

@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils'
 interface Filter {
   id: string
   column: string
-  operator: 'equals' | 'contains' | 'starts_with'
+  operator: 'equals' | 'contains' | 'starts_with' | 'not_equals' | 'less_than' | 'greater_than' | 'in' | 'not_in'
   value: string
 }
 
@@ -48,15 +48,28 @@ export function FilterTag({ filter, onUpdate, onRemove, columnOptions = [], valu
 
   const operatorOptions = [
     { value: 'equals', label: 'is' },
+    { value: 'not_equals', label: 'is not' },
     { value: 'contains', label: 'contains' },
-    { value: 'starts_with', label: 'starts with' }
+    { value: 'starts_with', label: 'starts with' },
+    { value: 'less_than', label: 'less than' },
+    { value: 'greater_than', label: 'greater than' },
+    { value: 'in', label: 'in' },
+    { value: 'not_in', label: 'not in' }
   ]
 
-  const operatorLabels = {
+  const operatorLabels: Record<Filter['operator'], string> = {
     equals: 'is',
+    not_equals: 'is not',
     contains: 'contains',
-    starts_with: 'starts with'
+    starts_with: 'starts with',
+    less_than: 'less than',
+    greater_than: 'greater than',
+    in: 'in',
+    not_in: 'not in'
   }
+
+  // Operators that should always use free text input
+  const freeTextOperators: Filter['operator'][] = ['contains', 'starts_with', 'less_than', 'greater_than']
 
   const handleSave = () => {
     onUpdate({
@@ -152,7 +165,18 @@ export function FilterTag({ filter, onUpdate, onRemove, columnOptions = [], valu
               <label className="text-sm font-medium text-muted-foreground mb-2 block">
                 Value
               </label>
-              {valueOptions && valueOptions.length > 0 ? (
+              {/* Use free text input if operator requires it OR no value options available */}
+              {freeTextOperators.includes(tempOperator) || !valueOptions || valueOptions.length === 0 ? (
+                <Input
+                  value={tempValue}
+                  onChange={(e) => setTempValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onBlur={handleSave}
+                  placeholder="Enter value..."
+                  className="h-9"
+                  autoFocus
+                />
+              ) : (
                 <Popover open={valueOpen} onOpenChange={setValueOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -195,16 +219,6 @@ export function FilterTag({ filter, onUpdate, onRemove, columnOptions = [], valu
                     </Command>
                   </PopoverContent>
                 </Popover>
-              ) : (
-                <Input
-                  value={tempValue}
-                  onChange={(e) => setTempValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onBlur={handleSave}
-                  placeholder="Enter value..."
-                  className="h-9"
-                  autoFocus
-                />
               )}
             </div>
           </div>

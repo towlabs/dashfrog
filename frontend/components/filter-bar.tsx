@@ -10,8 +10,19 @@ import { FilterTag } from '@/components/filter-tag'
 interface Filter {
   id: string
   column: string
-  operator: 'equals' | 'contains' | 'starts_with'
+  operator: 'equals' | 'contains' | 'starts_with' | 'not_equals' | 'less_than' | 'greater_than' | 'in' | 'not_in'
   value: string
+}
+
+export const op_to_request = {
+    'equals': '=',
+    'not_equals': '!=',
+    'contains': 'like',
+    'starts_with': 'like_start',
+    'in': 'in',
+    'not_in': 'not in',
+    'less_than': '<=',
+    'greater_than': '>=',
 }
 
 interface FilterBarProps {
@@ -43,12 +54,12 @@ export function FilterBar({
     onFiltersChange(filters.filter(f => f.id !== id))
   }
 
-  const handleAddFilter = (column: string) => {
+  const handleAddFilter = (column: string, operator: Filter['operator'], value: string) => {
     const newFilter: Filter = {
       id: `${column}-${Date.now()}`,
       column,
-      operator: 'equals',
-      value: ''
+      operator,
+      value
     }
     onFiltersChange([...filters, newFilter])
   }
@@ -96,6 +107,7 @@ export function FilterBar({
         <AddFilterDropdown
           availableColumns={availableColumns}
           onAddFilter={handleAddFilter}
+          getValueOptions={getValueOptions}
         />
       </div>
     </div>

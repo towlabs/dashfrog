@@ -80,6 +80,7 @@ class DashFrog:
         config = config or Config()
         self.__config = config
         self.service_name = service_name
+        self.__labels = {f"glob.{key}": value for key, value in labels.items()}
 
         if not clickhouse_client:
             set_singletons(
@@ -87,6 +88,7 @@ class DashFrog:
                     host=self.__config.clickhouse.host,
                     user=self.__config.clickhouse.user,
                     password=self.__config.clickhouse.password,
+                    autogenerate_session_id=False,
                 )
             )
 
@@ -135,10 +137,12 @@ class DashFrog:
         span = get_current_span()
         if span == INVALID_SPAN:
             with get_tracer("dashfrog").start_as_current_span(name) as span:
-                with Flow(name, self.service_name, description, auto_end=auto_end, **labels) as flow:
+                with Flow(
+                    name, self.service_name, description, auto_end=auto_end, **{**labels, **self.__labels}
+                ) as flow:
                     yield flow
         else:
-            with Flow(name, self.service_name, description, auto_end=auto_end, **labels) as flow:
+            with Flow(name, self.service_name, description, auto_end=auto_end, **{**labels, **self.__labels}) as flow:
                 yield flow
 
     @contextmanager
@@ -155,10 +159,14 @@ class DashFrog:
         span = get_current_span()
         if span == INVALID_SPAN:
             with get_tracer("dashfrog").start_as_current_span(name) as span:
-                with Step(name, description, auto_end=auto_end, auto_start=auto_start, **labels) as step:
+                with Step(
+                    name, description, auto_end=auto_end, auto_start=auto_start, **{**labels, **self.__labels}
+                ) as step:
                     yield step
         else:
-            with Step(name, description, auto_end=auto_end, auto_start=auto_start, **labels) as step:
+            with Step(
+                name, description, auto_end=auto_end, auto_start=auto_start, **{**labels, **self.__labels}
+            ) as step:
                 yield step
 
     @contextmanager

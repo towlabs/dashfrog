@@ -1,0 +1,10 @@
+env: local
+click_house:
+  database: dashfrog
+  host: localhost
+  user: tower-ch
+  password: 3cqG0IT1EuOdlLlZNM3zrkhWH
+logs:
+  level: "DEBUG"
+  activate_axiom: false
+  log_libs: true

@@ -3,6 +3,7 @@ import time
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
 from src import router
@@ -83,6 +84,13 @@ async def log_requests(request: Request, call_next):
 
 
 api.include_router(router, prefix="/api")
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # For development only
 if __name__ == "__main__":
