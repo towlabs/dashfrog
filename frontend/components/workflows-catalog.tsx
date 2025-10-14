@@ -1,0 +1,759 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import { Package, Loader2, CheckCircle2, XCircle, PlayCircle, ChevronDown, Calendar, Clock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Popover,
+  PopoverContent,
+} from '@/components/ui/popover'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { Flows } from '@/src/services/api/flows'
+import type { Flow } from '@/src/types/flow'
+import type { Step } from '@/src/types/step'
+import type { Filter } from '@/src/types/filter'
+import { StepTimeline } from '@/components/step-timeline'
+import { FilterBar, op_to_request } from '@/components/filter-bar'
+
+type ActiveFilter = { id: string; column: string; operator: 'equals' | 'contains' | 'not_equals' | 'in' | 'not_in'; value: string }
+
+interface WorkflowsCatalogProps {
+  searchTerm: string
+  onSearchChange: (value: string) => void
+  filters: ActiveFilter[]
+  onFiltersChange: (filters: ActiveFilter[]) => void
+}
+
+// Chart configuration
+const chartConfig: ChartConfig = {
+  runs: {
+    label: "Total Runs",
+    color: "#3b82f6",
+  },
+  SUCCESS: {
+    label: "Successful",
+    color: "#10b981",
+  },
+  FAILED: {
+    label: "Failed",
+    color: "#ef4444",
+  },
+}
+
+export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFiltersChange }: WorkflowsCatalogProps) {
+  const [flows, setFlows] = useState<Flow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [selectedWorkflow, setSelectedWorkflow] = useState<Flow | null>(null)
+  const [runHistory] = useState<any[]>([])
+  const [recentRuns, setRecentRuns] = useState<any[]>([])
+  const [expandedFlowTraceId, setExpandedFlowTraceId] = useState<string | null>(null)
+  const [timeWindow, setTimeWindow] = useState('24h')
+  const [customDateRange, setCustomDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined
+  })
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [flowSteps, setFlowSteps] = useState<Step[]>([])
+  const [loadingSteps, setLoadingSteps] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loadingMoreHistory, setLoadingMoreHistory] = useState(false)
+  const loadMoreTriggerRef = React.useRef<HTMLDivElement>(null)
+
+  // Helper function to convert timeWindow to date range params
+  const getDateRangeFromTimeWindow = (): { from_date?: string; to_date?: string } => {
+    const now = new Date()
+    let fromDate: Date | undefined
+    let toDate: Date = now
+
+    switch (timeWindow) {
+      case '15m':
+        fromDate = new Date(now.getTime() - 15 * 60 * 1000)
+        break
+      case '30m':
+        fromDate = new Date(now.getTime() - 30 * 60 * 1000)
+        break
+      case '1h':
+        fromDate = new Date(now.getTime() - 60 * 60 * 1000)
+        break
+      case '24h':
+        fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        break
+      case '7d':
+        fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case '30d':
+        fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        break
+      case 'custom':
+        if (customDateRange.from && customDateRange.to) {
+          fromDate = customDateRange.from
+          toDate = customDateRange.to
+        }
+        break
+    }
+
+    const dateRange: { from_date?: string; to_date?: string } = {}
+    if (fromDate) {
+      dateRange.from_date = fromDate.toISOString()
+    }
+    dateRange.to_date = toDate.toISOString()
+
+    return dateRange
+  }
+
+  useEffect(() => {
+    const fetchFlows = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const apiFilters: Filter[] = []
+
+        if (searchTerm) {
+          apiFilters.push({
+            key: 'name',
+            value: searchTerm,
+            op: op_to_request['contains'],
+            is_label: false
+          })
+        }
+
+        filters.forEach(f => {
+          apiFilters.push({
+            key: f.column,
+            value: f.value,
+            op: op_to_request[f.operator],
+            is_label: true
+          })
+        })
+
+        const response = await Flows.latest(apiFilters.length > 0 ? apiFilters : undefined)
+        setFlows(response.data)
+      } catch (err) {
+        console.error('Failed to fetch flows:', err)
+        setError('Failed to load flows')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFlows()
+  }, [searchTerm, filters])
+
+  // Reload workflow history when time window changes
+  useEffect(() => {
+    const reloadWorkflowHistory = async () => {
+      if (!selectedWorkflow) return
+
+      try {
+        setLoadingHistory(true)
+        setCurrentPage(1)
+
+        const filters: Filter[] = Object.entries(selectedWorkflow.labels).map(([key, value]) => ({
+          key,
+          value: String(value),
+          op: '=',
+          is_label: true
+        }))
+
+        const dateRange = getDateRangeFromTimeWindow()
+        const historyResponse = await Flows.history(selectedWorkflow.name, filters, { page: 1, nb_items: 7 }, dateRange)
+        setRecentRuns(historyResponse.data.items || [])
+        setTotalPages(historyResponse.data.total_pages)
+        setCurrentPage(historyResponse.data.page)
+      } catch (err) {
+        console.error('Failed to reload workflow history:', err)
+        setRecentRuns([selectedWorkflow])
+      } finally {
+        setLoadingHistory(false)
+      }
+    }
+
+    reloadWorkflowHistory()
+  }, [timeWindow, customDateRange, selectedWorkflow])
+
+  // Intersection observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0]
+        if (first.isIntersecting && !loadingMoreHistory && currentPage < totalPages) {
+          loadMoreHistory()
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    )
+
+    const currentRef = loadMoreTriggerRef.current
+    if (currentRef) {
+      observer.observe(currentRef)
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef)
+      }
+    }
+  }, [currentPage, totalPages, loadingMoreHistory])
+
+  const getTimeWindowLabel = () => {
+    switch (timeWindow) {
+      case '15m': return 'Last 15 Minutes'
+      case '30m': return 'Last 30 Minutes'
+      case '1h': return 'Last Hour'
+      case '24h': return 'Last 24 Hours'
+      case '7d': return 'Last 7 Days'
+      case '30d': return 'Last 30 Days'
+      case 'custom':
+        if (customDateRange.from && customDateRange.to) {
+          return `${customDateRange.from.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })} - ${customDateRange.to.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          })}`
+        }
+        return 'Custom Range'
+      default: return 'Last 24 Hours'
+    }
+  }
+
+  const handleWorkflowClick = async (flow: Flow) => {
+    try {
+      setSelectedWorkflow(flow)
+      setIsSheetOpen(true)
+      setExpandedFlowTraceId(null)
+      setLoadingHistory(true)
+      setCurrentPage(1)
+
+      const filters: Filter[] = Object.entries(flow.labels).map(([key, value]) => ({
+        key,
+        value: String(value),
+        op: '=',
+        is_label: true
+      }))
+
+      const dateRange = getDateRangeFromTimeWindow()
+      const historyResponse = await Flows.history(flow.name, filters, { page: 1, nb_items: 20 }, dateRange)
+      setRecentRuns(historyResponse.data.items || [])
+      setTotalPages(historyResponse.data.total_pages)
+      setCurrentPage(historyResponse.data.page)
+    } catch (err) {
+      console.error('Failed to load workflow history:', err)
+      setRecentRuns([flow])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  const loadMoreHistory = async () => {
+    if (!selectedWorkflow || loadingMoreHistory || currentPage >= totalPages) return
+
+    try {
+      setLoadingMoreHistory(true)
+
+      const filters: Filter[] = Object.entries(selectedWorkflow.labels).map(([key, value]) => ({
+        key,
+        value: String(value),
+        op: '=',
+        is_label: true
+      }))
+
+      const dateRange = getDateRangeFromTimeWindow()
+      const nextPage = currentPage + 1
+      const historyResponse = await Flows.history(selectedWorkflow.name, filters, { page: nextPage, nb_items: 20 }, dateRange)
+
+      setRecentRuns(prev => [...prev, ...historyResponse.data.items])
+      setCurrentPage(historyResponse.data.page)
+    } catch (err) {
+      console.error('Failed to load more history:', err)
+    } finally {
+      setLoadingMoreHistory(false)
+    }
+  }
+
+  const handleFlowRowClick = async (flow: Flow) => {
+    if (expandedFlowTraceId === flow.trace_id) {
+      setExpandedFlowTraceId(null)
+      setFlowSteps([])
+      return
+    }
+
+    setExpandedFlowTraceId(flow.trace_id)
+    setLoadingSteps(true)
+
+    try {
+      const stepsResponse = await Flows.getSteps(flow.name, flow.trace_id)
+      setFlowSteps(stepsResponse.data)
+    } catch (err) {
+      console.error('Failed to load flow steps:', err)
+      setFlowSteps([])
+    } finally {
+      setLoadingSteps(false)
+    }
+  }
+
+  const handleLabelClick = (e: React.MouseEvent, key: string, value: string) => {
+    e.stopPropagation()
+
+    const existingFilter = filters.find(f => f.column === key && f.value === value && f.operator === 'equals')
+    if (existingFilter) {
+      return
+    }
+
+    const newFilter: ActiveFilter = {
+      id: `${key}-${Date.now()}`,
+      column: key,
+      operator: 'equals',
+      value: value
+    }
+
+    onFiltersChange([...filters, newFilter])
+  }
+
+  return (
+    <>
+      {/* Filter Bar */}
+      <FilterBar
+        searchTerm={searchTerm}
+        onSearchChange={onSearchChange}
+        searchPlaceholder="Search workflows..."
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        availableColumns={([...new Set(flows.flatMap((wf: any) => Object.keys(wf.labels)))] as string[]).map((col) => ({ value: col, label: col }))}
+        getValueOptions={(column) => {
+          const values = [...new Set(flows.map((w: any) => w.labels[column]).filter(Boolean) as string[])]
+          return values.length > 0 ? values : undefined as any
+        }}
+      />
+
+      {/* Workflows Table */}
+      <div className="rounded-lg border bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[25%]">Name</TableHead>
+              <TableHead className="w-[35%]">Description</TableHead>
+              <TableHead className="w-[25%]">Labels</TableHead>
+              <TableHead className="w-[15%]">Last Run</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Loading flows...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-red-500">
+                  {error}
+                </TableCell>
+              </TableRow>
+            ) : flows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-gray-500">
+                  No flows found
+                </TableCell>
+              </TableRow>
+            ) : (
+              flows.map((flow, index) => (
+                <TableRow
+                  key={`flow-${flow.trace_id}-${index}`}
+                  className="group hover:bg-muted/50 cursor-pointer"
+                  onClick={() => handleWorkflowClick(flow)}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-gray-500" />
+                      {flow.name}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    {flow.description || 'No description available'}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    <div className="flex gap-1 flex-wrap">
+                      {Object.entries(flow.labels).map(([key, value]) => (
+                        <span
+                          key={`${flow.trace_id}-label-${key}`}
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
+                          onClick={(e) => handleLabelClick(e, key, value)}
+                        >
+                          {key}: {value}
+                        </span>
+                      ))}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
+                        service: {flow.service_name}
+                      </span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700">
+                        duration: {Math.round(flow.duration / 1000)}s
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        flow.status === 'completed' || flow.status === 'SUCCESS' ? 'bg-green-500' :
+                        flow.status === 'failed' || flow.status === 'FAILED' ? 'bg-red-500' :
+                        'bg-blue-500'
+                      }`}></div>
+                      <div className="flex flex-col">
+                        <span>{flow.created_at ? new Date(flow.created_at).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'Unknown'}</span>
+                        <span className="text-xs text-muted-foreground capitalize">{flow.status}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Right Drawer with Workflow Details */}
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent className="w-[1000px] sm:max-w-none overflow-auto">
+          {selectedWorkflow && (
+            <>
+              <div className="flex items-start justify-between gap-4 p-6 pb-4 border-b flex-shrink-0">
+                <SheetHeader className="p-0 flex-1">
+                  <SheetTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    {selectedWorkflow.name} - History
+                  </SheetTitle>
+                  <div className="flex gap-1 flex-wrap mb-2">
+                    {Object.entries(selectedWorkflow.labels).map(([key, value]) => (
+                      <span
+                        key={key}
+                        className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
+                        onClick={(e) => handleLabelClick(e, key, value)}
+                      >
+                        {key}: {value}
+                      </span>
+                    ))}
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
+                      service: {selectedWorkflow.service_name}
+                    </span>
+                  </div>
+                  <SheetDescription>
+                    {selectedWorkflow.description || 'No description available'}
+                  </SheetDescription>
+                </SheetHeader>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="default"
+                        className="flex items-center gap-2"
+                      >
+                        <Calendar className="h-4 w-4" />
+                        {getTimeWindowLabel()}
+                        <ChevronDown className="h-3 w-3 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem onClick={() => setTimeWindow('15m')}>
+                        Last 15 Minutes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTimeWindow('30m')}>
+                        Last 30 Minutes
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTimeWindow('1h')}>
+                        Last Hour
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTimeWindow('24h')}>
+                        Last 24 Hours
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTimeWindow('7d')}>
+                        Last 7 Days
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTimeWindow('30d')}>
+                        Last 30 Days
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.preventDefault()
+                          setTimeWindow('custom')
+                          setShowDatePicker(true)
+                        }}
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        Custom Range...
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Workflow Runs (Last 24 Hours)</h4>
+                    <ChartContainer
+                      config={chartConfig}
+                      className="h-[200px] w-full"
+                    >
+                      <LineChart data={runHistory} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="time"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tickFormatter={(value) => value}
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          width={30}
+                        />
+                        <ChartTooltip
+                          content={<ChartTooltipContent />}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="runs"
+                          stroke="#3b82f6"
+                          strokeWidth={2}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ChartContainer>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-medium mb-3">Recent Runs</h4>
+                    {loadingHistory ? (
+                      <div className="border rounded-lg p-8">
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <span>Loading workflow history...</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border rounded-lg overflow-hidden">
+                        <Table className="table-fixed">
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[20%]">Status</TableHead>
+                              <TableHead className="w-[30%]">Start Time</TableHead>
+                              <TableHead className="w-[30%]">End Time</TableHead>
+                              <TableHead className="w-[20%]">Duration</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {recentRuns.map((flow: Flow, index: number) => (
+                              <React.Fragment key={`${flow.trace_id}-${index}`}>
+                                <TableRow
+                                  className="cursor-pointer hover:bg-muted/50"
+                                  onClick={() => handleFlowRowClick(flow)}
+                                >
+                                  <TableCell>
+                                    <div className="flex items-center gap-1">
+                                      {flow.status === 'SUCCESS' || flow.status === 'completed' ? (
+                                        <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                      ) : flow.status === 'FAILED' || flow.status === 'failed' ? (
+                                        <XCircle className="h-3 w-3 text-red-500" />
+                                      ) : (
+                                        <PlayCircle className="h-3 w-3 text-blue-500" />
+                                      )}
+                                      <span className={`text-xs capitalize ${
+                                        flow.status === 'SUCCESS' || flow.status === 'completed'
+                                          ? 'text-green-600'
+                                          : flow.status === 'FAILED' || flow.status === 'failed'
+                                          ? 'text-red-600'
+                                          : 'text-blue-600'
+                                      }`}>
+                                        {flow.status.toLowerCase()}
+                                      </span>
+                                      {expandedFlowTraceId === flow.trace_id && (
+                                        <ChevronDown className="h-3 w-3 ml-1" />
+                                      )}
+                                      {expandedFlowTraceId !== flow.trace_id && (
+                                        <ChevronDown className="h-3 w-3 ml-1 -rotate-90" />
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-xs">
+                                    {flow.created_at ? new Date(flow.created_at).toLocaleString('en-US', {
+                                      year: 'numeric',
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    }) : 'Unknown'}
+                                  </TableCell>
+                                  <TableCell className="text-xs">
+                                    {flow.ended_at ? new Date(flow.ended_at).toLocaleString('en-US', {
+                                      year: 'numeric',
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    }) : 'N/A'}
+                                  </TableCell>
+                                  <TableCell className="text-xs font-mono">
+                                    {Math.round(flow.duration / 1000)}s
+                                  </TableCell>
+                                </TableRow>
+                                {expandedFlowTraceId === flow.trace_id && (
+                                  <TableRow>
+                                    <TableCell colSpan={4} className="p-0">
+                                      <div className="p-4 bg-muted/30 max-w-full">
+                                        <h5 className="text-sm font-medium mb-3">Flow Steps</h5>
+                                        {loadingSteps ? (
+                                          <div className="p-8">
+                                            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                              <Loader2 className="h-5 w-5 animate-spin" />
+                                              <span className="text-sm">Loading steps...</span>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="overflow-x-auto max-w-full">
+                                            <StepTimeline
+                                              steps={flowSteps}
+                                              workflowCreatedAt={flow.created_at}
+                                              workflowEndedAt={flow.ended_at}
+                                              workflowLabels={flow.labels}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </React.Fragment>
+                            ))}
+                            <TableRow className="hover:bg-muted/50">
+                              <TableCell colSpan={4} className="p-0">
+                                {currentPage >= totalPages && !loadingMoreHistory && (
+                                  <div className="p-4 text-center border-t">
+                                    No more history available
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                        {currentPage < totalPages && (
+                          <div
+                            ref={loadMoreTriggerRef}
+                            className="h-20 flex items-center justify-center"
+                          >
+                            {loadingMoreHistory && (
+                              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="text-sm">Loading more...</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
+                  <PopoverContent className="w-auto p-4" align="end">
+                    <div className="space-y-4">
+                      <div className="text-sm font-medium">Select Date Range</div>
+                      <div className="flex gap-2">
+                        <div className="space-y-2">
+                          <Label className="text-xs">From</Label>
+                          <CalendarComponent
+                            mode="single"
+                            selected={customDateRange.from}
+                            onSelect={(date) => setCustomDateRange({ ...customDateRange, from: date })}
+                            className="rounded-md border"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs">To</Label>
+                          <CalendarComponent
+                            mode="single"
+                            selected={customDateRange.to}
+                            onSelect={(date) => setCustomDateRange({ ...customDateRange, to: date })}
+                            className="rounded-md border"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="default"
+                          variant="outline"
+                          onClick={() => {
+                            setShowDatePicker(false)
+                            setTimeWindow('24h')
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="default"
+                          onClick={() => {
+                            setShowDatePicker(false)
+                            if (customDateRange.from && customDateRange.to) {
+                              setTimeWindow('custom')
+                            }
+                          }}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
+  )
+}
