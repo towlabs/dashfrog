@@ -33,14 +33,16 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
-import { Flows } from '@/src/services/api/flows'
+import { Flows, Labels } from '@/src/services/api'
 import type { Flow } from '@/src/types/flow'
 import type { Step } from '@/src/types/step'
 import type { Filter } from '@/src/types/filter'
+import type { LabelsResponse } from '@/src/services/api/labels'
 import { StepTimeline } from '@/components/step-timeline'
 import { FilterBar, op_to_request } from '@/components/filter-bar'
+import { formatRelativeTime, formatLocalDateTime, formatDuration } from '@/src/utils/date'
 
-type ActiveFilter = { id: string; column: string; operator: 'equals' | 'contains' | 'not_equals' | 'in' | 'not_in'; value: string }
+type ActiveFilter = { id: string; column: string; operator: 'equals' | 'contains' | 'starts_with' | 'not_equals' | 'less_than' | 'greater_than' | 'in' | 'not_in'; value: string }
 
 interface WorkflowsCatalogProps {
   searchTerm: string
@@ -87,6 +89,7 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
   const [totalPages, setTotalPages] = useState(1)
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false)
   const loadMoreTriggerRef = React.useRef<HTMLDivElement>(null)
+  const [availableLabels, setAvailableLabels] = useState<LabelsResponse>({})
 
   // Helper function to convert timeWindow to date range params
   const getDateRangeFromTimeWindow = (): { from_date?: string; to_date?: string } => {
@@ -130,6 +133,21 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
     return dateRange
   }
 
+  // Fetch available labels on mount
+  useEffect(() => {
+    const fetchLabels = async () => {
+      try {
+        const response = await Labels.getAll()
+        setAvailableLabels(response.data)
+      } catch (err) {
+        console.error('Failed to fetch labels:', err)
+        setAvailableLabels({})
+      }
+    }
+
+    fetchLabels()
+  }, [])
+
   useEffect(() => {
     const fetchFlows = async () => {
       try {
@@ -148,11 +166,13 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
         }
 
         filters.forEach(f => {
+          // Status is a special field, not a label
+          const isLabel = f.column !== 'status'
           apiFilters.push({
             key: f.column,
             value: f.value,
             op: op_to_request[f.operator],
-            is_label: true
+            is_label: isLabel
           })
         })
 
@@ -352,10 +372,19 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
         searchPlaceholder="Search workflows..."
         filters={filters}
         onFiltersChange={onFiltersChange}
-        availableColumns={([...new Set(flows.flatMap((wf: any) => Object.keys(wf.labels)))] as string[]).map((col) => ({ value: col, label: col }))}
+        availableColumns={[
+          { value: 'status', label: 'Status' },
+          ...Object.keys(availableLabels).sort().map((labelName) => ({ value: labelName, label: labelName }))
+        ]}
         getValueOptions={(column) => {
-          const values = [...new Set(flows.map((w: any) => w.labels[column]).filter(Boolean) as string[])]
-          return values.length > 0 ? values : undefined as any
+          // Provide status values
+          if (column === 'status') {
+            const statuses = [...new Set(flows.map((w: any) => w.status).filter(Boolean) as string[])]
+            return statuses.length > 0 ? statuses : ['SUCCESS', 'FAILED', 'completed', 'failed', 'running']
+          }
+
+          // Provide label values from API
+          return availableLabels[column] || []
         }}
       />
 
@@ -364,16 +393,17 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[25%]">Name</TableHead>
-              <TableHead className="w-[35%]">Description</TableHead>
+              <TableHead className="w-[20%]">Name</TableHead>
+              <TableHead className="w-[30%]">Description</TableHead>
               <TableHead className="w-[25%]">Labels</TableHead>
+              <TableHead className="w-[10%]">Duration</TableHead>
               <TableHead className="w-[15%]">Last Run</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
+                <TableCell colSpan={5} className="text-center py-8">
                   <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin" />
                     <span>Loading flows...</span>
@@ -382,13 +412,13 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
               </TableRow>
             ) : error ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-red-500">
+                <TableCell colSpan={5} className="text-center text-red-500">
                   {error}
                 </TableCell>
               </TableRow>
             ) : flows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-gray-500">
+                <TableCell colSpan={5} className="text-center text-gray-500">
                   No flows found
                 </TableCell>
               </TableRow>
@@ -418,13 +448,10 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
                           {key}: {value}
                         </span>
                       ))}
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
-                        service: {flow.service_name}
-                      </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700">
-                        duration: {Math.round(flow.duration / 1000)}s
-                      </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="text-sm font-mono text-gray-600">
+                    {formatDuration(flow.duration)}
                   </TableCell>
                   <TableCell className="text-sm text-gray-600">
                     <div className="flex items-center gap-2">
@@ -434,14 +461,15 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
                         'bg-blue-500'
                       }`}></div>
                       <div className="flex flex-col">
-                        <span>{flow.created_at ? new Date(flow.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }) : 'Unknown'}</span>
-                        <span className="text-xs text-muted-foreground capitalize">{flow.status}</span>
+                        <span title={formatLocalDateTime(flow.created_at)}>
+                          {formatRelativeTime(flow.created_at)}
+                        </span>
+                        <span
+                          className="text-xs text-muted-foreground capitalize cursor-pointer hover:text-foreground transition-colors"
+                          onClick={(e) => handleLabelClick(e, 'status', flow.status)}
+                        >
+                          {flow.status}
+                        </span>
                       </div>
                     </div>
                   </TableCell>
@@ -473,9 +501,6 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
                         {key}: {value}
                       </span>
                     ))}
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">
-                      service: {selectedWorkflow.service_name}
-                    </span>
                   </div>
                   <SheetDescription>
                     {selectedWorkflow.description || 'No description available'}
@@ -621,25 +646,17 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
                                     </div>
                                   </TableCell>
                                   <TableCell className="text-xs">
-                                    {flow.created_at ? new Date(flow.created_at).toLocaleString('en-US', {
-                                      year: 'numeric',
-                                      month: '2-digit',
-                                      day: '2-digit',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    }) : 'Unknown'}
+                                    <span title={formatLocalDateTime(flow.created_at)}>
+                                      {formatRelativeTime(flow.created_at)}
+                                    </span>
                                   </TableCell>
                                   <TableCell className="text-xs">
-                                    {flow.ended_at ? new Date(flow.ended_at).toLocaleString('en-US', {
-                                      year: 'numeric',
-                                      month: '2-digit',
-                                      day: '2-digit',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    }) : 'N/A'}
+                                    <span title={formatLocalDateTime(flow.ended_at)}>
+                                      {formatRelativeTime(flow.ended_at)}
+                                    </span>
                                   </TableCell>
                                   <TableCell className="text-xs font-mono">
-                                    {Math.round(flow.duration / 1000)}s
+                                    {formatDuration(flow.duration)}
                                   </TableCell>
                                 </TableRow>
                                 {expandedFlowTraceId === flow.trace_id && (

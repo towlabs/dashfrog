@@ -15,7 +15,7 @@ import { MetricsCatalog } from '@/components/metrics-catalog'
 type ActiveFilter = {
   id: string
   column: string
-  operator: 'equals' | 'contains' | 'not_equals' | 'in' | 'not_in'
+  operator: 'equals' | 'contains' | 'starts_with' | 'not_equals' | 'less_than' | 'greater_than' | 'in' | 'not_in'
   value: string
 }
 

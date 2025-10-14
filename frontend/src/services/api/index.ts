@@ -1,3 +1,4 @@
 import { Flows } from "./flows";
+import { Labels } from "./labels";
 
-export { Flows as Flows };
+export { Flows, Labels };

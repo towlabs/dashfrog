@@ -12,7 +12,7 @@ from src.adapters.stores import (
     Flows as FlowsStore,
     Steps as StepsStore,
 )
-from src.api.routes import API, flows, steps
+from src.api.routes import API, flows, steps, labels
 from src.context import ENV, RELEASE
 from src.core import Config
 from src.domain.usecases import Flows, Steps
@@ -77,4 +77,4 @@ class Application(BaseApplication[Config]):
         return self.logger.bind(name=name, **kwargs)
 
     def init_web(self):
-        API(flows.Flows(self.usecases["flows"]), steps.Steps(self.usecases["steps"]))
+        API(flows.Flows(self.usecases["flows"]), steps.Steps(self.usecases["steps"]), labels.Labels(self.usecases["flows"]))
