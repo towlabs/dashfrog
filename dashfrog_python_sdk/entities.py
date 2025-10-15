@@ -1,7 +1,10 @@
 from datetime import UTC, datetime
 from enum import Enum
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
+
+from . import time
 
 from opentelemetry.sdk.resources import LabelValue
 
@@ -21,9 +24,11 @@ class Base(BaseModel):
     status_message: str | None = None
 
     trace_id: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    started_at: datetime | None = None
-    ended_at: datetime | None = None
+    created_at: Annotated[
+        datetime, Field(default_factory=lambda: datetime.now(UTC)), BeforeValidator(time.Converts.to_utc)
+    ]
+    started_at: Annotated[datetime | None, BeforeValidator(lambda x: time.Converts.to_utc(x) if x else None)] = None
+    ended_at: Annotated[datetime | None, BeforeValidator(lambda x: time.Converts.to_utc(x) if x else None)] = None
     duration: int | None = None  # in ms
 
     @property

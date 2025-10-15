@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
-from dashfrog_python_sdk import DashFrog
+from dashfrog_python_sdk import DashFrog, MetricKind
 
 from . import schemas
 from .models import Ticket, TicketStatus, User, get_db, init_db
@@ -21,7 +21,10 @@ app = FastAPI(
 dashfrog = DashFrog("demo.tasker.api")
 dashfrog.with_fastapi(app).with_celery()
 
-some_mether = dashfrog.observable("test", "ntg to tes", "Km2", tenant="Tower")
+some_mether = dashfrog.observable(MetricKind.COUNTER, "counter", "ntg to tes", "", tenant="Tower")
+user_counter = dashfrog.observable(MetricKind.COUNTER, "test_nb_user", "", tenant="Tower")
+some_measure = dashfrog.observable(MetricKind.MEASURE, "measure", "ntg to tes", "", tenant="Tower")
+some_stats = dashfrog.observable(MetricKind.STATISTIC, "stats", "ntg to tes", "", tenant="Tower")
 
 # Initialize database
 init_db()
@@ -51,7 +54,7 @@ def create_user(user: schemas.UserCreate, db: Annotated[Session, Depends(get_db)
             db.add(db_user)
             db.commit()
             db.refresh(db_user)
-            some_mether.observe(1)
+            user_counter.observe(1)
 
         return db_user
 
@@ -257,6 +260,7 @@ def delete_ticket(ticket_id: int, db: Annotated[Session, Depends(get_db)]):
 
         db.delete(ticket)
         db.commit()
+        user_counter.observe(-1)
 
 
 # ===== HEALTH & INFO ENDPOINTS =====

@@ -6,13 +6,12 @@ import clickhouse_connect
 
 from .core import (
     Config,
-    Observable,
     SupportedInstrumentation,
     clean_methods,
-    clickhouse_client,
     set_singletons,
 )
 from .flows import Flow, Step
+from .metrics import Kind, Observable, new_observable
 
 from opentelemetry import context, propagate
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
@@ -82,16 +81,6 @@ class DashFrog:
         self.service_name = service_name
         self.__labels = {f"glob.{key}": value for key, value in labels.items()}
 
-        if not clickhouse_client:
-            set_singletons(
-                clickhouse_connect.get_client(
-                    host=self.__config.clickhouse.host,
-                    user=self.__config.clickhouse.user,
-                    password=self.__config.clickhouse.password,
-                    autogenerate_session_id=False,
-                )
-            )
-
         resource = Resource.create(
             attributes={
                 **{f"label.{key}": value for key, value in labels.items()},
@@ -123,6 +112,37 @@ class DashFrog:
         if isinstance(trace_provider, (NoOpTracerProvider, ProxyTracerProvider)):
             set_tracer_provider(TracerProvider(resource=resource))
 
+        set_singletons(
+            clickhouse_connect.get_client(
+                host=self.__config.clickhouse.host,
+                user=self.__config.clickhouse.user,
+                password=self.__config.clickhouse.password,
+                autogenerate_session_id=False,
+            ),
+            new_observable(
+                self.__meter,
+                Kind.COUNTER,
+                "workflow_status",
+                "counts occurrence of workflow end with status",
+                "",
+                **self.__labels,
+            ),
+            new_observable(
+                self.__meter, Kind.STATISTIC, "workflow_duration", "counts duration of workflow", "ms", **self.__labels
+            ),
+            new_observable(
+                self.__meter,
+                Kind.COUNTER,
+                "step_status",
+                "counts occurrence of step end with status",
+                "",
+                **self.__labels,
+            ),
+            new_observable(
+                self.__meter, Kind.STATISTIC, "step_duration", "counts duration of step", "ms", **self.__labels
+            ),
+        )
+
     # Features
     @contextmanager
     def flow(
@@ -138,11 +158,21 @@ class DashFrog:
         if span == INVALID_SPAN:
             with get_tracer("dashfrog").start_as_current_span(name) as span:
                 with Flow(
-                    name, self.service_name, description, auto_end=auto_end, **{**labels, **self.__labels}
+                    name,
+                    self.service_name,
+                    description,
+                    auto_end=auto_end,
+                    **{**labels, **self.__labels},
                 ) as flow:
                     yield flow
         else:
-            with Flow(name, self.service_name, description, auto_end=auto_end, **{**labels, **self.__labels}) as flow:
+            with Flow(
+                name,
+                self.service_name,
+                description,
+                auto_end=auto_end,
+                **{**labels, **self.__labels},
+            ) as flow:
                 yield flow
 
     @contextmanager
@@ -160,12 +190,20 @@ class DashFrog:
         if span == INVALID_SPAN:
             with get_tracer("dashfrog").start_as_current_span(name) as span:
                 with Step(
-                    name, description, auto_end=auto_end, auto_start=auto_start, **{**labels, **self.__labels}
+                    name,
+                    description,
+                    auto_end=auto_end,
+                    auto_start=auto_start,
+                    **{**labels, **self.__labels},
                 ) as step:
                     yield step
         else:
             with Step(
-                name, description, auto_end=auto_end, auto_start=auto_start, **{**labels, **self.__labels}
+                name,
+                description,
+                auto_end=auto_end,
+                auto_start=auto_start,
+                **{**labels, **self.__labels},
             ) as step:
                 yield step
 
@@ -190,6 +228,7 @@ class DashFrog:
 
     def observable(
         self,
+        kind: Kind,
         name: str,
         description: str = "",
         unit: str = "",
@@ -197,7 +236,7 @@ class DashFrog:
     ) -> Observable:
         """Observe metrics. /!\\ observable metrics are identified by the name, description and unit tuple."""
 
-        return Observable(self.__meter.create_histogram(name, unit, description), labels)
+        return new_observable(self.__meter, kind, name, description, unit, **labels)
 
     ### Instrumentation ####
     #### Web

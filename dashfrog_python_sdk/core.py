@@ -1,4 +1,3 @@
-from dataclasses import dataclass, field
 from enum import Enum
 from os import environ
 
@@ -12,7 +11,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-from opentelemetry.metrics import Histogram
+from .metrics import Observable
 
 DASHFROG_TRACE_KEY = "dashfrog"
 
@@ -129,26 +128,40 @@ class Config(BaseSettings):
         )
 
 
-@dataclass
-class Observable:
-    """Observable metrics support"""
-
-    metric: Histogram
-    default_labels: dict = field(default_factory=dict)
-
-    def observe(self, value: int | float, **labels):
-        """Add value to observable metric."""
-        self.metric.record(value, {**self.default_labels, **labels})
-
-
 # Singletons
 clickhouse_client: Client | None = None
+workflow_status: Observable | None = None
+workflow_duration: Observable | None = None
+step_status: Observable | None = None
+step_duration: Observable | None = None
 
 
-def set_singletons(client: Client):
+def set_singletons(
+    client: Client,
+    wf_status: Observable | None = None,
+    wf_duration: Observable | None = None,
+    st_status: Observable | None = None,
+    st_duration: Observable | None = None,
+):
     global clickhouse_client
     if not clickhouse_client:
         clickhouse_client = client
+
+    global workflow_status
+    if not workflow_status:
+        workflow_status = wf_status
+
+    global workflow_duration
+    if not workflow_duration:
+        workflow_duration = wf_duration
+
+    global step_status
+    if not step_status:
+        step_status = st_status
+
+    global step_duration
+    if not step_duration:
+        step_duration = st_duration
 
 
 def get_clickhouse() -> Client:
@@ -156,3 +169,31 @@ def get_clickhouse() -> Client:
         raise UnboundLocalError("Clickhouse not initialized")
 
     return clickhouse_client
+
+
+def get_workflow_status() -> Observable:
+    if not workflow_status:
+        raise UnboundLocalError("Workflow status not initialized")
+
+    return workflow_status
+
+
+def get_workflow_duration() -> Observable:
+    if not workflow_duration:
+        raise UnboundLocalError("Workflow duration not initialized")
+
+    return workflow_duration
+
+
+def get_step_status() -> Observable:
+    if not step_status:
+        raise UnboundLocalError("Step status not initialized")
+
+    return step_status
+
+
+def get_step_duration() -> Observable:
+    if not step_duration:
+        raise UnboundLocalError("Step duration not initialized")
+
+    return step_duration

@@ -10,6 +10,7 @@ from structlog.processors import CallsiteParameter
 from .core import Config
 from .dashfrog import DashFrog
 from .flows import Flow
+from .metrics import Kind as MetricKind
 
 processors = [
     structlog.processors.add_log_level,

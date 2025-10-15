@@ -18,12 +18,12 @@ celery.conf.result_backend = "redis://0.0.0.0:6379"
 celery.conf.beat_schedule = {
     "check-in-progress-tickets-daily": {
         "task": "check_in_progress_tickets",
-        "schedule": crontab(hour="*", minute="*/2"),  # Tous les jours à 9h00
+        "schedule": crontab(hour="*/2", minute="0"),  # Tous les jours à 9h00
         # Pour tester toutes les minutes : "schedule": crontab(minute="*")
     },
     "send-weekly-summary": {
         "task": "send_weekly_ticket_summary",
-        "schedule": crontab(hour="*", minute="*/10"),  # Tous les lundis à 10h00
+        "schedule": crontab(hour="*/5", minute="10"),  # Tous les lundis à 10h00
     },
 }
 
@@ -62,18 +62,14 @@ def update_user_info_on_tickets(user_id: int):
 
                 with dashfrog.step("update_tickets_as_creator"):
                     # Update tickets where user is creator
-                    creator_tickets = (
-                        db.query(Ticket).filter(Ticket.creator_id == user_id).all()
-                    )
+                    creator_tickets = db.query(Ticket).filter(Ticket.creator_id == user_id).all()
                     for ticket in creator_tickets:
                         ticket.creator_display_name = user.display_name
                         ticket.creator_avatar = user.avatar
 
                 with dashfrog.step("update_tickets_as_assignee"):
                     # Update tickets where user is assignee
-                    assignee_tickets = (
-                        db.query(Ticket).filter(Ticket.assignee_id == user_id).all()
-                    )
+                    assignee_tickets = db.query(Ticket).filter(Ticket.assignee_id == user_id).all()
                     for ticket in assignee_tickets:
                         ticket.assignee_display_name = user.display_name
                         ticket.assignee_avatar = user.avatar
@@ -120,26 +116,23 @@ def send_email_to_user(user_email: str, subject: str, body: str, close: bool = T
     Send email to a user.
     In production, this would use a real email service (SendGrid, AWS SES, etc.)
     """
+    with dashfrog.current_flow(auto_end=close):
+        with dashfrog.current_step(auto_end=close):
+            with dashfrog.step("connect_to_smtp"):
+                # Simulate SMTP connection
+                time.sleep(0.2)
 
-    with dashfrog.step("connect_to_smtp"):
-        # Simulate SMTP connection
-        time.sleep(0.2)
-
-    with dashfrog.step("send_message"):
-        # In production: send actual email
-        # For demo: just log it
-        print(f"\n{'=' * 60}")
-        print("📧 EMAIL SENT")
-        print(f"{'=' * 60}")
-        print(f"To: {user_email}")
-        print(f"Subject: {subject}")
-        print(f"\n{body}")
-        print(f"{'=' * 60}\n")
-        time.sleep(0.3)
-
-        if close:
-            dashfrog.steps.end()
-            dashfrog.flows.end()
+            with dashfrog.step("send_message"):
+                # In production: send actual email
+                # For demo: just log it
+                print(f"\n{'=' * 60}")
+                print("📧 EMAIL SENT")
+                print(f"{'=' * 60}")
+                print(f"To: {user_email}")
+                print(f"Subject: {subject}")
+                print(f"\n{body}")
+                print(f"{'=' * 60}\n")
+                time.sleep(0.3)
 
     return {"status": "sent", "to": user_email, "subject": subject}
 
@@ -200,9 +193,7 @@ def check_in_progress_tickets():
                     body += "Best regards,\nTasker Team"
 
                     # Send email asynchronously
-                    mail_tasks.append(
-                        send_email_to_user.s(user.email, subject, body, close=False)
-                    )
+                    mail_tasks.append(send_email_to_user.s(user.email, subject, body, close=False))
 
                     emails_sent += 1
 
@@ -218,10 +209,7 @@ def check_in_progress_tickets():
                 "status": "success",
                 "tickets_checked": len(in_progress_tickets),
                 "users_notified": emails_sent,
-                "details": {
-                    user_id: len(data["tickets"])
-                    for user_id, data in tickets_by_user.items()
-                },
+                "details": {user_id: len(data["tickets"]) for user_id, data in tickets_by_user.items()},
             }
 
         finally:
@@ -241,24 +229,10 @@ def send_weekly_ticket_summary():
             with dashfrog.step("gather_statistics"):
                 # Get statistics
                 total_tickets = db.query(Ticket).count()
-                open_tickets = (
-                    db.query(Ticket).filter(Ticket.status == TicketStatus.OPEN).count()
-                )
-                in_progress_tickets = (
-                    db.query(Ticket)
-                    .filter(Ticket.status == TicketStatus.IN_PROGRESS)
-                    .count()
-                )
-                resolved_tickets = (
-                    db.query(Ticket)
-                    .filter(Ticket.status == TicketStatus.RESOLVED)
-                    .count()
-                )
-                closed_tickets = (
-                    db.query(Ticket)
-                    .filter(Ticket.status == TicketStatus.CLOSED)
-                    .count()
-                )
+                open_tickets = db.query(Ticket).filter(Ticket.status == TicketStatus.OPEN).count()
+                in_progress_tickets = db.query(Ticket).filter(Ticket.status == TicketStatus.IN_PROGRESS).count()
+                resolved_tickets = db.query(Ticket).filter(Ticket.status == TicketStatus.RESOLVED).count()
+                closed_tickets = db.query(Ticket).filter(Ticket.status == TicketStatus.CLOSED).count()
 
                 stats = {
                     "total": total_tickets,
@@ -274,9 +248,7 @@ def send_weekly_ticket_summary():
                 mail_tasks = []
                 for user in users:
                     # Get user-specific stats
-                    user_created = (
-                        db.query(Ticket).filter(Ticket.creator_id == user.id).count()
-                    )
+                    user_created = db.query(Ticket).filter(Ticket.creator_id == user.id).count()
                     user_assigned = (
                         db.query(Ticket)
                         .filter(Ticket.assignee_id == user.id)
@@ -300,9 +272,7 @@ def send_weekly_ticket_summary():
                     body += "Have a great week!\n\n"
                     body += "Best regards,\nTasker Team"
 
-                    mail_tasks.append(
-                        send_email_to_user.s(user.email, subject, body, close=False)
-                    )
+                    mail_tasks.append(send_email_to_user.s(user.email, subject, body, close=False))
 
                 res = group(mail_tasks).apply_async()
 

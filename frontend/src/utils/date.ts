@@ -1,8 +1,21 @@
 /**
+ * Parse a UTC date string and ensure it's treated as UTC
+ * Handles dates with or without 'Z' suffix
+ *
+ * @param utcDateString - ISO 8601 date string in UTC
+ * @returns Date object in UTC
+ */
+function parseUTCDate(utcDateString: string): Date {
+  // If the string doesn't end with 'Z', append it to ensure UTC parsing
+  const dateStr = utcDateString.endsWith('Z') ? utcDateString : `${utcDateString}Z`
+  return new Date(dateStr)
+}
+
+/**
  * Format a UTC date string to a relative time string (e.g., "2 minutes ago", "3 hours ago")
  * The date is converted from UTC to the user's local timezone before calculating the interval
  *
- * @param utcDateString - ISO 8601 date string in UTC (e.g., "2025-10-14T12:30:00Z")
+ * @param utcDateString - ISO 8601 date string in UTC (e.g., "2025-10-14T12:30:00Z" or "2025-10-14T12:30:00")
  * @returns Human-readable relative time string
  */
 export function formatRelativeTime(utcDateString: string | null | undefined): string {
@@ -11,8 +24,8 @@ export function formatRelativeTime(utcDateString: string | null | undefined): st
   }
 
   try {
-    // Parse the UTC date string and convert to local time
-    const date = new Date(utcDateString)
+    // Parse the UTC date string ensuring it's treated as UTC
+    const date = parseUTCDate(utcDateString)
     const now = new Date()
 
     // Calculate the difference in milliseconds
@@ -52,9 +65,9 @@ export function formatRelativeTime(utcDateString: string | null | undefined): st
 /**
  * Format a UTC date string to a localized date/time string in the user's timezone
  *
- * @param utcDateString - ISO 8601 date string in UTC
+ * @param utcDateString - ISO 8601 date string in UTC (e.g., "2025-10-14T12:30:00Z" or "2025-10-14T12:30:00")
  * @param options - Intl.DateTimeFormatOptions for formatting
- * @returns Localized date string
+ * @returns Localized date string in the user's timezone
  */
 export function formatLocalDateTime(
   utcDateString: string | null | undefined,
@@ -71,7 +84,8 @@ export function formatLocalDateTime(
   }
 
   try {
-    const date = new Date(utcDateString)
+    // Parse the UTC date string ensuring it's treated as UTC
+    const date = parseUTCDate(utcDateString)
     return date.toLocaleString('en-US', options)
   } catch (error) {
     console.error('Failed to format local date time:', error)

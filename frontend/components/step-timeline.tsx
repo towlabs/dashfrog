@@ -2,6 +2,15 @@ import React from 'react'
 import { CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight } from 'lucide-react'
 import type { Step } from '@/src/types/step'
 
+/**
+ * Parse a UTC date string and ensure it's treated as UTC
+ * Handles dates with or without 'Z' suffix
+ */
+function parseUTCDate(utcDateString: string): Date {
+  const dateStr = utcDateString.endsWith('Z') ? utcDateString : `${utcDateString}Z`
+  return new Date(dateStr)
+}
+
 interface StepTimelineProps {
   steps: Step[]
   workflowCreatedAt: string | null
@@ -59,9 +68,9 @@ const StepItem: React.FC<StepItemProps> = ({
   }
 
   // Calculate timeline positions
-  const stepCreatedTime = step.created_at ? new Date(step.created_at).getTime() : null
-  const stepStartedTime = step.started_at ? new Date(step.started_at).getTime() : null
-  const stepEndedTime = step.ended_at ? new Date(step.ended_at).getTime() : null
+  const stepCreatedTime = step.created_at ? parseUTCDate(step.created_at).getTime() : null
+  const stepStartedTime = step.started_at ? parseUTCDate(step.started_at).getTime() : null
+  const stepEndedTime = step.ended_at ? parseUTCDate(step.ended_at).getTime() : null
 
   // Calculate delays and positions relative to workflow timeline
   let delayStartPercent = 0
@@ -257,8 +266,8 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
   }
 
   // Calculate workflow timeline bounds
-  const workflowStartTime = workflowCreatedAt ? new Date(workflowCreatedAt).getTime() : Date.now()
-  const workflowEndTime = workflowEndedAt ? new Date(workflowEndedAt).getTime() : Date.now()
+  const workflowStartTime = workflowCreatedAt ? parseUTCDate(workflowCreatedAt).getTime() : Date.now()
+  const workflowEndTime = workflowEndedAt ? parseUTCDate(workflowEndedAt).getTime() : Date.now()
   const totalDuration = workflowEndTime - workflowStartTime
 
   if (totalDuration <= 0) {

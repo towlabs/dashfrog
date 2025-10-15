@@ -8,7 +8,8 @@ from typing import Any
 import shortuuid
 from structlog import get_logger
 
-from . import entities, stores
+from . import entities, stores, time
+from .core import get_step_duration, get_step_status, get_workflow_duration, get_workflow_status
 
 from opentelemetry import baggage, context
 from opentelemetry.trace import get_current_span, get_tracer
@@ -84,6 +85,7 @@ class BaseSpan(AbstractContextManager):
 
             self.__entity.status = entities.Status.UNSET
             self._store.insert(self.__entity)
+            self.__observe()
 
         return self
 
@@ -99,7 +101,12 @@ class BaseSpan(AbstractContextManager):
         if self.__auto_end or exc_value is not None:
             self.__entity.ended_at = datetime.now(UTC)
             if self.__entity.started_at:
-                self.__entity.duration = int((self.__entity.ended_at - self.__entity.started_at).total_seconds() * 1000)
+                self.__entity.duration = int(
+                    (
+                        time.Converts.to_utc(self.__entity.ended_at) - time.Converts.to_utc(self.__entity.started_at)
+                    ).total_seconds()
+                    * 1000
+                )
 
             if exc_value is not None:
                 logger.error(f"ending object {self._kind}::{self.name} with error")  # , exc_info=exc_value)
@@ -114,11 +121,22 @@ class BaseSpan(AbstractContextManager):
                 self.__entity.status = entities.Status.SUCCESS
 
             self._store.insert(self.__entity)
+            self.__observe()
 
         if self.__ctx_token:
             context.detach(self.__ctx_token)
 
         return None
+
+    def __observe(self):
+        if self._kind == "step":
+            get_step_status().observe(1, status=self.__entity.status, step=self.name)
+            if self.__entity.duration is not None:
+                get_step_duration().observe(self.__entity.duration, step=self.name)
+        if self._kind == "flow":
+            get_workflow_status().observe(1, status=self.__entity.status, step=self.name)
+            if self.__entity.duration is not None:
+                get_workflow_duration().observe(self.__entity.duration, step=self.name)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.name!r})"
@@ -145,11 +163,17 @@ class Flow(BaseSpan):
             trace_id = str(span.get_span_context().trace_id)
 
             if from_context:
-                _flow = entities.Flow(
-                    name=str(current_baggage.get(f"current_{Flow._kind}_id", "")),
-                    trace_id=trace_id,
-                    created_at=datetime.now(UTC),
+                _flow = self._store.get_by_id(
+                    str(current_baggage.get(f"current_{Flow._kind}_id", "")),
+                    trace_id,
+                    "created_at",
+                    "started_at",
+                    "ended_at",
+                    "status",
+                    "labels",
+                    "duration",
                 )
+
             else:
                 src_flow = current_baggage.get(f"current_{Flow._kind}_id")
                 if src_flow:
@@ -205,11 +229,19 @@ class Step(BaseSpan):
             src_flow = str(current_baggage.get(f"current_{Flow._kind}_id"))
 
             if from_context:
-                _step = entities.Step(
-                    id=str(current_baggage.get(f"current_{Step._kind}_id", "")),
-                    for_flow=str(src_flow),
-                    trace_id=trace_id,
+                _step = self._store.get_by_id(
+                    str(current_baggage.get(f"current_{Step._kind}_id", "")),
+                    trace_id,
+                    "name",
+                    "created_at",
+                    "started_at",
+                    "ended_at",
+                    "status",
+                    "labels",
+                    "duration",
                 )
+
+                _step.created_at = datetime.now(UTC)
             else:
                 src_step_id = current_baggage.get(f"current_{self._kind}_id")
 
