@@ -1,0 +1,19 @@
+{{- if .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-postgresql
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: postgresql
+spec:
+  type: {{ .Values.postgresql.service.type }}
+  ports:
+    - port: {{ .Values.postgresql.service.port }}
+      targetPort: postgresql
+      protocol: TCP
+      name: postgresql
+  selector:
+    {{- include "dashfrog_kube.selectorLabels" . | nindent 4 }}
+    component: postgresql
+{{- end }}

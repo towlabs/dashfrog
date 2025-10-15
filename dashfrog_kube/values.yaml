@@ -56,6 +56,49 @@ clickhouse:
     runAsGroup: 101
     fsGroup: 101
 
+# PostgreSQL Configuration
+postgresql:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: postgres
+    pullPolicy: IfNotPresent
+    tag: "16-alpine"
+
+  # PostgreSQL configuration
+  config:
+    user: "dashfrog"
+    password: "change-me-password"  # MUST be changed in production
+    database: "dashfrog"
+    port: 5432
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 5432
+
+  # Resources
+  resources: {}
+    # limits:
+    #   cpu: 500m
+    #   memory: 1Gi
+    # requests:
+    #   cpu: 250m
+    #   memory: 512Mi
+
+  # Persistent volume
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+
+  # Security context
+  securityContext:
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+
 # Prometheus Configuration
 prometheus:
   enabled: true

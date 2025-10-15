@@ -1,4 +1,13 @@
 services:
+  postgresql:
+    hostname: postgres
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=dev
+      - POSTGRES_PASSWORD=dev-pwd*
+      - POSTGRES_DB=dashfrog
 
   clickhouse:
     hostname: clickhouse
