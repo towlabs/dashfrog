@@ -21,10 +21,16 @@ app = FastAPI(
 dashfrog = DashFrog("demo.tasker.api")
 dashfrog.with_fastapi(app).with_celery()
 
-some_mether = dashfrog.observable(MetricKind.COUNTER, "counter", "ntg to tes", "", tenant="Tower")
-user_counter = dashfrog.observable(MetricKind.COUNTER, "test_nb_user", "", tenant="Tower")
-some_measure = dashfrog.observable(MetricKind.MEASURE, "measure", "ntg to tes", "", tenant="Tower")
-some_stats = dashfrog.observable(MetricKind.STATISTIC, "stats", "ntg to tes", "", tenant="Tower")
+some_mether = dashfrog.metrics(
+    MetricKind.COUNTER, "counter", "ntg to tes", "", tenant="Tower"
+)
+user_counter = dashfrog.metrics(MetricKind.COUNTER, "test_nb_user", "", tenant="Tower")
+some_measure = dashfrog.metrics(
+    MetricKind.MEASURE, "measure", "ntg to tes", "", tenant="Tower"
+)
+some_stats = dashfrog.metrics(
+    MetricKind.STATISTIC, "stats", "ntg to tes", "", tenant="Tower"
+)
 
 # Initialize database
 init_db()
@@ -54,13 +60,15 @@ def create_user(user: schemas.UserCreate, db: Annotated[Session, Depends(get_db)
             db.add(db_user)
             db.commit()
             db.refresh(db_user)
-            user_counter.observe(1)
+            user_counter.record(1)
 
         return db_user
 
 
 @app.get("/users", response_model=list[schemas.User])
-def list_users(db: Annotated[Session, Depends(get_db)], skip: int = 0, limit: int = 100):
+def list_users(
+    db: Annotated[Session, Depends(get_db)], skip: int = 0, limit: int = 100
+):
     """List all users"""
 
     users = db.query(User).offset(skip).limit(limit).all()
@@ -102,7 +110,9 @@ def update_user(
 
         with dashfrog.step("trigger_ticket_update", auto_end=False, auto_start=False):
             # Trigger Celery task to update user info on all tickets
-            update_user_info_on_tickets.apply_async(args=(user_id,), countdown=randint(3, 10))
+            update_user_info_on_tickets.apply_async(
+                args=(user_id,), countdown=randint(3, 10)
+            )
 
     return user
 
@@ -117,7 +127,9 @@ def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
 
         # Check if user has tickets
         tickets_count = (
-            db.query(Ticket).filter((Ticket.creator_id == user_id) | (Ticket.assignee_id == user_id)).count()
+            db.query(Ticket)
+            .filter((Ticket.creator_id == user_id) | (Ticket.assignee_id == user_id))
+            .count()
         )
 
         if tickets_count > 0:
@@ -134,7 +146,9 @@ def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
 
 
 @app.post("/tickets", response_model=schemas.Ticket, status_code=201)
-def create_ticket(ticket: schemas.TicketCreate, db: Annotated[Session, Depends(get_db)]):
+def create_ticket(
+    ticket: schemas.TicketCreate, db: Annotated[Session, Depends(get_db)]
+):
     """Create a new ticket"""
     with dashfrog.flow("create_ticket", title=ticket.title, auto_end=False):
         with dashfrog.step("validate_users"):
@@ -229,7 +243,9 @@ def update_ticket(
                 if assignee_id:
                     assignee = db.query(User).filter(User.id == assignee_id).first()
                     if not assignee:
-                        raise HTTPException(status_code=404, detail="Assignee not found")
+                        raise HTTPException(
+                            status_code=404, detail="Assignee not found"
+                        )
                     ticket.assignee_display_name = assignee.display_name
                     ticket.assignee_avatar = assignee.avatar
                 else:
@@ -260,7 +276,7 @@ def delete_ticket(ticket_id: int, db: Annotated[Session, Depends(get_db)]):
 
         db.delete(ticket)
         db.commit()
-        user_counter.observe(-1)
+        user_counter.record(-1)
 
 
 # ===== HEALTH & INFO ENDPOINTS =====

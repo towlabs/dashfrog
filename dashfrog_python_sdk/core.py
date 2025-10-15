@@ -11,7 +11,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-from .metrics import Observable
+from .metrics import Metric
 
 DASHFROG_TRACE_KEY = "dashfrog"
 
@@ -105,8 +105,14 @@ class Config(BaseSettings):
         env_parse_enums=True,
         extra="ignore",
         env_file="dashfrog.env",
-        json_file=(get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog") + ".json"),
-        yaml_file=(get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog") + ".yaml"),
+        json_file=(
+            get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog")
+            + ".json"
+        ),
+        yaml_file=(
+            get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog")
+            + ".yaml"
+        ),
     )
 
     @classmethod
@@ -130,18 +136,18 @@ class Config(BaseSettings):
 
 # Singletons
 clickhouse_client: Client | None = None
-workflow_status: Observable | None = None
-workflow_duration: Observable | None = None
-step_status: Observable | None = None
-step_duration: Observable | None = None
+workflow_status: Metric | None = None
+workflow_duration: Metric | None = None
+step_status: Metric | None = None
+step_duration: Metric | None = None
 
 
 def set_singletons(
     client: Client,
-    wf_status: Observable | None = None,
-    wf_duration: Observable | None = None,
-    st_status: Observable | None = None,
-    st_duration: Observable | None = None,
+    wf_status: Metric | None = None,
+    wf_duration: Metric | None = None,
+    st_status: Metric | None = None,
+    st_duration: Metric | None = None,
 ):
     global clickhouse_client
     if not clickhouse_client:
@@ -171,28 +177,28 @@ def get_clickhouse() -> Client:
     return clickhouse_client
 
 
-def get_workflow_status() -> Observable:
+def get_workflow_status() -> Metric:
     if not workflow_status:
         raise UnboundLocalError("Workflow status not initialized")
 
     return workflow_status
 
 
-def get_workflow_duration() -> Observable:
+def get_workflow_duration() -> Metric:
     if not workflow_duration:
         raise UnboundLocalError("Workflow duration not initialized")
 
     return workflow_duration
 
 
-def get_step_status() -> Observable:
+def get_step_status() -> Metric:
     if not step_status:
         raise UnboundLocalError("Step status not initialized")
 
     return step_status
 
 
-def get_step_duration() -> Observable:
+def get_step_duration() -> Metric:
     if not step_duration:
         raise UnboundLocalError("Step duration not initialized")
 

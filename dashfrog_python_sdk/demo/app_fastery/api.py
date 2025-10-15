@@ -9,7 +9,7 @@ from .worker import hello_world
 
 dashfrog = DashFrog("demo.fastery.api")
 
-obs = dashfrog.observable("test", "something to observe", "Km2", tenant="Tower")
+obs = dashfrog.metrics("test", "something to observe", "Km2", tenant="Tower")
 
 api = FastAPI(title="DashFrog demo")
 dashfrog = dashfrog.with_fastapi(api).with_httpx()
@@ -45,7 +45,7 @@ def index():
 
 @api.get("/error")
 def with_error():
-    obs.observe(-5)
+    obs.record(-5)
     with dashfrog.step("step4"):
         with dashfrog.flow("error"):
             with dashfrog.step("step5"):

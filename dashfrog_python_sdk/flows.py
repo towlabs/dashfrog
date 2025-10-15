@@ -9,7 +9,12 @@ import shortuuid
 from structlog import get_logger
 
 from . import entities, stores, time
-from .core import get_step_duration, get_step_status, get_workflow_duration, get_workflow_status
+from .core import (
+    get_step_duration,
+    get_step_status,
+    get_workflow_duration,
+    get_workflow_status,
+)
 
 from opentelemetry import baggage, context
 from opentelemetry.trace import get_current_span, get_tracer
@@ -49,7 +54,7 @@ class BaseSpan(AbstractContextManager):
             ctx = baggage.set_baggage(
                 f"current_{self._kind}_id",
                 self.identifier,
-                baggage.set_baggage(f"current_{self._kind}", self.name),
+                baggage.set_baggage(f"current_{self._kind}_name", self.name),
             )
             self.__ctx_token = context.attach(ctx)
 
@@ -83,6 +88,8 @@ class BaseSpan(AbstractContextManager):
             if self.__entity.started_at is None:
                 self.__entity.started_at = datetime.now(UTC)
 
+            ctx = baggage.set_baggage(f"current_{self._kind}_started_at", self.__entity.started_at)
+            self.__ctx_token = self.__ctx_token or context.attach(ctx)
             self.__entity.status = entities.Status.UNSET
             self._store.insert(self.__entity)
             self.__observe()
@@ -130,13 +137,15 @@ class BaseSpan(AbstractContextManager):
 
     def __observe(self):
         if self._kind == "step":
-            get_step_status().observe(1, status=self.__entity.status, step=self.name)
+            if self.__entity.status:
+                get_step_status().record(1, status=self.__entity.status, step=self.name)
             if self.__entity.duration is not None:
-                get_step_duration().observe(self.__entity.duration, step=self.name)
+                get_step_duration().record(self.__entity.duration, step=self.name)
         if self._kind == "flow":
-            get_workflow_status().observe(1, status=self.__entity.status, step=self.name)
+            if self.__entity.status:
+                get_workflow_status().record(1, status=self.__entity.status, flow=self.name)
             if self.__entity.duration is not None:
-                get_workflow_duration().observe(self.__entity.duration, step=self.name)
+                get_workflow_duration().record(self.__entity.duration, flow=self.name)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.name!r})"
@@ -163,15 +172,20 @@ class Flow(BaseSpan):
             trace_id = str(span.get_span_context().trace_id)
 
             if from_context:
-                _flow = self._store.get_by_id(
-                    str(current_baggage.get(f"current_{Flow._kind}_id", "")),
-                    trace_id,
-                    "created_at",
-                    "started_at",
-                    "ended_at",
-                    "status",
-                    "labels",
-                    "duration",
+                started_at = current_baggage.get(f"current_{Flow._kind}_started_at", None)
+                if started_at:
+                    started_at = datetime.fromisoformat(started_at)
+
+                get_logger(
+                    started_at=started_at,
+                    baggage=current_baggage,
+                    ctx=context.get_current(),
+                ).info("plop ?")
+                _flow = entities.Flow(
+                    name=str(current_baggage.get(f"current_{Flow._kind}_id", "")),
+                    started_at=started_at,  # pyright: ignore [reportArgumentType]
+                    trace_id=trace_id,
+                    created_at=datetime.now(UTC),
                 )
 
             else:
@@ -229,16 +243,16 @@ class Step(BaseSpan):
             src_flow = str(current_baggage.get(f"current_{Flow._kind}_id"))
 
             if from_context:
-                _step = self._store.get_by_id(
-                    str(current_baggage.get(f"current_{Step._kind}_id", "")),
-                    trace_id,
-                    "name",
-                    "created_at",
-                    "started_at",
-                    "ended_at",
-                    "status",
-                    "labels",
-                    "duration",
+                started_at = current_baggage.get(f"current_{Flow._kind}_started_at", None)
+                if started_at:
+                    started_at = datetime.fromisoformat(started_at)
+                _step = entities.Step(
+                    id=str(current_baggage.get(f"current_{Step._kind}_id", "")),
+                    name=str(current_baggage.get(f"current_{Step._kind}_name", "")),
+                    for_flow=str(src_flow),
+                    trace_id=trace_id,
+                    created_at=datetime.now(UTC),
+                    started_at=started_at,  # pyright: ignore [reportArgumentType]
                 )
 
                 _step.created_at = datetime.now(UTC)

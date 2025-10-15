@@ -12,7 +12,7 @@ from .db import DemoUser, session
 dashfrog = DashFrog("demo.fastapi")
 dashfrog2 = DashFrog("demo.fastapi2")
 
-obs = dashfrog.observable("test", "something to observe", "Km2", tenant="Tower")
+obs = dashfrog.metrics("test", "something to observe", "Km2", tenant="Tower")
 
 api = FastAPI(title="DashFrog demo")
 dashfrog = dashfrog.with_fastapi(api)
@@ -28,7 +28,7 @@ class HelloBudy(BaseModel):
 @api.get("/")
 def index():
     with dashfrog.step("hello-world") as process:
-        obs.observe(1)
+        obs.record(1)
         process.event("say_hello")
         time.sleep(1)
         process.event("say_goodbye")
@@ -38,7 +38,7 @@ def index():
 @api.post("/you")
 def hello(body: HelloBudy):
     with dashfrog.flow("say_hello", user_name=body.name, body=body.model_dump_json()):
-        obs.observe(10)
+        obs.record(10)
         try:
             with session() as ses:
                 ses.add(DemoUser(name=body.name))
@@ -50,7 +50,7 @@ def hello(body: HelloBudy):
 
 @api.get("/error")
 def with_error():
-    obs.observe(-5)
+    obs.record(-5)
     with dashfrog.step("step4"):
         with dashfrog.flow("error"):
             with dashfrog.step("step5"):
@@ -77,6 +77,7 @@ def recall(callback: str):
 def redirect(callback: str):
     with dashfrog.flow("callback", recall=callback):
         return RedirectResponse(callback)
+
 
 # For development only
 if __name__ == "__main__":

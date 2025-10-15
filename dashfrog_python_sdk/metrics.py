@@ -10,7 +10,7 @@ class Kind(str, Enum):
     STATISTIC = "statistic"
 
 
-class Observable(ABC):
+class Metric(ABC):
     """Observable metrics support"""
 
     name: str
@@ -20,13 +20,15 @@ class Observable(ABC):
         return f"<Observable::({self.name!r})>"
 
     @abstractmethod
-    def observe(self, value: int | float, **labels):
+    def record(self, value: int | float, **labels):
         """Add value to observable metric."""
 
         raise NotImplementedError()
 
 
-def new_observable(meter: Meter, kind: Kind, name: str, description: str, unit: str, **labels) -> Observable:
+def new_metric(
+    meter: Meter, kind: Kind, name: str, description: str, unit: str, **labels
+) -> Metric:
     match kind:
         case Kind.COUNTER:
             return __Counter(meter, name, description, unit, **labels)
@@ -38,34 +40,34 @@ def new_observable(meter: Meter, kind: Kind, name: str, description: str, unit: 
             raise ValueError(f"Invalid kind: {kind}")
 
 
-class __Counter(Observable):
+class __Counter(Metric):
     def __init__(self, meter: Meter, name: str, description: str, unit: str, **labels):
         self.__meter = meter.create_counter(name, unit, description)
         self.default_labels = labels
 
-    def observe(self, value: int | float, **labels):
+    def record(self, value: int | float, **labels):
         self.__meter.add(value, {**labels, **self.default_labels})
 
         return self
 
 
-class __Measure(Observable):
+class __Measure(Metric):
     def __init__(self, meter: Meter, name: str, description: str, unit: str, **labels):
         self.__meter = meter.create_gauge(name, unit, description)
         self.default_labels = labels
 
-    def observe(self, value: int | float, **labels):
+    def record(self, value: int | float, **labels):
         self.__meter.set(value, {**labels, **self.default_labels})
 
         return self
 
 
-class __Statistic(Observable):
+class __Statistic(Metric):
     def __init__(self, meter: Meter, name: str, description: str, unit: str, **labels):
         self.__meter = meter.create_histogram(name, unit, description)
         self.default_labels = labels
 
-    def observe(self, value: int | float, **labels):
+    def record(self, value: int | float, **labels):
         self.__meter.record(value, {**labels, **self.default_labels})
 
         return self

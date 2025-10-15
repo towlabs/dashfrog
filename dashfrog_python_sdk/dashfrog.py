@@ -11,7 +11,7 @@ from .core import (
     set_singletons,
 )
 from .flows import Flow, Step
-from .metrics import Kind, Observable, new_observable
+from .metrics import Kind, Metric, new_metric
 
 from opentelemetry import context, propagate
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
@@ -119,7 +119,7 @@ class DashFrog:
                 password=self.__config.clickhouse.password,
                 autogenerate_session_id=False,
             ),
-            new_observable(
+            new_metric(
                 self.__meter,
                 Kind.COUNTER,
                 "workflow_status",
@@ -127,10 +127,10 @@ class DashFrog:
                 "",
                 **self.__labels,
             ),
-            new_observable(
+            new_metric(
                 self.__meter, Kind.STATISTIC, "workflow_duration", "counts duration of workflow", "ms", **self.__labels
             ),
-            new_observable(
+            new_metric(
                 self.__meter,
                 Kind.COUNTER,
                 "step_status",
@@ -138,9 +138,7 @@ class DashFrog:
                 "",
                 **self.__labels,
             ),
-            new_observable(
-                self.__meter, Kind.STATISTIC, "step_duration", "counts duration of step", "ms", **self.__labels
-            ),
+            new_metric(self.__meter, Kind.STATISTIC, "step_duration", "counts duration of step", "ms", **self.__labels),
         )
 
     # Features
@@ -226,17 +224,17 @@ class DashFrog:
         with Step("", auto_end=auto_end, auto_start=auto_start, from_context=True) as step:
             yield step
 
-    def observable(
+    def metrics(
         self,
         kind: Kind,
         name: str,
         description: str = "",
         unit: str = "",
         **labels,
-    ) -> Observable:
+    ) -> Metric:
         """Observe metrics. /!\\ observable metrics are identified by the name, description and unit tuple."""
 
-        return new_observable(self.__meter, kind, name, description, unit, **labels)
+        return new_metric(self.__meter, kind, name, description, unit, **labels)
 
     ### Instrumentation ####
     #### Web
