@@ -1,0 +1,28 @@
+{{- if .Values.backend.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-backend-config
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: backend
+data:
+  config.yaml: |
+    env: {{ .Values.backend.config.env }}
+    click_house:
+      database: {{ .Values.clickhouse.config.database }}
+      host: {{ include "dashfrog_kube.fullname" . }}-clickhouse
+      port: {{ .Values.clickhouse.config.port }}
+      user: {{ .Values.clickhouse.config.user }}
+      # Password will be provided via secret
+    postgresql:
+      database: {{ .Values.postgresql.config.database }}
+      host: {{ include "dashfrog_kube.fullname" . }}-postgresql
+      port: {{ .Values.postgresql.config.port }}
+      user: {{ .Values.postgresql.config.user }}
+      # Password will be provided via secret
+    logs:
+      level: {{ .Values.backend.config.logs.level | quote }}
+      activate_axiom: {{ .Values.backend.config.logs.activateAxiom }}
+      log_libs: {{ .Values.backend.config.logs.logLibs }}
+{{- end }}

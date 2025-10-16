@@ -146,12 +146,12 @@ prometheus:
 collector:
   enabled: true
   replicaCount: 1
-  
+
   image:
     repository: "ghcr.io/towlabs/dashfrog/collector"  # Must be provided - your custom collector image
     pullPolicy: IfNotPresent
     tag: "latest"
-  
+
   # Collector configuration
   config:
     # OTLP receiver ports
@@ -161,7 +161,7 @@ collector:
     prometheusPort: 9090
     # Health check port
     healthCheckPort: 13133
-  
+
   # Service configuration
   service:
     type: ClusterIP
@@ -170,7 +170,7 @@ collector:
       otlpHttp: 4318
       prometheus: 9090
       healthCheck: 13133
-  
+
   # Resources
   resources: {}
     # limits:
@@ -179,12 +179,89 @@ collector:
     # requests:
     #   cpu: 250m
     #   memory: 512Mi
-  
+
   # Security context
   securityContext:
     runAsUser: 10001
     runAsGroup: 10001
     fsGroup: 10001
+
+# Backend Configuration
+backend:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: "ghcr.io/towlabs/dashfrog/backend"  # Your backend image
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  # Backend configuration
+  config:
+    port: 8080
+    env: "production"
+    release: "1.0.0"
+    # Logging configuration
+    logs:
+      level: "INFO"
+      activateAxiom: false
+      logLibs: false
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+
+  # Resources
+  resources: {}
+    # limits:
+    #   cpu: 500m
+    #   memory: 512Mi
+    # requests:
+    #   cpu: 250m
+    #   memory: 256Mi
+
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+
+# Frontend Configuration
+frontend:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: "ghcr.io/towlabs/dashfrog/frontend"  # Your frontend image
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+  # Frontend configuration
+  config:
+    port: 8080
+    # Backend API URL (will be passed as env var)
+    backendUrl: "http://dashfrog-backend:8080"
+
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+
+  # Resources
+  resources: {}
+    # limits:
+    #   cpu: 200m
+    #   memory: 256Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  # Security context
+  securityContext:
+    runAsUser: 101
+    runAsGroup: 101
+    fsGroup: 101
 
 # This is for the secrets for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []

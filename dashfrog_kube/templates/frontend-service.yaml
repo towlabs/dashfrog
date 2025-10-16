@@ -1,0 +1,19 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "dashfrog_kube.fullname" . }}-frontend
+  labels:
+    {{- include "dashfrog_kube.labels" . | nindent 4 }}
+    component: frontend
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "dashfrog_kube.selectorLabels" . | nindent 4 }}
+    component: frontend
+{{- end }}
