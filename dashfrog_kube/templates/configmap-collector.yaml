@@ -24,6 +24,7 @@ data:
       prometheus:
         endpoint: "0.0.0.0:9090"
         # namespace: dashfrog
+        enable_open_metrics: false
         resource_to_telemetry_conversion:
           enabled: false
     processors:

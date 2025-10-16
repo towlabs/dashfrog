@@ -5,6 +5,7 @@ import Header from './Header'
 import SideMenu from './SideMenu'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
 import { NotebookTitleProvider } from './notebook-title-context'
+import { LabelsProvider } from '@/src/contexts/labels-context'
 
 export default function LayoutClient({
   children,
@@ -15,26 +16,28 @@ export default function LayoutClient({
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false)
 
   return (
-    <NotebookTitleProvider>
-      <div className="relative flex min-h-screen">
-        {/* Desktop Sidebar - Fixed */}
-        <SideMenu isCollapsed={sidebarCollapsed} onToggleCollapse={setSidebarCollapsed} />
+    <LabelsProvider>
+      <NotebookTitleProvider>
+        <div className="relative flex min-h-screen">
+          {/* Desktop Sidebar - Fixed */}
+          <SideMenu isCollapsed={sidebarCollapsed} onToggleCollapse={setSidebarCollapsed} />
 
-        {/* Mobile Sidebar */}
-        <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <DrawerContent side="left" className="p-0">
-            <SideMenu />
-          </DrawerContent>
-        </Drawer>
+          {/* Mobile Sidebar */}
+          <Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <DrawerContent side="left" className="p-0">
+              <SideMenu />
+            </DrawerContent>
+          </Drawer>
 
-        {/* Main Content - With left margin to account for fixed sidebar */}
-        <div className={`flex flex-1 flex-col transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
-          <Header onMenuClick={() => setMobileMenuOpen(true)} />
-          <main className="flex-1 overflow-y-auto">
-            {children}
-          </main>
+          {/* Main Content - With left margin to account for fixed sidebar */}
+          <div className={`flex flex-1 flex-col transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'}`}>
+            <Header onMenuClick={() => setMobileMenuOpen(true)} />
+            <main className="flex-1 overflow-y-auto">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
-    </NotebookTitleProvider>
+      </NotebookTitleProvider>
+    </LabelsProvider>
   )
 }

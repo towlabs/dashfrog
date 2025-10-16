@@ -7,9 +7,5 @@ GET 0.0.0.0:8080/api/flows/latest
 ### GET flow history
 GET 0.0.0.0:8080/api/flows/classify?nb_items=5
 
-
-### GET flow labels
-GET 0.0.0.0:8080/api/labels
-
 ### GET steps
 GET 0.0.0.0:8080/api/flows/classify/68154714088537406052407552665373702896/steps

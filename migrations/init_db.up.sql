@@ -1,9 +1,3 @@
-DROP TABLE if exists dashfrog.flow_events;
-DROP TABLE if exists dashfrog.step_events;
-DROP TABLE if exists dashfrog.flows;
-DROP VIEW if exists dashfrog.flows;
-DROP VIEW if exists dashfrog.flows_mv;
-
 CREATE TABLE IF NOT EXISTS dashfrog.flow_events (
     name LowCardinality(String),
     service_name LowCardinality(Nullable(String)),

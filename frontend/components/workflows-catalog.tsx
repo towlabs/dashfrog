@@ -33,14 +33,14 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
-import { Flows, Labels } from '@/src/services/api'
+import { Flows } from '@/src/services/api'
 import type { Flow } from '@/src/types/flow'
 import type { Step } from '@/src/types/step'
 import type { Filter } from '@/src/types/filter'
-import type { LabelsResponse } from '@/src/services/api/labels'
 import { StepTimeline } from '@/components/step-timeline'
 import { FilterBar, op_to_request } from '@/components/filter-bar'
 import { formatRelativeTime, formatLocalDateTime, formatDuration } from '@/src/utils/date'
+import { useLabels } from '@/src/contexts/labels-context'
 
 type ActiveFilter = { id: string; column: string; operator: 'equals' | 'contains' | 'starts_with' | 'not_equals' | 'less_than' | 'greater_than' | 'in' | 'not_in'; value: string }
 
@@ -68,6 +68,7 @@ const chartConfig: ChartConfig = {
 }
 
 export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFiltersChange }: WorkflowsCatalogProps) {
+  const { labels: labelsStore } = useLabels()
   const [flows, setFlows] = useState<Flow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -89,7 +90,11 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
   const [totalPages, setTotalPages] = useState(1)
   const [loadingMoreHistory, setLoadingMoreHistory] = useState(false)
   const loadMoreTriggerRef = React.useRef<HTMLDivElement>(null)
-  const [availableLabels, setAvailableLabels] = useState<LabelsResponse>({})
+
+  // Helper to get display value for a label (uses proxy if available)
+  const getDisplayValue = (labelKey: string, value: string): string => {
+    return labelsStore[labelKey]?.valueMappings.get(value) || value
+  }
 
   // Helper function to convert timeWindow to date range params
   const getDateRangeFromTimeWindow = (): { from_date?: string; to_date?: string } => {
@@ -132,21 +137,6 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
 
     return dateRange
   }
-
-  // Fetch available labels on mount
-  useEffect(() => {
-    const fetchLabels = async () => {
-      try {
-        const response = await Labels.getAll()
-        setAvailableLabels(response.data)
-      } catch (err) {
-        console.error('Failed to fetch labels:', err)
-        setAvailableLabels({})
-      }
-    }
-
-    fetchLabels()
-  }, [])
 
   useEffect(() => {
     const fetchFlows = async () => {
@@ -374,17 +364,26 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
         onFiltersChange={onFiltersChange}
         availableColumns={[
           { value: 'status', label: 'Status' },
-          ...Object.keys(availableLabels).sort().map((labelName) => ({ value: labelName, label: labelName }))
+          ...Object.keys(labelsStore).sort().map((labelName) => ({
+            value: labelName,
+            label: labelName,
+            description: labelsStore[labelName].description || undefined
+          }))
         ]}
         getValueOptions={(column) => {
-          // Provide status values
+          // Provide status values as ValueOptions
           if (column === 'status') {
             const statuses = [...new Set(flows.map((w: any) => w.status).filter(Boolean) as string[])]
-            return statuses.length > 0 ? statuses : ['SUCCESS', 'FAILED', 'completed', 'failed', 'running']
+            const statusList = statuses.length > 0 ? statuses : ['SUCCESS', 'FAILED', 'completed', 'failed', 'running']
+            return statusList.map(s => ({ value: s, display: s }))
           }
 
-          // Provide label values from API
-          return availableLabels[column] || []
+          // Provide label values as ValueOptions with proxy display
+          // ONLY actual queryable values, NOT proxies
+          return labelsStore[column]?.values.map(val => ({
+            value: val,
+            display: getDisplayValue(column, val)
+          })) || []
         }}
       />
 
@@ -444,8 +443,9 @@ export function WorkflowsCatalog({ searchTerm, onSearchChange, filters, onFilter
                           key={`${flow.trace_id}-label-${key}`}
                           className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
                           onClick={(e) => handleLabelClick(e, key, value)}
+                          title={`${key}: ${value}`}
                         >
-                          {key}: {value}
+                          {key}: {getDisplayValue(key, value)}
                         </span>
                       ))}
                     </div>

@@ -3,8 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Annotated, ClassVar, Generic, TypeVar
 
-from pydantic import Field
-from pydantic.generics import GenericModel
+from pydantic import BaseModel, Field
 
 T = TypeVar("T")
 C = TypeVar("C")
@@ -24,12 +23,14 @@ class AbstractParams(ABC):
         pass
 
 
-class AbstractPage(GenericModel, Generic[T], ABC):
+class AbstractPage(BaseModel, Generic[T], ABC):
     __params_type__: ClassVar[type[AbstractParams]]
 
     @classmethod
     @abstractmethod
-    def create(cls: type[C], items: Sequence[T], total: int, params: AbstractParams) -> C:
+    def create(
+        cls: type[C], items: Sequence[T], total: int, params: AbstractParams
+    ) -> C:
         pass
 
     class Config:

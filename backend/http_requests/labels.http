@@ -1,0 +1,5 @@
+### GET labels
+GET 0.0.0.0:8080/api/labels
+
+### GET Scrape labels
+GET 0.0.0.0:8080/api/labels/scrape

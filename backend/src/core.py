@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from pydantic import BaseModel
 from pydantic_settings import (
     BaseSettings,
@@ -6,6 +8,9 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from context import SESSION
 
 
 def str_to_bool(value: str) -> bool:
@@ -13,12 +18,16 @@ def str_to_bool(value: str) -> bool:
 
 
 class Config(BaseSettings):
-    class ClickHouse(BaseModel):
+    class Database(BaseModel):
         host: str = "0.0.0.0"
         user: str = "dev"
         database: str = "dashfrog"
         port: int | None = None
         password: str
+
+    class Prometheus(BaseModel):
+        url: str = "http://localhost:9090"
+        disable_ssl: bool = True  # insecured default
 
     class Logs(BaseModel):
         level: str = "INFO"
@@ -29,15 +38,17 @@ class Config(BaseSettings):
     env: str = "dev"
     release: str = "0.0.0"
 
-    click_house: ClickHouse = ClickHouse(password="dev-pwd*")  # nosec default to local click password
+    click_house: Database = Database(password="dev-pwd*")  # nosec default to local click password
+    psql: Database = Database(password="dev-pwd*")  # nosec default to local click password
     logs: Logs = Logs()
+    prometheus: Prometheus = Prometheus()
 
     model_config = SettingsConfigDict(
         env_ignore_empty=True,
         env_nested_delimiter=".",
         env_parse_enums=True,
         extra="ignore",
-        env_file="dashfrog.env",
+        env_file=".env",
         json_file="config.json",
         yaml_file="config.yaml",
     )
@@ -59,3 +70,15 @@ class Config(BaseSettings):
             # Load env settings last so any other way to configure overrides..
             dotenv_settings,
         )
+
+
+class AsyncSessionMaker:
+    def __init__(self, session_maker: async_sessionmaker):
+        self.__maker = session_maker
+
+    @asynccontextmanager
+    async def begin(self):
+        async with self.__maker.begin() as session:
+            SESSION.set(session)
+            yield session
+            SESSION.set(None)

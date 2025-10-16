@@ -5,28 +5,21 @@ from typing import Any, TypeVar
 from uuid import uuid4
 
 from fastapi import Request
+from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 from structlog.contextvars import clear_contextvars
 
 # Append STRUCTLOG_KEY_PREFIX to all context vars to ensure auto logging with structlog
-REQUEST_ID: ContextVar[str | None] = ContextVar(
-    f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}REQUEST_ID", default=None
-)
-USER_ID: ContextVar[str | None] = ContextVar(
-    f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}USER_ID", default=None
-)
-TENANT_ID: ContextVar[str | None] = ContextVar(
-    f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}TENANT_ID", default=None
-)
+REQUEST_ID: ContextVar[str | None] = ContextVar(f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}REQUEST_ID", default=None)
+USER_ID: ContextVar[str | None] = ContextVar(f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}USER_ID", default=None)
+TENANT_ID: ContextVar[str | None] = ContextVar(f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}TENANT_ID", default=None)
 APP_VERSION: ContextVar[str | None] = ContextVar(
     f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}APP_VERSION", default=None
 )
-ENV: ContextVar[str | None] = ContextVar(
-    f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}ENV", default="prod"
-)
-RELEASE: ContextVar[str | None] = ContextVar(
-    f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}RELEASE", default="0.0.0"
-)
+ENV: ContextVar[str | None] = ContextVar(f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}ENV", default="prod")
+RELEASE: ContextVar[str | None] = ContextVar(f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}RELEASE", default="0.0.0")
+
+SESSION: ContextVar[AsyncSession | None] = ContextVar("session")
 
 T = TypeVar("T")
 

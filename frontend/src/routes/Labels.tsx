@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -20,83 +20,109 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Eye, Tags, RefreshCcw, Download, Search, Settings, BarChart3, Globe, Edit2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Eye, Tags, RefreshCcw, Download, Search, Settings, BarChart3, Globe, Edit2, ChevronDown, ChevronRight, Save, X, Check } from 'lucide-react'
+import { useLabels } from '@/src/contexts/labels-context'
+import { Labels } from '@/src/services/api'
+import type { ProcessedLabel } from '@/src/services/api/labels'
 
-// Mock data for demonstration - combined labels with usage
-const mockLabels = [
-  { 
-    name: 'environment', 
-    description: 'Deployment environment identifier',
-    values: ['production', 'staging', 'development'], 
-    type: 'all',
-    usedIn: ['workflow-deployment', 'workflow-testing', 'metric-cpu-usage', 'metric-memory']
-  },
-  { 
-    name: 'service', 
-    description: 'Service component identifier',
-    values: ['api', 'web', 'worker', 'database'], 
-    type: 'workflows',
-    usedIn: ['workflow-api-deploy', 'workflow-web-build', 'metric-request-count']
-  },
-  { 
-    name: 'version', 
-    description: 'Application version tracking',
-    values: ['v1.0', 'v1.1', 'v2.0'], 
-    type: 'metrics',
-    usedIn: ['metric-deployment-frequency', 'metric-rollback-rate']
-  },
-  { 
-    name: 'region', 
-    description: 'Geographic deployment region',
-    values: ['us-east', 'us-west', 'eu-central'], 
-    type: 'all',
-    usedIn: ['workflow-regional-backup', 'metric-latency', 'metric-availability']
-  },
-  { 
-    name: 'team', 
-    description: 'Responsible team identifier',
-    values: ['backend', 'frontend', 'devops'], 
-    type: 'workflows',
-    usedIn: ['workflow-team-deploy', 'workflow-code-review']
-  },
-  { 
-    name: 'priority', 
-    description: 'Alert or task priority level',
-    values: ['high', 'medium', 'low'], 
-    type: 'metrics',
-    usedIn: ['metric-alert-priority', 'metric-incident-priority']
-  },
-]
+interface LabelWithType extends ProcessedLabel {
+  type: 'all' | 'workflows' | 'metrics'
+}
 
-const mockRenamedValues = [
-  { label: 'environment', value: 'prod', displayValue: 'Production' },
-  { label: 'environment', value: 'dev', displayValue: 'Development' },
-  { label: 'priority', value: 'p1', displayValue: 'High Priority' },
-  { label: 'priority', value: 'p2', displayValue: 'Medium Priority' },
-  { label: 'priority', value: 'p3', displayValue: 'Low Priority' },
-  { label: 'status', value: 'ok', displayValue: 'Healthy' },
-  { label: 'status', value: 'warn', displayValue: 'Warning' },
-  { label: 'status', value: 'error', displayValue: 'Critical' },
-]
+interface RenamedValue {
+  label: string
+  value: string
+  displayValue: string
+}
 
 export default function LabelsPage() {
+  const { labels: labelsStore, loading, error, refreshLabels } = useLabels()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<'all' | 'workflows' | 'metrics'>('all')
   const [renamedSearch, setRenamedSearch] = useState('')
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
-  const filteredLabels = mockLabels.filter(label => {
-    const matchesSearch = label.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      label.usedIn.some(usage => usage.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesType = filterType === 'all' || label.type === filterType || label.type === 'all'
-    return matchesSearch && matchesType
-  })
+  // Edit states
+  const [editingDescription, setEditingDescription] = useState<number | null>(null)
+  const [editingValue, setEditingValue] = useState<{ labelId: number; value: string } | null>(null)
+  const [descriptionDraft, setDescriptionDraft] = useState('')
+  const [valueDraft, setValueDraft] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const filteredRenamedValues = mockRenamedValues.filter(item =>
-    item.label.toLowerCase().includes(renamedSearch.toLowerCase()) ||
-    item.value.toLowerCase().includes(renamedSearch.toLowerCase()) ||
-    item.displayValue.toLowerCase().includes(renamedSearch.toLowerCase())
-  )
+  // Transform labels from store to UI format
+  const labelsWithType = useMemo(() => {
+    return Object.values(labelsStore).map((label): LabelWithType => {
+      // Determine type based on usage - collect unique kind categories
+      const uniqueKinds = new Set<string>()
+
+      label.usedIn.forEach(u => {
+        // Normalize kinds into categories
+        if (u.kind === 'flow' || u.kind === 'workflow') {
+          uniqueKinds.add('workflow')
+        } else if (u.kind === 'metric' || u.kind === 'metrics') {
+          uniqueKinds.add('metric')
+        } else {
+          uniqueKinds.add(u.kind) // Keep other kinds as-is
+        }
+      })
+
+      // Determine type based on unique kind categories
+      let type: 'all' | 'workflows' | 'metrics'
+
+      if (uniqueKinds.size === 0) {
+        type = 'all' // No usage, default to all
+      } else if (uniqueKinds.size > 1) {
+        type = 'all' // Various kinds -> all
+      } else {
+        // Only one kind category
+        const singleKind = Array.from(uniqueKinds)[0]
+        if (singleKind === 'workflow') {
+          type = 'workflows' // Only workflow kind
+        } else if (singleKind === 'metric') {
+          type = 'metrics' // Only metric kind
+        } else {
+          type = 'all' // Unknown single kind, default to all
+        }
+      }
+
+      return {
+        ...label,
+        type,
+      }
+    })
+  }, [labelsStore])
+
+  // Extract renamed values from value mappings
+  const renamedValues = useMemo((): RenamedValue[] => {
+    const renamed: RenamedValue[] = []
+    Object.values(labelsStore).forEach(label => {
+      label.valueMappings.forEach((mappedTo, value) => {
+        renamed.push({
+          label: label.name,
+          value,
+          displayValue: mappedTo
+        })
+      })
+    })
+    return renamed
+  }, [labelsStore])
+
+  const filteredLabels = useMemo(() => {
+    return labelsWithType.filter(label => {
+      const matchesSearch = label.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        label.usedIn.some(usage => usage.used_in.toLowerCase().includes(searchTerm.toLowerCase()))
+      const matchesType = filterType === 'all' || label.type === filterType || label.type === 'all'
+      return matchesSearch && matchesType
+    })
+  }, [labelsWithType, searchTerm, filterType])
+
+  const filteredRenamedValues = useMemo(() => {
+    return renamedValues.filter(item =>
+      item.label.toLowerCase().includes(renamedSearch.toLowerCase()) ||
+      item.value.toLowerCase().includes(renamedSearch.toLowerCase()) ||
+      item.displayValue.toLowerCase().includes(renamedSearch.toLowerCase())
+    )
+  }, [renamedValues, renamedSearch])
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -124,12 +150,20 @@ export default function LabelsPage() {
     }
   }
 
-  const handleRefresh = () => {
-    console.log('Refreshing labels data...')
+  const handleRefresh = async () => {
+    await refreshLabels()
   }
 
   const handleExport = () => {
-    console.log('Exporting labels data...')
+    // Export labels data as JSON
+    const dataStr = JSON.stringify(labelsStore, null, 2)
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+    const exportFileDefaultName = `labels-export-${new Date().toISOString()}.json`
+
+    const linkElement = document.createElement('a')
+    linkElement.setAttribute('href', dataUri)
+    linkElement.setAttribute('download', exportFileDefaultName)
+    linkElement.click()
   }
 
   const toggleRowExpansion = (labelName: string, event: React.MouseEvent) => {
@@ -141,6 +175,89 @@ export default function LabelsPage() {
       newExpandedRows.add(labelName)
     }
     setExpandedRows(newExpandedRows)
+  }
+
+  // Description editing handlers
+  const startEditDescription = (labelId: number, currentDescription: string | null) => {
+    setEditingDescription(labelId)
+    setDescriptionDraft(currentDescription || '')
+  }
+
+  const cancelEditDescription = () => {
+    setEditingDescription(null)
+    setDescriptionDraft('')
+  }
+
+  const saveDescription = async (labelId: number) => {
+    if (saving) return
+
+    try {
+      setSaving(true)
+      await Labels.updateDescription(labelId, descriptionDraft)
+      await refreshLabels() // Reload all labels to get updated data
+      setEditingDescription(null)
+      setDescriptionDraft('')
+    } catch (err) {
+      console.error('Failed to update description:', err)
+      alert('Failed to update description. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Value proxy editing handlers
+  const startEditValue = (labelId: number, value: string, currentProxy: string | undefined) => {
+    setEditingValue({ labelId, value })
+    setValueDraft(currentProxy || '')
+  }
+
+  const cancelEditValue = () => {
+    setEditingValue(null)
+    setValueDraft('')
+  }
+
+  const saveValueProxy = async (labelId: number, value: string) => {
+    if (saving) return
+
+    try {
+      setSaving(true)
+      const proxyValue = valueDraft.trim() === '' ? null : valueDraft.trim()
+      await Labels.updateValueProxy(labelId, value, proxyValue)
+      await refreshLabels() // Reload all labels to get updated data
+      setEditingValue(null)
+      setValueDraft('')
+    } catch (err) {
+      console.error('Failed to update value proxy:', err)
+      alert('Failed to update value proxy. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex-1 space-y-6 p-8 pt-6">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <RefreshCcw className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Loading labels...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 space-y-6 p-8 pt-6">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button onClick={handleRefresh}>Try Again</Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -243,10 +360,47 @@ export default function LabelsPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground max-w-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="truncate">{label.description}</span>
-                              <Edit2 className="h-3 w-3 opacity-50 hover:opacity-100" />
-                            </div>
+                            {editingDescription === label.id ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={descriptionDraft}
+                                  onChange={(e) => setDescriptionDraft(e.target.value)}
+                                  className="h-8 text-sm"
+                                  placeholder="Enter description..."
+                                  autoFocus
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => saveDescription(label.id)}
+                                  disabled={saving}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Check className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={cancelEditDescription}
+                                  disabled={saving}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <X className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="truncate">{label.description || 'No description'}</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => startEditDescription(label.id, label.description)}
+                                  className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
+                                >
+                                  <Edit2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
@@ -264,13 +418,13 @@ export default function LabelsPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {label.usedIn.slice(0, 3).map((usage) => (
-                                <Badge 
-                                  key={usage} 
-                                  variant={usage.startsWith('workflow') ? 'secondary' : 'outline'}
+                              {label.usedIn.slice(0, 3).map((usage, idx) => (
+                                <Badge
+                                  key={`${usage.used_in}-${idx}`}
+                                  variant={usage.kind === 'flow' || usage.kind === 'workflow' ? 'secondary' : 'outline'}
                                   className="text-xs"
                                 >
-                                  {usage}
+                                  {usage.used_in}
                                 </Badge>
                               ))}
                               {label.usedIn.length > 3 && (
@@ -297,21 +451,67 @@ export default function LabelsPage() {
                                       </h4>
                                       <div className="space-y-2">
                                         {label.values.map((value) => {
-                                          const renamedValue = mockRenamedValues.find(
-                                            r => r.label === label.name && r.value === value
-                                          )
+                                          const mappedTo = label.valueMappings.get(value)
+                                          const isEditing = editingValue?.labelId === label.id && editingValue?.value === value
+
                                           return (
-                                            <div key={value} className="flex items-center gap-2 p-3 border rounded">
+                                            <div key={value} className="flex items-center gap-2 p-3 border rounded bg-muted/20">
                                               <Badge variant="outline" className="font-mono text-xs min-w-fit">
                                                 {value}
                                               </Badge>
                                               <span className="text-sm text-muted-foreground">→</span>
-                                              <Input 
-                                                className="text-sm h-8"
-                                                defaultValue={renamedValue?.displayValue || value}
-                                                placeholder="Display name..."
-                                              />
-                                              <Edit2 className="h-3 w-3 text-muted-foreground" />
+
+                                              {isEditing ? (
+                                                <>
+                                                  <Input
+                                                    value={valueDraft}
+                                                    onChange={(e) => setValueDraft(e.target.value)}
+                                                    className="h-8 text-sm flex-1"
+                                                    placeholder={value}
+                                                    autoFocus
+                                                  />
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => saveValueProxy(label.id, value)}
+                                                    disabled={saving}
+                                                    className="h-8 w-8 p-0"
+                                                  >
+                                                    <Check className="h-4 w-4 text-green-600" />
+                                                  </Button>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={cancelEditValue}
+                                                    disabled={saving}
+                                                    className="h-8 w-8 p-0"
+                                                  >
+                                                    <X className="h-4 w-4 text-red-600" />
+                                                  </Button>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <div className="flex-1 flex items-center gap-2">
+                                                    {mappedTo ? (
+                                                      <Badge variant="secondary" className="text-xs">
+                                                        {mappedTo}
+                                                      </Badge>
+                                                    ) : (
+                                                      <span className="text-sm text-muted-foreground italic">
+                                                        {value} (no proxy)
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                  <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => startEditValue(label.id, value, mappedTo)}
+                                                    className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
+                                                  >
+                                                    <Edit2 className="h-3 w-3" />
+                                                  </Button>
+                                                </>
+                                              )}
                                             </div>
                                           )
                                         })}
@@ -325,20 +525,23 @@ export default function LabelsPage() {
                                         Used In ({label.usedIn.length})
                                       </h4>
                                       <div className="space-y-2">
-                                        {label.usedIn.map((usage) => (
-                                          <div key={usage} className="flex items-center gap-2 p-3 border rounded">
+                                        {label.usedIn.map((usage, idx) => (
+                                          <div key={`${usage.used_in}-${idx}`} className="flex items-center gap-2 p-3 border rounded">
                                             <div className="flex items-center gap-2">
-                                              <span className={usage.startsWith('workflow') ? 'text-orange-600' : 'text-blue-600'}>
-                                                {usage.startsWith('workflow') ? 
-                                                  <Settings className="h-4 w-4" /> : 
+                                              <span className={(usage.kind === 'flow' || usage.kind === 'workflow') ? 'text-orange-600' : 'text-blue-600'}>
+                                                {(usage.kind === 'flow' || usage.kind === 'workflow') ?
+                                                  <Settings className="h-4 w-4" /> :
                                                   <BarChart3 className="h-4 w-4" />
                                                 }
                                               </span>
-                                              <Badge 
-                                                variant={usage.startsWith('workflow') ? 'secondary' : 'outline'}
+                                              <Badge
+                                                variant={(usage.kind === 'flow' || usage.kind === 'workflow') ? 'secondary' : 'outline'}
                                                 className="text-xs"
                                               >
-                                                {usage}
+                                                {usage.used_in}
+                                              </Badge>
+                                              <Badge variant="outline" className="text-xs capitalize">
+                                                {usage.kind}
                                               </Badge>
                                             </div>
                                           </div>

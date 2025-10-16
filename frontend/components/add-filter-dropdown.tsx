@@ -34,10 +34,15 @@ import { cn } from '@/lib/utils'
 
 type FilterOperator = 'equals' | 'contains' | 'starts_with' | 'not_equals' | 'less_than' | 'greater_than' | 'in' | 'not_in'
 
+export interface ValueOption {
+  value: string  // Actual backend value
+  display: string  // Display value (may be proxied)
+}
+
 interface AddFilterDropdownProps {
   onAddFilter: (column: string, operator: FilterOperator, value: string) => void
-  availableColumns: { value: string; label: string }[]
-  getValueOptions?: (column: string) => string[] | undefined
+  availableColumns: { value: string; label: string; description?: string }[]
+  getValueOptions?: (column: string) => ValueOption[] | undefined
 }
 
 export function AddFilterDropdown({ onAddFilter, availableColumns, getValueOptions }: AddFilterDropdownProps) {
@@ -89,6 +94,13 @@ export function AddFilterDropdown({ onAddFilter, availableColumns, getValueOptio
 
   const valueOptions = selectedColumn && getValueOptions ? getValueOptions(selectedColumn) : undefined
 
+  // Get display value for currently selected value
+  const getSelectedDisplay = () => {
+    if (!value || !valueOptions) return value
+    const option = valueOptions.find(opt => opt.value === value)
+    return option ? option.display : value
+  }
+
   return (
     <>
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -107,6 +119,7 @@ export function AddFilterDropdown({ onAddFilter, availableColumns, getValueOptio
               key={column.value}
               onClick={() => handleColumnSelect(column.value)}
               className="text-sm"
+              title={column.description}
             >
               {column.label}
             </DropdownMenuItem>
@@ -184,7 +197,7 @@ export function AddFilterDropdown({ onAddFilter, availableColumns, getValueOptio
                       aria-expanded={valueOpen}
                       className="w-full justify-between h-9"
                     >
-                      {value || "Select value"}
+                      {value ? getSelectedDisplay() : "Select value"}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -196,8 +209,8 @@ export function AddFilterDropdown({ onAddFilter, availableColumns, getValueOptio
                         <CommandGroup>
                           {valueOptions.map((val) => (
                             <CommandItem
-                              key={val}
-                              value={val}
+                              key={val.value}
+                              value={val.value}
                               onSelect={(currentValue) => {
                                 setValue(currentValue)
                                 setValueOpen(false)
@@ -206,10 +219,10 @@ export function AddFilterDropdown({ onAddFilter, availableColumns, getValueOptio
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  value === val ? "opacity-100" : "opacity-0"
+                                  value === val.value ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              {val}
+                              {val.display}
                             </CommandItem>
                           ))}
                         </CommandGroup>

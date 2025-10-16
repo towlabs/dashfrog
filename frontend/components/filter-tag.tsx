@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
+import type { ValueOption } from '@/components/add-filter-dropdown'
 
 interface Filter {
   id: string
@@ -36,7 +37,7 @@ interface FilterTagProps {
   onUpdate: (filter: Filter) => void
   onRemove: (id: string) => void
   columnOptions?: { value: string; label: string }[]
-  valueOptions?: string[]
+  valueOptions?: ValueOption[]
 }
 
 export function FilterTag({ filter, onUpdate, onRemove, columnOptions = [], valueOptions = [] }: FilterTagProps) {
@@ -45,6 +46,13 @@ export function FilterTag({ filter, onUpdate, onRemove, columnOptions = [], valu
   const [tempValue, setTempValue] = useState(filter.value)
   const [operatorOpen, setOperatorOpen] = useState(false)
   const [valueOpen, setValueOpen] = useState(false)
+
+  // Get display value for currently selected value
+  const getDisplayValue = (value: string): string => {
+    if (!valueOptions || valueOptions.length === 0) return value
+    const option = valueOptions.find(opt => opt.value === value)
+    return option ? option.display : value
+  }
 
   const operatorOptions = [
     { value: 'equals', label: 'is' },
@@ -101,7 +109,7 @@ export function FilterTag({ filter, onUpdate, onRemove, columnOptions = [], valu
           >
             <span className="text-muted-foreground">{filter.column}</span>
             <span className="mx-1 text-foreground">{operatorLabels[filter.operator]}</span>
-            <span className="font-medium text-foreground">{filter.value}</span>
+            <span className="font-medium text-foreground">{getDisplayValue(filter.value)}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -185,7 +193,7 @@ export function FilterTag({ filter, onUpdate, onRemove, columnOptions = [], valu
                       aria-expanded={valueOpen}
                       className="w-full justify-between h-9"
                     >
-                      {tempValue || "Select value"}
+                      {tempValue ? getDisplayValue(tempValue) : "Select value"}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -195,10 +203,10 @@ export function FilterTag({ filter, onUpdate, onRemove, columnOptions = [], valu
                       <CommandList>
                         <CommandEmpty>No value found.</CommandEmpty>
                         <CommandGroup>
-                          {valueOptions.map((value) => (
+                          {valueOptions.map((val) => (
                             <CommandItem
-                              key={value}
-                              value={value}
+                              key={val.value}
+                              value={val.value}
                               onSelect={(currentValue) => {
                                 setTempValue(currentValue)
                                 setValueOpen(false)
@@ -208,10 +216,10 @@ export function FilterTag({ filter, onUpdate, onRemove, columnOptions = [], valu
                               <Check
                                 className={cn(
                                   "mr-2 h-4 w-4",
-                                  tempValue === value ? "opacity-100" : "opacity-0"
+                                  tempValue === val.value ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              {value}
+                              {val.display}
                             </CommandItem>
                           ))}
                         </CommandGroup>

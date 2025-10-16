@@ -1,21 +1,25 @@
 from dataclasses import dataclass, field
 import logging
 
-from axiom_py.client import Client
+from axiom_py.client import Client as AxiomClient
 import clickhouse_connect
 from clickhouse_connect.driver import Client as ClickhouseClient
+import orjson
+from prometheus_api_client import PrometheusConnect
 from pydantic import BaseModel
-from structlog.stdlib import BoundLogger
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from structlog._generic import BoundLogger
 
 from src._inits import setup_logging
 from src.adapters.stores import (
     Flows as FlowsStore,
+    Labels as LabelsStore,
     Steps as StepsStore,
 )
-from src.api.routes import API, flows, steps, labels, health
+from src.api.routes import API, flows, health, labels, steps
 from src.context import ENV, RELEASE
-from src.core import Config
-from src.domain.usecases import Flows, Steps
+from src.core import AsyncSessionMaker, Config
+from src.domain.usecases import Flows, Labels, Steps
 
 
 @dataclass
@@ -35,7 +39,8 @@ class Application(BaseApplication[Config]):
     configuration_path_env_var: str | None = None
 
     clickhouse_client: ClickhouseClient = field(init=False)
-    axiom_client: Client = field(init=False)
+    axiom_client: AxiomClient = field(init=False)
+    prom_client: PrometheusConnect = field(init=False)
     logger: BoundLogger = field(init=False)
 
     def __post_init__(self):
@@ -51,9 +56,23 @@ class Application(BaseApplication[Config]):
             autogenerate_session_id=False,
         )
 
+        self.engine = create_async_engine(
+            f"postgresql+asyncpg://{self.configuration.psql.user}:{self.configuration.psql.password}@{self.configuration.psql.host}/{self.configuration.psql.database}",
+            json_serializer=lambda x: orjson.dumps(x).decode(),
+            json_deserializer=orjson.loads,
+            echo=self.configuration.logs.log_libs,
+        )
+
+        self.prom_client = PrometheusConnect(
+            url=self.configuration.prometheus.url, disable_ssl=self.configuration.prometheus.disable_ssl
+        )
+
+        self.sessionmaker = AsyncSessionMaker(async_sessionmaker(self.engine))
+
         self.axiom_client = (
-            Client() if self.configuration.logs.activate_axiom else None
+            AxiomClient() if self.configuration.logs.activate_axiom else None
         )  # Need a support for logs as we do not provide one yet
+
         self.logger = setup_logging(
             self.axiom_client,
             log_level=getattr(logging, self.configuration.logs.level),
@@ -67,10 +86,12 @@ class Application(BaseApplication[Config]):
         ## Deps
         flow_store = FlowsStore(self.clickhouse_client)
         step_store = StepsStore(self.clickhouse_client)
+        label_store = LabelsStore(self.clickhouse_client, self.prom_client)
 
         self.usecases = {
             "flows": Flows(flow_store, self.logger),
             "steps": Steps(step_store, self.logger),
+            "labels": Labels(label_store, self.sessionmaker, self.logger),
         }
 
     def log(self, name: str, **kwargs) -> BoundLogger:
@@ -80,6 +101,6 @@ class Application(BaseApplication[Config]):
         API(
             flows.Flows(self.usecases["flows"]),
             steps.Steps(self.usecases["steps"]),
-            labels.Labels(self.usecases["flows"]),
+            labels.Labels(self.usecases["labels"]),
             health,
         )

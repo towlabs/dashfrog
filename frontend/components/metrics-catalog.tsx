@@ -53,6 +53,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs'
+import { useLabels } from '@/src/contexts/labels-context'
 
 interface Rule {
   id: string
@@ -302,8 +303,14 @@ const generateMetricHistory = (metricName: string, thresholds?: { warning?: numb
 }
 
 export function MetricsCatalog({ searchTerm, onSearchChange, filters, onFiltersChange }: MetricsCatalogProps) {
+  const { labels: labelsStore } = useLabels()
   const normalizeLabels = (arr: any[]) => arr.map((m) => ({ ...m, labels: Object.fromEntries(Object.entries(m.labels).filter(([_, v]) => typeof v === 'string')) }))
   const [metrics, setMetrics] = useState<Metric[]>(normalizeLabels(sampleMetrics) as Metric[])
+
+  // Helper to get display value for a label (uses proxy if available)
+  const getDisplayValue = (labelKey: string, value: string): string => {
+    return labelsStore[labelKey]?.valueMappings.get(value) || value
+  }
   const [isMetricSheetOpen, setIsMetricSheetOpen] = useState(false)
   const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null)
   const [metricHistory, setMetricHistory] = useState<any[]>([])
@@ -469,10 +476,18 @@ export function MetricsCatalog({ searchTerm, onSearchChange, filters, onFiltersC
         searchPlaceholder="Search metrics..."
         filters={filters}
         onFiltersChange={onFiltersChange}
-        availableColumns={([...new Set(metrics.flatMap((m: any) => Object.keys(m.labels)))] as string[]).map((col) => ({ value: col, label: col }))}
+        availableColumns={Object.keys(labelsStore).sort().map((labelName) => ({
+          value: labelName,
+          label: labelName,
+          description: labelsStore[labelName].description || undefined
+        }))}
         getValueOptions={(column) => {
-          const values = [...new Set(metrics.map((m: any) => m.labels[column]).filter(Boolean) as string[])]
-          return values.length > 0 ? values : undefined as any
+          // Provide label values as ValueOptions with proxy display
+          // ONLY actual queryable values, NOT proxies
+          return labelsStore[column]?.values.map(val => ({
+            value: val,
+            display: getDisplayValue(column, val)
+          })) || []
         }}
       />
 
@@ -517,8 +532,9 @@ export function MetricsCatalog({ searchTerm, onSearchChange, filters, onFiltersC
                           key={`${metric.id}-label-${key}`}
                           className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
                           onClick={(e) => handleLabelClick(e, key, value)}
+                          title={`${key}: ${value}`}
                         >
-                          {key}: {value}
+                          {key}: {getDisplayValue(key, value)}
                         </span>
                       ))}
                     </div>

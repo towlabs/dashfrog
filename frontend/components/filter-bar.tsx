@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { AddFilterDropdown } from '@/components/add-filter-dropdown'
+import { AddFilterDropdown, type ValueOption } from '@/components/add-filter-dropdown'
 import { FilterTag } from '@/components/filter-tag'
 
 interface Filter {
@@ -31,8 +31,8 @@ interface FilterBarProps {
   searchPlaceholder?: string
   filters: Filter[]
   onFiltersChange: (filters: Filter[]) => void
-  availableColumns: { value: string; label: string }[]
-  getValueOptions?: (column: string) => string[]
+  availableColumns: { value: string; label: string; description?: string }[]
+  getValueOptions?: (column: string) => ValueOption[]
 }
 
 export function FilterBar({

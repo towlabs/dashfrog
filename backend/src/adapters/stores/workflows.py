@@ -137,20 +137,6 @@ class Flows:
 
         return res
 
-    def get_labels(self, ctx: Context) -> dict[str, stdList[str]]:
-        query = """select
-            key as key, groupArray(distinct(value)) as value
-        from dashfrog.flow_events array join mapKeys(labels) as key, mapValues(labels) as value
-        group by key
-        order by key"""
-
-        results = self.__client.query(query)
-        res = {}
-        for row in results.named_results():
-            res[row["key"]] = row["value"]
-
-        return res
-
 
 class Steps:
     def __init__(self, client: Client):
