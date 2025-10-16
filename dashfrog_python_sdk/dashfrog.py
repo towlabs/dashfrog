@@ -79,11 +79,11 @@ class DashFrog:
         config = config or Config()
         self.__config = config
         self.service_name = service_name
-        self.__labels = {f"glob.{key}": value for key, value in labels.items()}
+        self.__labels = labels
 
         resource = Resource.create(
             attributes={
-                **{f"label.{key}": value for key, value in labels.items()},
+                **{f"dashfrog.label.{key}": value for key, value in labels.items()},
                 "service.name": service_name,
                 "service.provider": "tower.dashfrog",
                 "dashfrog.version": "alpha",

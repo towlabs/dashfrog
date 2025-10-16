@@ -8,6 +8,7 @@ import EventsPage from '@/src/routes/Events'
 import NotebookPage from '@/src/routes/NotebookIndex'
 import NotebookById from '@/src/routes/NotebookById'
 import CatalogPage from '@/src/routes/Catalog'
+import LabelsPage from '@/src/routes/Labels'
 
 const router = createBrowserRouter([
   { path: '/', element: <LayoutClient><Home /></LayoutClient> },
@@ -15,6 +16,7 @@ const router = createBrowserRouter([
   { path: '/notebook', element: <LayoutClient><NotebookPage /></LayoutClient> },
   { path: '/notebook/:id', element: <LayoutClient><NotebookById /></LayoutClient> },
   { path: '/catalog', element: <LayoutClient><CatalogPage /></LayoutClient> },
+  { path: '/labels', element: <LayoutClient><LabelsPage /></LayoutClient> },
 ])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

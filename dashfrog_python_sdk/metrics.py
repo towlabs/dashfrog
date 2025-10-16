@@ -15,6 +15,8 @@ class Metric(ABC):
 
     name: str
     default_labels: dict
+    def __init__(self, **labels):
+        self.labels = {f"dashfrog.label.glob.{key}": value for key, value in labels.items()}
 
     def __repr__(self):
         return f"<Observable::({self.name!r})>"
@@ -25,6 +27,8 @@ class Metric(ABC):
 
         raise NotImplementedError()
 
+    def _prepare_labels(self, labels: dict) -> dict:
+        return {f"dashfrog.label.{key}": value for key, value in labels.items()}
 
 def new_metric(
     meter: Meter, kind: Kind, name: str, description: str, unit: str, **labels
@@ -42,32 +46,33 @@ def new_metric(
 
 class __Counter(Metric):
     def __init__(self, meter: Meter, name: str, description: str, unit: str, **labels):
+        super().__init__(**labels)
         self.__meter = meter.create_counter(name, unit, description)
-        self.default_labels = labels
 
     def record(self, value: int | float, **labels):
-        self.__meter.add(value, {**labels, **self.default_labels})
+        self.__meter.add(value, {**self._prepare_labels(labels), **self.default_labels})
 
         return self
 
 
 class __Measure(Metric):
     def __init__(self, meter: Meter, name: str, description: str, unit: str, **labels):
+        super().__init__(**labels)
         self.__meter = meter.create_gauge(name, unit, description)
-        self.default_labels = labels
+
 
     def record(self, value: int | float, **labels):
-        self.__meter.set(value, {**labels, **self.default_labels})
+        self.__meter.set(value, {**self._prepare_labels(labels), **self.default_labels})
 
         return self
 
 
 class __Statistic(Metric):
     def __init__(self, meter: Meter, name: str, description: str, unit: str, **labels):
+        super().__init__(**labels)
         self.__meter = meter.create_histogram(name, unit, description)
-        self.default_labels = labels
 
     def record(self, value: int | float, **labels):
-        self.__meter.record(value, {**labels, **self.default_labels})
+        self.__meter.record(value, {**self._prepare_labels(labels), **self.default_labels})
 
         return self

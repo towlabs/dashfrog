@@ -12,9 +12,9 @@ data:
       otlp:
         protocols:
           grpc:
-            endpoint: 0.0.0.0:{{ .Values.collector.config.otlpGrpcPort }}
+            endpoint: 0.0.0.0:4317
           http:
-            endpoint: 0.0.0.0:{{ .Values.collector.config.otlpHttpPort }}
+            endpoint: 0.0.0.0:4318
 
     exporters:
       debug:
@@ -22,19 +22,27 @@ data:
         sampling_initial: 5
         sampling_thereafter: 200
       prometheus:
-        endpoint: "0.0.0.0:{{ .Values.collector.config.prometheusPort }}"
+        endpoint: "0.0.0.0:9090"
         # namespace: dashfrog
-        enable_open_metrics: true
         resource_to_telemetry_conversion:
-          enabled: true
+          enabled: false
     processors:
       batch:
         send_batch_size: 1000  # Tune the batch size for more efficient exporting
         timeout: 1s
+      transform/keep-dashfrog-labels:
+        error_mode: ignore
+        metric_statements:
+          - context: datapoint
+            statements:
+              - keep_matching_keys(attributes, "^dashfrog\\.label.*$")
+          - context: resource
+            statements:
+              - keep_matching_keys(attributes, "^dashfrog\\.label.*$")
 
     extensions:
       health_check:
-        endpoint: "0.0.0.0:{{ .Values.collector.config.healthCheckPort }}"
+        endpoint: "0.0.0.0:13133"
         path: "/ping"
         check_collector_pipeline:
           enabled: true
@@ -47,6 +55,9 @@ data:
         metrics:
           receivers:
             - otlp
+          processors:
+            - batch
+            - transform/keep-dashfrog-labels
           exporters:
             - debug
             - prometheus

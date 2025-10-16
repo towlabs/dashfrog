@@ -14,13 +14,21 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:9090"
     # namespace: dashfrog
-    enable_open_metrics: true
     resource_to_telemetry_conversion:
-      enabled: true
+      enabled: false
 processors:
   batch:
     send_batch_size: 1000  # Tune the batch size for more efficient exporting
     timeout: 1s
+  transform/keep-dashfrog-labels:
+    error_mode: ignore
+    metric_statements:
+      - context: datapoint
+        statements:
+          - keep_matching_keys(attributes, "^dashfrog\\.label.*$")
+      - context: resource
+        statements:
+          - keep_matching_keys(attributes, "^dashfrog\\.label.*$")
 
 extensions:
   health_check:
@@ -37,6 +45,9 @@ service:
     metrics:
       receivers:
         - otlp
+      processors:
+        - batch
+        - transform/keep-dashfrog-labels
       exporters:
         - debug
         - prometheus

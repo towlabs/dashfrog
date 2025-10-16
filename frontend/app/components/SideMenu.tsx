@@ -19,13 +19,15 @@ import {
   Plus,
   Zap,
   Calendar,
-  BookOpen
+  BookOpen,
+  Tags
 } from 'lucide-react'
 
 const topMenuItems = [
   { id: 'home', label: 'Home', icon: Home, href: '/' },
   { id: 'search', label: 'Search', icon: Search, href: '/search', shortcut: '⌘K' },
   { id: 'catalog', label: 'Data Catalog', icon: BookOpen, href: '/catalog' },
+  { id: 'labels', label: 'Labels', icon: Tags, href: '/labels' },
   { id: 'events', label: 'Calendar', icon: Calendar, href: '/events' },
 ]
 
