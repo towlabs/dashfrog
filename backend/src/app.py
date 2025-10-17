@@ -14,12 +14,13 @@ from src._inits import setup_logging
 from src.adapters.stores import (
     Flows as FlowsStore,
     Labels as LabelsStore,
+    Metrics as MetricsStore,
     Steps as StepsStore,
 )
-from src.api.routes import API, flows, health, labels, steps
-from src.context import ENV, RELEASE
+from src.api.routes import API, flows, health, labels, metrics, steps
 from src.core import AsyncSessionMaker, Config
-from src.domain.usecases import Flows, Labels, Steps
+from src.core.context import ENV, RELEASE
+from src.domain.usecases import Flows, Labels, Metrics, Steps
 
 
 @dataclass
@@ -64,7 +65,8 @@ class Application(BaseApplication[Config]):
         )
 
         self.prom_client = PrometheusConnect(
-            url=self.configuration.prometheus.url, disable_ssl=self.configuration.prometheus.disable_ssl
+            url=self.configuration.prometheus.url,
+            disable_ssl=self.configuration.prometheus.disable_ssl,
         )
 
         self.sessionmaker = AsyncSessionMaker(async_sessionmaker(self.engine))
@@ -86,12 +88,14 @@ class Application(BaseApplication[Config]):
         ## Deps
         flow_store = FlowsStore(self.clickhouse_client)
         step_store = StepsStore(self.clickhouse_client)
-        label_store = LabelsStore(self.clickhouse_client, self.prom_client)
+        label_store = LabelsStore(self.clickhouse_client, self.prom_client, self.logger)
+        metrics_store = MetricsStore(self.clickhouse_client, self.prom_client, self.logger)
 
         self.usecases = {
             "flows": Flows(flow_store, self.logger),
             "steps": Steps(step_store, self.logger),
             "labels": Labels(label_store, self.sessionmaker, self.logger),
+            "metrics": Metrics(metrics_store, self.sessionmaker, self.logger),
         }
 
     def log(self, name: str, **kwargs) -> BoundLogger:
@@ -102,5 +106,6 @@ class Application(BaseApplication[Config]):
             flows.Flows(self.usecases["flows"]),
             steps.Steps(self.usecases["steps"]),
             labels.Labels(self.usecases["labels"]),
+            metrics.Metrics(self.usecases["metrics"]),
             health,
         )

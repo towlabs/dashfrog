@@ -3,7 +3,7 @@ from fastapi import APIRouter, Request
 from api.payloads import ResponsesDefinition
 from domain import usecases
 from domain.entities import Step
-from src.context import context
+from src.core.context import context
 
 
 class Steps:

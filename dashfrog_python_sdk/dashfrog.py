@@ -104,9 +104,9 @@ class DashFrog:
             export_interval_millis=3000,  # Export every 3 seconds
         )
 
-        meter_provider = MeterProvider(metric_readers=[reader], resource=resource)
+        self.meter_provider = MeterProvider(metric_readers=[reader], resource=resource)
 
-        self.__meter = meter_provider.get_meter("dashfrog")
+        self.__meter = self.meter_provider.get_meter("dashfrog")
 
         trace_provider = get_tracer_provider()
         if isinstance(trace_provider, (NoOpTracerProvider, ProxyTracerProvider)):
@@ -122,23 +122,35 @@ class DashFrog:
             new_metric(
                 self.__meter,
                 Kind.COUNTER,
-                "workflow_status",
+                "dashfrog_internal_workflow_workflow_status",
                 "counts occurrence of workflow end with status",
                 "",
                 **self.__labels,
             ),
             new_metric(
-                self.__meter, Kind.STATISTIC, "workflow_duration", "counts duration of workflow", "ms", **self.__labels
+                self.__meter,
+                Kind.STATISTIC,
+                "dashfrog_internal_workflow_workflow_duration",
+                "counts duration of workflow",
+                "ms",
+                **self.__labels,
             ),
             new_metric(
                 self.__meter,
                 Kind.COUNTER,
-                "step_status",
+                "dashfrog_internal_workflow_step_status",
                 "counts occurrence of step end with status",
                 "",
                 **self.__labels,
             ),
-            new_metric(self.__meter, Kind.STATISTIC, "step_duration", "counts duration of step", "ms", **self.__labels),
+            new_metric(
+                self.__meter,
+                Kind.STATISTIC,
+                "dashfrog_internal_workflow_step_duration",
+                "counts duration of step",
+                "ms",
+                **self.__labels,
+            ),
         )
 
     # Features
@@ -234,7 +246,7 @@ class DashFrog:
     ) -> Metric:
         """Observe metrics. /!\\ observable metrics are identified by the name, description and unit tuple."""
 
-        return new_metric(self.__meter, kind, name, description, unit, **labels)
+        return new_metric(self.__meter, kind, f"dashfrog_user_custom_{name}", description, unit, **labels)
 
     ### Instrumentation ####
     #### Web
@@ -246,6 +258,7 @@ class DashFrog:
         FlaskInstrumentor.instrument_app(
             flask_app,
             request_hook=self.__with_hook(SupportedInstrumentation.FLASK),
+            meter_provider=self.meter_provider,
         )
 
         @flask_app.after_request
@@ -263,6 +276,7 @@ class DashFrog:
         FastAPIInstrumentor.instrument_app(
             fastapi_app,
             server_request_hook=self.__with_hook(SupportedInstrumentation.FASTAPI),
+            meter_provider=self.meter_provider,
         )
 
         @fastapi_app.middleware("http")
@@ -276,6 +290,7 @@ class DashFrog:
     def with_requests(self) -> Self:
         RequestsInstrumentor().instrument(
             request_hook=self.__with_hook(SupportedInstrumentation.REQUESTS),
+            meter_provider=self.meter_provider,
         )
         return self
 
@@ -285,6 +300,7 @@ class DashFrog:
 
         HTTPXClientInstrumentor().instrument(
             request_hook=self.__with_hook(SupportedInstrumentation.HTTPX),
+            meter_provider=self.meter_provider,
         )
         return self
 
@@ -299,6 +315,7 @@ class DashFrog:
 
         CeleryInstrumentor().instrument(
             request_hook=self.__with_hook(SupportedInstrumentation.CELERY),
+            meter_provider=self.meter_provider,
         )
         return self
 
@@ -309,6 +326,7 @@ class DashFrog:
         BotocoreInstrumentor().instrument()
         AwsLambdaInstrumentor().instrument(
             request_hook=self.__with_hook(SupportedInstrumentation.AWS_LAMBDA),
+            meter_provider=self.meter_provider,
         )
 
         return self

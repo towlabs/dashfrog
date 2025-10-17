@@ -14,8 +14,11 @@ exporters:
   prometheus:
     endpoint: "0.0.0.0:9090"
     # namespace: dashfrog
+    enable_open_metrics: true
+    translation_strategy: "UnderscoreEscapingWithoutSuffixes"
     resource_to_telemetry_conversion:
       enabled: false
+
 processors:
   batch:
     send_batch_size: 1000  # Tune the batch size for more efficient exporting
@@ -25,7 +28,7 @@ processors:
     metric_statements:
       - context: datapoint
         statements:
-          - keep_matching_keys(attributes, "^dashfrog\\.label.*$")
+          - keep_matching_keys(attributes, "^dashfrog\\.label.*$") where IsMatch(metric.name, "^dashfrog_.*")
       - context: resource
         statements:
           - keep_matching_keys(attributes, "^dashfrog\\.label.*$")

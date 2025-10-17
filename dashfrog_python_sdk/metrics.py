@@ -47,7 +47,7 @@ def new_metric(meter: Meter, kind: Kind, name: str, description: str, unit: str,
 class __Counter(Metric):
     def __init__(self, meter: Meter, name: str, description: str, unit: str, **labels):
         super().__init__(**labels)
-        self.__meter = meter.create_counter(name, unit, description)
+        self.__meter = meter.create_counter(f"{name}_counter", unit, description)
 
     def record(self, value: int | float, **labels):
         self.__meter.add(value, {**self._prepare_labels(labels), **self.default_labels})
@@ -58,7 +58,7 @@ class __Counter(Metric):
 class __Measure(Metric):
     def __init__(self, meter: Meter, name: str, description: str, unit: str, **labels):
         super().__init__(**labels)
-        self.__meter = meter.create_gauge(name, unit, description)
+        self.__meter = meter.create_gauge(f"{name}_measure", unit, description)
 
     def record(self, value: int | float, **labels):
         self.__meter.set(value, {**self._prepare_labels(labels), **self.default_labels})
@@ -69,7 +69,7 @@ class __Measure(Metric):
 class __Statistic(Metric):
     def __init__(self, meter: Meter, name: str, description: str, unit: str, **labels):
         super().__init__(**labels)
-        self.__meter = meter.create_histogram(name, unit, description)
+        self.__meter = meter.create_histogram(f"{name}_stats", unit, description)
 
     def record(self, value: int | float, **labels):
         self.__meter.record(value, {**self._prepare_labels(labels), **self.default_labels})

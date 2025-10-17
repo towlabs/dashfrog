@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
-from src.context import context
+from src.core.context import context
 from src.domain import usecases
 
 
@@ -16,7 +16,7 @@ class _LabelValueUpdate(BaseModel):
 class Labels:
     __uc = usecases.Labels
 
-    ep = APIRouter(prefix="/labels", tags=["flows", "labels"])
+    ep = APIRouter(prefix="/labels", tags=["flows", "labels", "metrics"])
 
     def __init__(self, uc: usecases.Labels):
         Labels.__uc = uc
@@ -28,6 +28,12 @@ class Labels:
             labels = await Labels.__uc.list(ctx)
 
             return labels
+
+    @staticmethod
+    @ep.get("/metrics")
+    async def scrape_metrics(request: Request):
+        with context(request):
+            await Labels.__uc.list_metrics()
 
     @staticmethod
     @ep.get("/scrape")

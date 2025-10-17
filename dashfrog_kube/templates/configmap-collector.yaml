@@ -24,7 +24,8 @@ data:
       prometheus:
         endpoint: "0.0.0.0:9090"
         # namespace: dashfrog
-        enable_open_metrics: false
+        enable_open_metrics: true
+        translation_strategy: "UnderscoreEscapingWithoutSuffixes"
         resource_to_telemetry_conversion:
           enabled: false
     processors:
@@ -36,10 +37,11 @@ data:
         metric_statements:
           - context: datapoint
             statements:
-              - keep_matching_keys(attributes, "^dashfrog\\.label.*$")
+              - 'keep_matching_keys(attributes, "^dashfrog\\.label.*$") where IsMatch(metric.name, "^dashfrog_.*")'
           - context: resource
             statements:
-              - keep_matching_keys(attributes, "^dashfrog\\.label.*$")
+              - 'keep_matching_keys(attributes, "^dashfrog\\.label.*$")'
+
 
     extensions:
       health_check:

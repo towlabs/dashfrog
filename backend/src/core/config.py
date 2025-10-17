@@ -1,5 +1,3 @@
-from contextlib import asynccontextmanager
-
 from pydantic import BaseModel
 from pydantic_settings import (
     BaseSettings,
@@ -8,13 +6,6 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
-from sqlalchemy.ext.asyncio import async_sessionmaker
-
-from context import SESSION
-
-
-def str_to_bool(value: str) -> bool:
-    return value.lower() in ("true", "t", "1")
 
 
 class Config(BaseSettings):
@@ -70,15 +61,3 @@ class Config(BaseSettings):
             # Load env settings last so any other way to configure overrides..
             dotenv_settings,
         )
-
-
-class AsyncSessionMaker:
-    def __init__(self, session_maker: async_sessionmaker):
-        self.__maker = session_maker
-
-    @asynccontextmanager
-    async def begin(self):
-        async with self.__maker.begin() as session:
-            SESSION.set(session)
-            yield session
-            SESSION.set(None)

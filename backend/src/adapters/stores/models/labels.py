@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.sqltypes import Enum
+from sqlalchemy.sql.sqltypes import ARRAY, Enum
 
 from domain import entities
 
@@ -27,8 +27,12 @@ class LabelUsage(Base):
     __tablename__ = "label_usage"
 
     label_id = Column(Integer, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
-    used_in = Column(String, nullable=False, primary_key=True)
+    used_in = Column(Integer, ForeignKey("metrics.id", ondelete="CASCADE"), primary_key=True)
     kind = Column(Enum(entities.LabelSrcKind, name="label_src_kind"), nullable=False)
+
+    metric = relationship(
+        "Metric", cascade="all, delete-orphan", lazy="selectin", uselist=False
+    )  # single metric should exists from this association
 
     def to_entity(self) -> entities.Label.Usage:
         return entities.Label.Usage(
@@ -55,6 +59,19 @@ class Label(Base):
             values=[value.to_entity() for value in self.values],
             used_in=[usage.to_entity() for usage in self.used_in],
         )
+
+
+class Metric(Base):
+    __tablename__ = "metrics"
+
+    id = Column(Integer, primary_key=True)
+    key = Column(String, nullable=False, unique=True)
+    kind = Column(Enum(entities.MetricKind, name="metric_kind"), nullable=False)
+    scope = Column(String, nullable=False)
+    display_as = Column(String, unique=True)
+    description = Column(String)
+    unit = Column(String)
+    associated_identifiers = Column(ARRAY(String))
 
 
 class LabelsScrapped(Base):

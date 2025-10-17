@@ -1,5 +1,9 @@
 from .flows import Flow, Step
 from .labels import Label, LabelScrapping, LabelSrcKind
+from .metrics import (
+    Kind as MetricKind,
+    Metric,
+)
 from .stores import (
     StoreEqual,
     StoreFilter,
@@ -25,4 +29,6 @@ __all__ = [
     "StoreNotEqual",
     "StoreOrder",
     "LabelScrapping",
+    "Metric",
+    "MetricKind",
 ]

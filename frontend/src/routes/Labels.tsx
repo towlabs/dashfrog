@@ -55,13 +55,12 @@ interface RenamedValue {
 }
 
 export default function LabelsPage() {
-	const { labels: labelsStore, loading, error, refreshLabels } = useLabels();
-	const [searchTerm, setSearchTerm] = useState("");
-	const [filterType, setFilterType] = useState<"all" | "workflows" | "metrics">(
-		"all",
-	);
-	const [renamedSearch, setRenamedSearch] = useState("");
-	const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const { labels: labelsStore, loading, error, refreshLabels } = useLabels()
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState<'all' | 'workflows' | 'metrics'>('all')
+  const [renamedSearch, setRenamedSearch] = useState('')
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [showRenamedPanel, setShowRenamedPanel] = useState(false)
 
 	// Edit states
 	const [editingDescription, setEditingDescription] = useState<number | null>(

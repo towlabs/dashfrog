@@ -19,6 +19,7 @@ APP_VERSION: ContextVar[str | None] = ContextVar(
 ENV: ContextVar[str | None] = ContextVar(f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}ENV", default="prod")
 RELEASE: ContextVar[str | None] = ContextVar(f"{structlog.contextvars.STRUCTLOG_KEY_PREFIX}RELEASE", default="0.0.0")
 
+# Functional context must not be logged
 SESSION: ContextVar[AsyncSession | None] = ContextVar("session")
 
 T = TypeVar("T")

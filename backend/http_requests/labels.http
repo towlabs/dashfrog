@@ -3,3 +3,7 @@ GET 0.0.0.0:8080/api/labels
 
 ### GET Scrape labels
 GET 0.0.0.0:8080/api/labels/scrape
+
+
+### GET Scrape metrics
+GET 0.0.0.0:8080/api/metrics/scrape

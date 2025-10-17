@@ -1,11 +1,24 @@
 CREATE TYPE LABEL_SRC_KIND AS ENUM (
     'workflow', 'metrics'
 );
-
+CREATE TYPE METRIC_KIND AS ENUM (
+    'counter', 'measure', 'stats', 'over'
+);
 CREATE TABLE labels (
  id SERIAL PRIMARY KEY,
  label VARCHAR NOT NULL UNIQUE,
  description VARCHAR
+);
+
+CREATE TABLE metrics (
+    id SERIAL PRIMARY KEY,
+    key VARCHAR not null unique,
+    kind METRIC_KIND NOT NULL,
+    scope VARCHAR NOT NULL,
+    unit VARCHAR,
+    display_as VARCHAR unique,
+    description VARCHAR,
+    associated_identifiers VARCHAR[]
 );
 
 CREATE TABLE label_values (
@@ -18,7 +31,7 @@ CREATE TABLE label_values (
 
 CREATE TABLE label_usage (
     label_id SERIAL REFERENCES labels (id) ON DELETE CASCADE,
-    used_in VARCHAR NOT NULL,
+    used_in SERIAL REFERENCES metrics (id) ON DELETE CASCADE,
     kind LABEL_SRC_KIND NOT NULL DEFAULT 'workflow',
     PRIMARY KEY (label_id, used_in)
 );
