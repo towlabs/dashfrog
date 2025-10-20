@@ -41,6 +41,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useLabels } from "@/src/contexts/labels";
+import { useMetrics } from "@/src/contexts/metrics";
 import { Labels } from "@/src/services/api";
 import type { ProcessedLabel } from "@/src/services/api/labels";
 
@@ -55,13 +56,15 @@ interface RenamedValue {
 }
 
 export default function LabelsPage() {
-  const { labels: labelsStore, loading, error, refreshLabels } = useLabels()
-  const { getMetricDisplayName } = useMetrics()
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterType, setFilterType] = useState<'all' | 'workflows' | 'metrics'>('all')
-  const [renamedSearch, setRenamedSearch] = useState('')
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
-  const [showRenamedPanel, setShowRenamedPanel] = useState(false)
+	const { labels: labelsStore, loading, error, refreshLabels } = useLabels();
+	const { getMetricDisplayName } = useMetrics();
+	const [searchTerm, setSearchTerm] = useState("");
+	const [filterType, setFilterType] = useState<"all" | "workflows" | "metrics">(
+		"all",
+	);
+	const [renamedSearch, setRenamedSearch] = useState("");
+	const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+	const [showRenamedPanel, setShowRenamedPanel] = useState(false);
 
 	// Edit states
 	const [editingDescription, setEditingDescription] = useState<number | null>(
@@ -74,6 +77,22 @@ export default function LabelsPage() {
 	const [descriptionDraft, setDescriptionDraft] = useState("");
 	const [valueDraft, setValueDraft] = useState("");
 	const [saving, setSaving] = useState(false);
+
+	/**
+	 * Helper to get display value for used_in field
+	 * Replaces metric IDs with their display_as names when applicable
+	 */
+	const getUsedInDisplayValue = (usedIn: string, kind: string): string => {
+		// Check if this is a metric-related usage
+		if (kind === "metric" || kind === "metrics") {
+			// Try to get the metric display name
+			const displayName = getMetricDisplayName(usedIn);
+			// Return display name if found, otherwise return original value
+			return displayName || usedIn;
+		}
+		// For non-metric kinds, return as-is
+		return usedIn;
+	};
 
 	// Transform labels from store to UI format
 	const labelsWithType = useMemo(() => {
@@ -137,16 +156,17 @@ export default function LabelsPage() {
 		return labelsWithType.filter((label) => {
 			const matchesSearch =
 				label.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				label.usedIn.some((usage) =>
-					usage.used_in.toLowerCase().includes(searchTerm.toLowerCase()),
-				);
+				label.usedIn.some((usage) => {
+					const displayValue = getUsedInDisplayValue(usage.used_in, usage.kind);
+					return displayValue.toLowerCase().includes(searchTerm.toLowerCase());
+				});
 			const matchesType =
 				filterType === "all" ||
 				label.type === filterType ||
 				label.type === "all";
 			return matchesSearch && matchesType;
 		});
-	}, [labelsWithType, searchTerm, filterType]);
+	}, [labelsWithType, searchTerm, filterType, getUsedInDisplayValue]);
 
 	const filteredRenamedValues = useMemo(() => {
 		return renamedValues.filter(
@@ -314,6 +334,16 @@ export default function LabelsPage() {
 					</p>
 				</div>
 				<div className="flex items-center space-x-2">
+					<Button
+						variant={showRenamedPanel ? "default" : "outline"}
+						size="default"
+						onClick={() => setShowRenamedPanel(!showRenamedPanel)}
+					>
+						<Eye className="h-4 w-4" />
+						<span className="ml-2 hidden lg:inline">
+							{showRenamedPanel ? "Hide" : "Show"} Renamed Values
+						</span>
+					</Button>
 					<Button variant="outline" size="default" onClick={handleRefresh}>
 						<RefreshCcw className="h-4 w-4" />
 						<span className="ml-2 hidden lg:inline">Refresh</span>
@@ -325,10 +355,8 @@ export default function LabelsPage() {
 				</div>
 			</div>
 
-			{/* Section 1 & 2: Labels Table and Renamed Values side by side */}
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Labels Table - 2/3 width */}
-				<div className="lg:col-span-2">
+			{/* Labels Table */}
+			<div>
 					<Card>
 						<CardHeader>
 							<CardTitle className="flex items-center gap-2">
@@ -491,7 +519,7 @@ export default function LabelsPage() {
 																	}
 																	className="text-xs"
 																>
-																	{usage.used_in}
+																	{getUsedInDisplayValue(usage.used_in, usage.kind)}
 																</Badge>
 															))}
 															{label.usedIn.length > 3 && (
@@ -652,7 +680,7 @@ export default function LabelsPage() {
 																								}
 																								className="text-xs"
 																							>
-																								{usage.used_in}
+																								{getUsedInDisplayValue(usage.used_in, usage.kind)}
 																							</Badge>
 																							<Badge
 																								variant="outline"
@@ -680,32 +708,51 @@ export default function LabelsPage() {
 					</Card>
 				</div>
 
-				{/* Renamed Values Card - 1/3 width */}
-				<div className="lg:col-span-1">
-					<Card>
-						<CardHeader>
+			{/* Sliding Renamed Values Panel - Right side */}
+			<div
+				className={`fixed top-0 right-0 h-full w-96 bg-background border-l shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
+					showRenamedPanel ? "translate-x-0" : "translate-x-full"
+				}`}
+			>
+				<Card className="h-full rounded-none border-0 flex flex-col">
+					<CardHeader className="flex-shrink-0 border-b">
+						<div className="flex items-center justify-between">
 							<CardTitle className="flex items-center gap-2">
 								<Eye className="h-5 w-5" />
 								Renamed Values
 							</CardTitle>
-							<CardDescription>
-								Custom display names for label values
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="mb-4">
-								<div className="flex items-center space-x-2">
-									<Search className="h-4 w-4" />
-									<Input
-										placeholder="Search renamed values..."
-										value={renamedSearch}
-										onChange={(e) => setRenamedSearch(e.target.value)}
-										className="w-full"
-									/>
-								</div>
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={() => setShowRenamedPanel(false)}
+								className="h-8 w-8 p-0"
+							>
+								<X className="h-4 w-4" />
+							</Button>
+						</div>
+						<CardDescription>
+							Custom display names for label values
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="flex-1 overflow-y-auto pt-4">
+						<div className="mb-4">
+							<div className="flex items-center space-x-2">
+								<Search className="h-4 w-4" />
+								<Input
+									placeholder="Search renamed values..."
+									value={renamedSearch}
+									onChange={(e) => setRenamedSearch(e.target.value)}
+									className="w-full"
+								/>
 							</div>
-							<div className="space-y-3">
-								{Object.entries(
+						</div>
+						<div className="space-y-3">
+							{filteredRenamedValues.length === 0 ? (
+								<div className="text-center py-8 text-muted-foreground">
+									<p>No renamed values found</p>
+								</div>
+							) : (
+								Object.entries(
 									filteredRenamedValues.reduce(
 										(acc, item) => {
 											if (!acc[item.label]) acc[item.label] = [];
@@ -734,12 +781,20 @@ export default function LabelsPage() {
 											</div>
 										))}
 									</div>
-								))}
-							</div>
-						</CardContent>
-					</Card>
-				</div>
+								))
+							)}
+						</div>
+					</CardContent>
+				</Card>
 			</div>
+
+			{/* Overlay when panel is open */}
+			{showRenamedPanel && (
+				<div
+					className="fixed inset-0 bg-black/20 z-40"
+					onClick={() => setShowRenamedPanel(false)}
+				/>
+			)}
 		</div>
 	);
 }
