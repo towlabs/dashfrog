@@ -15,7 +15,7 @@ class Label(BaseModel):
         mapped_to: str | None = None
 
     class Usage(BaseModel):
-        used_in: int
+        used_in: int | str
         kind: LabelSrcKind
 
     id: int = Field(..., frozen=True)

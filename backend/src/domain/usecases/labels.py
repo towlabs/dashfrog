@@ -4,6 +4,7 @@ from structlog import BoundLogger
 
 from src.adapters.stores import (
     Labels as LabelsStore,
+    Metrics as MetricsStore,
 )
 from src.core import AsyncSessionMaker
 from src.domain.entities import (
@@ -13,9 +14,12 @@ from src.domain.entities import (
 
 
 class Labels:
-    def __init__(self, store: LabelsStore, session_maker: AsyncSessionMaker, logger: BoundLogger):
+    def __init__(
+        self, store: LabelsStore, metrics: MetricsStore, session_maker: AsyncSessionMaker, logger: BoundLogger
+    ):
         self.__log = logger.bind(name="usecases.Labels")
         self.__labels = store
+        self.__metrics = metrics
         self.__session_maker = session_maker
 
     async def list(self, _ctx: Context):
@@ -58,23 +62,45 @@ class Labels:
                 for label in (await self.__labels.list())
             }
 
+            existing_metrics = {metric.key: metric.id for metric in (await self.__metrics.list())}
+
             await self.__process_labels(existing_labels, self.__labels.list_workflow_labels(), LabelSrcKind.workflow)
-            await self.__process_labels(existing_labels, self.__labels.list_metrics_labels(), LabelSrcKind.metrics)
+            await self.__process_labels(
+                existing_labels,
+                self.__labels.list_metrics_labels(),
+                LabelSrcKind.metrics,
+                existing_metrics=existing_metrics,
+            )
 
         log.debug("Success !")
 
-    async def __process_labels(self, existing_labels, labels, kind: LabelSrcKind):
+    async def __process_labels(
+        self, existing_labels, labels, kind: LabelSrcKind, existing_metrics: None | dict[str, int] = None
+    ):
+        if kind == LabelSrcKind.metrics and existing_metrics is None:
+            self.__log.error("No existing metrics found for processing metrics labels!")
+            return
+
         for label_key, label_data in labels.items():
             detected_values = [
                 Label.Value(value=value)
                 for value in label_data["values"]
                 if value not in existing_labels.get(label_key, {}).get("values", [])
             ]
-            detected_used_ins = [
-                Label.Usage(used_in=used_in, kind=kind)
-                for used_in in label_data["used_in"]
-                if used_in not in existing_labels.get(label_key, {}).get("used_by", [])
-            ]
+
+            if kind == LabelSrcKind.metrics:
+                detected_used_ins = [
+                    Label.Usage(used_in=existing_metrics[used_in], kind=kind)
+                    for used_in in label_data["used_in"]
+                    if used_in not in existing_labels.get(label_key, {}).get("used_by", [])
+                    and used_in in existing_metrics
+                ]
+            else:
+                detected_used_ins = [
+                    Label.Usage(used_in=used_in, kind=kind)
+                    for used_in in label_data["used_in"]
+                    if used_in not in existing_labels.get(label_key, {}).get("used_by", [])
+                ]
 
             if not (label := existing_labels.get(label_key)):
                 await self.__labels.insert(

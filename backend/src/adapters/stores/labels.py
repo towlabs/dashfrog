@@ -36,15 +36,6 @@ KNOWN_PROM_UNITS = {
 
 stdList = list
 
-metric_name_parsing = compile(
-    r"^(?:dashfrog_internal_(?P<scope>[^_]+)_|dashfrog_user_(?P<custom>[^_]+)_)?"  # optional prefix
-    r"(?P<name>.+?)"  # base name
-    r"(?:_(?P<kind>measure|stats|counter))?"  # optional kind
-    r"(?:_(?P<unit>(?!total$|sum$|count$|bucket$|buckets$)[^_]+))?$",  # optional unit
-)
-
-
-
 
 metric_name_parsing = compile(
     r"^(?:dashfrog_internal_(?P<scope>[^_]+)_|dashfrog_user_(?P<custom>[^_]+)_)?"
@@ -70,9 +61,7 @@ class Labels:
 
     @staticmethod
     async def list() -> list[entities.Label]:
-        labels = await _get_session().execute(
-            select(LabelModel).order_by(LabelModel.label)
-        )
+        labels = await _get_session().execute(select(LabelModel).order_by(LabelModel.label))
 
         return [label.to_entity() for label in labels.scalars()]
 
@@ -82,9 +71,7 @@ class Labels:
 
         label = (
             await db.execute(
-                select(LabelModel)
-                .options(noload(LabelModel.used_in), noload(LabelModel.values))
-                .filter_by(id=label_id)
+                select(LabelModel).options(noload(LabelModel.used_in), noload(LabelModel.values)).filter_by(id=label_id)
             )
         ).scalar_one()
 
@@ -96,16 +83,10 @@ class Labels:
         return label.to_entity()
 
     @staticmethod
-    async def update_value(
-        ctx, label_id: int, value_name, **new_values
-    ) -> entities.Label.Value:
+    async def update_value(ctx, label_id: int, value_name, **new_values) -> entities.Label.Value:
         db = _get_session()
 
-        label = (
-            await db.execute(
-                select(LabelValue).filter_by(label_id=label_id, value=value_name)
-            )
-        ).scalar_one()
+        label = (await db.execute(select(LabelValue).filter_by(label_id=label_id, value=value_name))).scalar_one()
 
         for field, value in new_values.items():
             setattr(label, field, value)
@@ -122,10 +103,7 @@ class Labels:
             LabelModel(
                 label=label.label,
                 values=[LabelValue(value=value.value) for value in label.values],
-                used_in=[
-                    LabelUsage(used_in=used_in.used_in, kind=used_in.kind)
-                    for used_in in label.used_in
-                ],
+                used_in=[LabelUsage(_used_in=str(used_in.used_in), kind=used_in.kind) for used_in in label.used_in],
             )
         )
 
@@ -139,9 +117,7 @@ class Labels:
     async def insert_usage(label_id: int, used_in: stdList[entities.Label.Usage]):
         db = _get_session()
         for usage in used_in:
-            db.add(
-                LabelUsage(label_id=label_id, used_in=usage.used_in, kind=usage.kind)
-            )
+            db.add(LabelUsage(label_id=label_id, _used_in=str(usage.used_in), kind=usage.kind))
 
     def list_workflow_labels(self) -> entities.LabelScrapping:
         query = """select
@@ -167,7 +143,7 @@ class Labels:
             series = self.__prom.all_metrics({"match[]": f'{{{name}=~".+"}}'})
             res[name] = {
                 "values": self.__prom.get_label_values(name),
-                "used_in": list(set(series)),
+                "used_in": list(set([parse_prom_name(res)[0] for res in set(series) if parse_prom_name(res)])),
             }
 
         return res
@@ -180,17 +156,20 @@ class Metrics:
         self.__log = logger.bind(name="stores.Metrics")
 
     @staticmethod
-    async def upserts(metrics: list[entities.Metric]):
+    async def list() -> list[entities.Metric]:
+        metrics = await _get_session().execute(select(Metric).order_by(Metric.key))
+
+        return [metric.to_entity() for metric in metrics.scalars()]
+
+    @staticmethod
+    async def upserts(metrics: stdList[entities.Metric]):
         db = _get_session()
         values = [metric.model_dump(exclude={"id"}) for metric in metrics]
         insert_stmt = insert(Metric).values(values)
         await db.execute(
             insert_stmt.on_conflict_do_update(
                 index_elements=["key"],
-                set_={
-                    col: getattr(insert_stmt.excluded, col)
-                    for col in ["kind", "unit", "associated_identifiers"]
-                },
+                set_={col: getattr(insert_stmt.excluded, col) for col in ["kind", "unit", "associated_identifiers"]},
             )
         )
 
@@ -198,7 +177,7 @@ class Metrics:
         data = self.__prom.get_metric_metadata("")
         res = {}
         for metric in data:
-            if not (matches := self.__parse_unit(metric["metric_name"])):
+            if not (matches := parse_prom_name(metric["metric_name"])):
                 self.__log.error("Invalid metric", name=metric["metric_name"])
                 continue
 
@@ -207,11 +186,7 @@ class Metrics:
                 name = name.strip(metric["unit"]).strip("_")
                 unit = metric["unit"]
 
-            scope = (
-                scope
-                or self._otel_scope_to_scope(metric["metric_name"], metric["type"])
-                or "UNKNOWN"
-            )
+            scope = scope or self._otel_scope_to_scope(metric["metric_name"], metric["type"]) or "UNKNOWN"
 
             if name not in res:
                 metric_entity = entities.Metric(
@@ -243,12 +218,7 @@ class Metrics:
             if "fastapi" in scope or "flask" in scope or "http" in scope:
                 return "api"
 
-            if (
-                "celery" in scope
-                or "dramatiq" in scope
-                or "pubsub" in scope
-                or "tasks" in scope
-            ):
+            if "celery" in scope or "dramatiq" in scope or "pubsub" in scope or "tasks" in scope:
                 return "tasks"
 
             return "UNKNOW"
@@ -256,9 +226,7 @@ class Metrics:
         if metric_kind == "histogram":
             metric_name += "_sum"
 
-        candidates = self.__prom.get_label_values(
-            "otel_scope_name", {"match[]": metric_name}
-        )
+        candidates = self.__prom.get_label_values("otel_scope_name", {"match[]": metric_name})
 
         val = [replace(scope) for scope in candidates if replace(scope) != "UNKNOWN"]
         if len(val) == 0:
@@ -266,29 +234,29 @@ class Metrics:
 
         return val[0]
 
-    @staticmethod
-    def __parse_unit(metric_name: str):
-        if not (matches := metric_name_parsing.match(metric_name)):
-            return None
 
-        name = matches.group("name")
-        kind = entities.MetricKind(matches.group("kind") or "over")
-        df_scope = matches.group("scope")
-        usr_scope = matches.group("custom")
-        unit = matches.group("unit")
+def parse_prom_name(metric_name: str):
+    if not (matches := metric_name_parsing.match(metric_name)):
+        return None
 
-        if kind is None and unit not in KNOWN_PROM_UNITS:
-            # If no kind and unit is not in Prometheus known units → not a real unit
-            name = "_".join(filter(None, [name, unit]))
-            unit = None
-        elif kind is not None and unit in {
-            "total",
-            "sum",
-            "count",
-            "bucket",
-            "buckets",
-        }:
-            # Safety: drop special Prom suffixes if misparsed
-            unit = None
+    name = matches.group("name")
+    kind = entities.MetricKind(matches.group("kind") or "over")
+    df_scope = matches.group("scope")
+    usr_scope = matches.group("custom")
+    unit = matches.group("unit")
 
-        return name, kind, (usr_scope or df_scope), unit
+    if kind is None and unit not in KNOWN_PROM_UNITS:
+        # If no kind and unit is not in Prometheus known units → not a real unit
+        name = "_".join(filter(None, [name, unit]))
+        unit = None
+    elif kind is not None and unit in {
+        "total",
+        "sum",
+        "count",
+        "bucket",
+        "buckets",
+    }:
+        # Safety: drop special Prom suffixes if misparsed
+        unit = None
+
+    return name, kind, (usr_scope or df_scope), unit

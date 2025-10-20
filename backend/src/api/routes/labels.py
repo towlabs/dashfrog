@@ -30,12 +30,6 @@ class Labels:
             return labels
 
     @staticmethod
-    @ep.get("/metrics")
-    async def scrape_metrics(request: Request):
-        with context(request):
-            await Labels.__uc.list_metrics()
-
-    @staticmethod
     @ep.get("/scrape")
     async def scrape_labels(request: Request):
         with context(request) as ctx:
@@ -51,8 +45,12 @@ class Labels:
 
     @staticmethod
     @ep.put("/{label_id}/value/{value_name}")
-    async def update_label_value(request: Request, label_id: int, value_name: str, body: _LabelValueUpdate):
+    async def update_label_value(
+        request: Request, label_id: int, value_name: str, body: _LabelValueUpdate
+    ):
         with context(request) as ctx:
-            updated = await Labels.__uc.update_value(ctx, label_id, value_name, body.proxy)
+            updated = await Labels.__uc.update_value(
+                ctx, label_id, value_name, body.proxy
+            )
 
             return updated

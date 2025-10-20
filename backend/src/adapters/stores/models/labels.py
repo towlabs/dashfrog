@@ -27,12 +27,15 @@ class LabelUsage(Base):
     __tablename__ = "label_usage"
 
     label_id = Column(Integer, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
-    used_in = Column(Integer, ForeignKey("metrics.id", ondelete="CASCADE"), primary_key=True)
+    _used_in = Column(String, name="used_in", primary_key=True)
     kind = Column(Enum(entities.LabelSrcKind, name="label_src_kind"), nullable=False)
 
-    metric = relationship(
-        "Metric", cascade="all, delete-orphan", lazy="selectin", uselist=False
-    )  # single metric should exists from this association
+    @property
+    def used_in(self) -> str | int:
+        if self.kind == entities.LabelSrcKind.metrics:
+            return int(self._used_in)
+
+        return self._used_in
 
     def to_entity(self) -> entities.Label.Usage:
         return entities.Label.Usage(
@@ -72,6 +75,18 @@ class Metric(Base):
     description = Column(String)
     unit = Column(String)
     associated_identifiers = Column(ARRAY(String))
+
+    def to_entity(self) -> entities.Metric:
+        return entities.Metric(
+            id=self.id,
+            key=self.key,
+            kind=self.kind,
+            scope=self.scope,
+            unit=self.unit,
+            display_as=self.display_as,
+            description=self.description,
+            associated_identifiers=self.associated_identifiers,
+        )
 
 
 class LabelsScrapped(Base):

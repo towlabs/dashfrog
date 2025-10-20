@@ -94,7 +94,7 @@ class Application(BaseApplication[Config]):
         self.usecases = {
             "flows": Flows(flow_store, self.logger),
             "steps": Steps(step_store, self.logger),
-            "labels": Labels(label_store, self.sessionmaker, self.logger),
+            "labels": Labels(label_store, metrics_store, self.sessionmaker, self.logger),
             "metrics": Metrics(metrics_store, self.sessionmaker, self.logger),
         }
 

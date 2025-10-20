@@ -31,7 +31,7 @@ CREATE TABLE label_values (
 
 CREATE TABLE label_usage (
     label_id SERIAL REFERENCES labels (id) ON DELETE CASCADE,
-    used_in SERIAL REFERENCES metrics (id) ON DELETE CASCADE,
+    used_in VARCHAR NOT NULL,
     kind LABEL_SRC_KIND NOT NULL DEFAULT 'workflow',
     PRIMARY KEY (label_id, used_in)
 );
