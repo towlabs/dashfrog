@@ -2,7 +2,7 @@ import "@blocknote/core/fonts/inter.css";
 import { useCreateBlockNote, useEditorChange } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import "@blocknote/shadcn/style.css";
-import { BlockNoteSchema, defaultBlockSpecs, type BlockNoteEditor } from '@blocknote/core'
+import { BlockNoteSchema, combineByGroup, defaultBlockSpecs, type BlockNoteEditor } from '@blocknote/core'
 import { SuggestionMenuController, getDefaultReactSlashMenuItems, type DefaultReactSuggestionItem, SideMenuController, SideMenu, DragHandleMenu, type DragHandleMenuProps, RemoveBlockItem, BlockColorsItem } from '@blocknote/react'
 import { ChartSettingsItem } from '@/components/blocks/ChartSettingsItem'
 import { NumberSettingsItem } from '@/components/blocks/NumberSettingsItem'
@@ -18,6 +18,13 @@ import { createWorkflowBlock } from '@/components/blocks/workflow-block'
 import { createWorkflowStatusMapBlock } from '@/components/blocks/workflow-status-map-block'
 import { TimeWindowProvider, type TimeWindow } from '@/components/time-window-context'
 import { blockNoteStorage } from '@/lib/blocknote-storage'
+import * as locales from "@blocknote/core/locales";
+import {
+  getMultiColumnSlashMenuItems,
+  multiColumnDropCursor,
+  locales as multiColumnLocales,
+  withMultiColumn,
+} from "@blocknote/xl-multi-column"
 
 interface ClientBlockNoteProps {
   timeWindow: TimeWindow
@@ -30,7 +37,7 @@ export default function ClientBlockNote({ timeWindow, blockNoteId, readonly = fa
   const loadedContentRef = useRef(false)
 
   const editor = useCreateBlockNote({
-    schema: BlockNoteSchema.create({
+    schema: withMultiColumn(BlockNoteSchema.create({
       blockSpecs: {
         ...defaultBlockSpecs,
         chart: createChartBlock(),
@@ -39,7 +46,12 @@ export default function ClientBlockNote({ timeWindow, blockNoteId, readonly = fa
         workflow: createWorkflowBlock(),
         workflowStatusMap: createWorkflowStatusMapBlock(),
       },
-    }),
+    })),
+    dropCursor: multiColumnDropCursor,
+    dictionary: {
+      ...locales.en,
+      multi_column: multiColumnLocales.en,
+    }
     // Don't set initialContent here - we'll load it after editor is ready
   });
 
@@ -277,7 +289,10 @@ export default function ClientBlockNote({ timeWindow, blockNoteId, readonly = fa
           }
 
           // Simple filter matching title/aliases like defaults
-          const all = [chartItem, numberItem, barChartItem, workflowItem, workflowStatusMapItem, ...getDefaultReactSlashMenuItems(editor)]
+          const all = [chartItem, numberItem, barChartItem, workflowItem, workflowStatusMapItem, ...combineByGroup(
+            getDefaultReactSlashMenuItems(editor),
+            getMultiColumnSlashMenuItems(editor),
+          )]
           const q = query.trim().toLowerCase()
           return q ? all.filter(i => (i.title?.toLowerCase().includes(q) || (i as any).aliases?.some((a: string) => a.includes(q)))) : all
         }}
