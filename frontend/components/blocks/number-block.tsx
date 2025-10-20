@@ -152,8 +152,10 @@ export const createNumberBlock = createReactBlockSpec(
         conditionValue2: string;
         exclude: string;
       }>) => {
-        editor.updateBlock(block, { props: next } as any)
-      }, [editor, block.id])
+        Promise.resolve().then(() => {
+          editor.updateBlock(block, { props: next } as any)
+        })
+      }, [editor, block])
 
       // Get available labels from the selected metric
       const getAvailableLabels = (): string[] => {
@@ -191,7 +193,9 @@ export const createNumberBlock = createReactBlockSpec(
           {/* Settings Drawer */}
           <Sheet open={open} onOpenChange={(v) => {
             setOpen(v)
-            editor.updateBlock(block, { props: { open: v } } as any)
+            Promise.resolve().then(() => {
+              editor.updateBlock(block, { props: { open: v } } as any)
+            })
           }}>
             <SheetContent className="w-[360px] sm:max-w-none p-0 flex h-full flex-col">
               <div className="border-b p-6">

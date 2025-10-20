@@ -211,8 +211,10 @@ export const createBarChartBlock = createReactBlockSpec(
         exclude: string;
       }>) => {
         // Only send what changed - BlockNote merges partial updates
-        editor.updateBlock(block, { props: next } as any)
-      }, [editor, block.id])
+        Promise.resolve().then(() => {
+          editor.updateBlock(block, { props: next } as any)
+        })
+      }, [editor, block])
 
       const updateGroupBy = (labels: string[]) => {
         updateProps({ groupBy: JSON.stringify(labels) })
@@ -263,7 +265,9 @@ export const createBarChartBlock = createReactBlockSpec(
           {/* Settings Drawer */}
           <Sheet open={open} onOpenChange={(v) => {
             setOpen(v)
-            editor.updateBlock(block, { props: { open: v } } as any)
+            Promise.resolve().then(() => {
+              editor.updateBlock(block, { props: { open: v } } as any)
+            })
           }}>
             <SheetContent className="w-[360px] sm:max-w-none p-0 flex h-full flex-col">
               <div className="border-b p-6">
