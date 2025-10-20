@@ -161,7 +161,9 @@ export const createChartBlock = createReactBlockSpec(
       // Memoize updateProps to prevent creating new function on every render
       const updateProps = useCallback((next: Partial<{ grid: boolean; title: string; showTitle: boolean; legend: boolean; selectedMetric: string; filters: string; operation: string; groupBy: string; }>) => {
         // Always exclude 'open' from being persisted to block props
-        editor.updateBlock(block, { props: next } as any)
+        Promise.resolve().then(() => {
+          editor.updateBlock(block, { props: next } as any)
+        })
       }, [editor, block])
 
       const updateGroupBy = (labels: string[]) => {
@@ -218,7 +220,9 @@ export const createChartBlock = createReactBlockSpec(
           {/* Settings Drawer */}
           <Sheet open={Boolean((block.props as any).open)}
           onOpenChange={(v) => {
-            editor.updateBlock(block, { props: { open: Boolean(v) } } as any)
+            Promise.resolve().then(() => {
+              editor.updateBlock(block, { props: { open: Boolean(v) } } as any)
+            })
           }}>
             <SheetContent className="w-[360px] sm:max-w-none p-0 flex h-full flex-col">
               <div className="border-b p-6">
