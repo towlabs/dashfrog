@@ -4,7 +4,6 @@ import * as React from 'react'
 import Header from './Header'
 import SideMenu from './SideMenu'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
-import { NotebookTitleProvider } from './notebook-title-context'
 import { LabelsProvider } from '@/src/contexts/labels-context'
 import { NotebooksProvider } from './notebooks-context'
 
@@ -19,7 +18,6 @@ export default function LayoutClient({
   return (
     <LabelsProvider>
       <NotebooksProvider>
-        <NotebookTitleProvider>
           <div className="relative flex min-h-screen">
             {/* Desktop Sidebar - Fixed */}
             <SideMenu isCollapsed={sidebarCollapsed} onToggleCollapse={setSidebarCollapsed} />
@@ -39,7 +37,6 @@ export default function LayoutClient({
               </main>
             </div>
           </div>
-        </NotebookTitleProvider>
       </NotebooksProvider>
     </LabelsProvider>
   )
