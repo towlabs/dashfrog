@@ -16,9 +16,9 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
-import { notebookStorage } from "@/lib/notebook-storage";
 import { cn } from "@/lib/utils";
-import { useNotebooks } from "./NotebooksContext";
+import { notebookStorage } from "@/src/services/api/notebook";
+import { useNotebooks } from "../src/contexts/notebooks";
 import SearchDialog from "./SearchDialog";
 
 const topMenuItems = [

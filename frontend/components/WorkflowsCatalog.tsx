@@ -45,7 +45,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useLabels } from "@/src/contexts/labels-context";
+import { useLabels } from "@/src/contexts/labels";
 import { Flows } from "@/src/services/api";
 import type { ApiFilter, Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";

@@ -40,7 +40,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useLabels } from "@/src/contexts/labels-context";
+import { useLabels } from "@/src/contexts/labels";
 import { Labels } from "@/src/services/api";
 import type { ProcessedLabel } from "@/src/services/api/labels";
 

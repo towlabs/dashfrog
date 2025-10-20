@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import Notebook from "@/components/Notebook";
-import { useNotebooks } from "@/components/NotebooksContext";
-import { notebookStorage } from "@/lib/notebook-storage";
-import type { NotebookData } from "@/lib/notebook-types";
+import { useNotebooks } from "@/src/contexts/notebooks";
+import { notebookStorage } from "@/src/services/api/notebook";
+import type { NotebookData } from "@/src/types/notebook";
 
 export default function NotebookById() {
 	const { id } = useParams<{ id: string }>();

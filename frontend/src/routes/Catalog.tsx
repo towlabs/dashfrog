@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { Download, RefreshCcw, TrendingUp, Workflow } from "lucide-react";
-
-import type { Filter } from "@/components/FilterBadgesEditor";
+import { useState } from "react";
 import { MetricsCatalog } from "@/components/MetricsCatalog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkflowsCatalog } from "@/components/WorkflowsCatalog";
+import type { Filter } from "@/src/types/filter";
 
 export default function CatalogPage() {
 	const [searchTerm, setSearchTerm] = useState("");

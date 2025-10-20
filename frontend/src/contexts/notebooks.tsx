@@ -6,8 +6,8 @@ import {
 	useEffect,
 	useState,
 } from "react";
-import { notebookStorage } from "@/lib/notebook-storage";
-import type { NotebookData } from "@/lib/notebook-types";
+import { notebookStorage } from "@/src/services/api/notebook";
+import type { NotebookData } from "@/src/types/notebook";
 
 interface NotebooksContextValue {
 	notebooks: NotebookData[];

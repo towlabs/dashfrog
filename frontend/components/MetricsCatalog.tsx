@@ -64,7 +64,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useLabels } from "@/src/contexts/labels-context";
+import { useLabels } from "@/src/contexts/labels";
 import type { Filter } from "@/src/types/filter";
 
 interface Rule {
