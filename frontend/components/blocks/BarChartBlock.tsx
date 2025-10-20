@@ -1,12 +1,16 @@
 import { createReactBlockSpec } from "@blocknote/react";
 import { useCallback, useEffect, useState } from "react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
 	type Filter,
 	MetricQueryBuilder,
-} from "@/components/metric-query-builder";
-import type { Metric, Operation } from "@/components/metric-types";
-import { useTimeWindow } from "@/components/time-window-context";
+} from "@/components/MetricQueryBuilder";
+import type { Metric, Operation } from "@/components/MetricTypes";
+import { useTimeWindow } from "@/components/TimeWindowContext";
+import {
+	type ExclusionType,
+	TimeWindowExclusionSelect,
+} from "@/components/TimeWindowExclusion";
 import {
 	ChartContainer,
 	ChartTooltip,
@@ -15,57 +19,76 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { Separator } from "@/components/ui/separator";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { Separator } from "../ui/separator";
+import { type Aggregation, AggregationSettings } from "./ChartSettingsItem";
 
-type ChartDataPoint = {
-	x: string;
-	y: number;
+type BarChartDataPoint = {
+	name: string;
+	value: number;
 };
 
-export const createChartBlock = createReactBlockSpec(
+export const createBarChartBlock = createReactBlockSpec(
 	{
-		type: "chart",
+		type: "barChart",
 		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 		propSchema: {
+			// Display
 			grid: { default: true },
-			title: { default: "Line Chart" },
+			title: { default: "Bar Chart" },
 			showTitle: { default: false },
 			legend: { default: false },
-			// JSON string: the selected metric object (e.g., {"name": "response_time", ...})
-			selectedMetric: { default: "" },
-			// JSON string: array of filter objects (e.g., [{"label": "status", "operator": "=", "value": "200"}])
-			filters: { default: "" },
-			// JSON string: the selected operation object for statistics
-			operation: { default: "" },
-			// JSON array of label names to group by: ["status", "endpoint"]
-			groupBy: { default: "" },
-			// whether the settings sheet is open
+			color: { default: "var(--color-chart-1)" },
+			orientation: { default: "horizontal" },
+
+			// Data - metric query
+			selectedMetric: { default: "" }, // JSON string: Metric object
+			filters: { default: "" }, // JSON string: Filter[]
+			operation: { default: "" }, // Operation name (e.g., "average", "p95")
+
+			// Aggregation
+			aggregation: { default: "" },
+			conditionTarget: { default: "value" }, // 'value' or label name
+			conditionOp: { default: "eq" }, // eq, neq, lte, gte, between
+			conditionValue: { default: "" },
+			conditionValue2: { default: "" }, // for between
+
+			// Grouping
+			groupBy: { default: "" }, // JSON array: ["status", "endpoint"]
+
+			// Time window
+			exclude: { default: "none" },
+
+			// Transient UI state - managed by local state, stripped from updates
 			open: { default: false },
 		},
 		content: "none",
 	},
 	{
 		render: ({ block, editor }) => {
-			// Access the time window from context
-			const timeWindow = useTimeWindow();
-
 			const grid = block.props.grid !== false;
-			const title = block.props.title || "Line Chart";
+			const title = block.props.title || "Bar Chart";
 			const showTitle = block.props.showTitle !== false;
-			const legend = block.props.legend !== false;
+			const color = block.props.color || "var(--color-chart-1)";
 
 			// Parse selectedMetric from JSON string
-			const parseSelectedMetric = () => {
+			const parseSelectedMetric = (): Metric | null => {
 				try {
 					const m = block.props.selectedMetric;
 					if (m && typeof m === "string") {
-						return JSON.parse(m);
+						return JSON.parse(m) as Metric;
 					}
 				} catch {}
 				return null;
@@ -97,6 +120,12 @@ export const createChartBlock = createReactBlockSpec(
 			const filtersValue = parseFilters();
 			const selectedOperationValue = parseOperation();
 
+			const aggregation = block.props.aggregation as Aggregation | null;
+			const conditionTarget = block.props.conditionTarget || "value";
+			const conditionOp = block.props.conditionOp || "eq";
+			const conditionValue = block.props.conditionValue || "";
+			const conditionValue2 = block.props.conditionValue2 || "";
+
 			const parseGroupBy = (): string[] => {
 				try {
 					const g = block.props.groupBy;
@@ -109,9 +138,13 @@ export const createChartBlock = createReactBlockSpec(
 			};
 
 			const groupBy = parseGroupBy();
+			const exclude = block.props.exclude || "none";
+
+			// Access the time window from context
+			const timeWindow = useTimeWindow();
 
 			// State for chart data
-			const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+			const [chartData, setChartData] = useState<BarChartDataPoint[]>([]);
 			const [_, setIsLoading] = useState(false);
 
 			// Mock API call - will be replaced with real API later
@@ -131,20 +164,25 @@ export const createChartBlock = createReactBlockSpec(
 					// Simulate API call
 					await new Promise((resolve) => setTimeout(resolve, 300));
 
-					// Generate mock data based on time window
-					const dataPoints = 12;
+					// Generate mock data
+					const categories = [
+						"Category A",
+						"Category B",
+						"Category C",
+						"Category D",
+						"Category E",
+					];
 					const seed = Date.now() % 100000;
 					const rand = (n: number) => {
-						// simple LCG for deterministic-but-changing randomness
 						const a = 1664525;
 						const c = 1013904223;
 						const m = 2 ** 32;
 						const val = (a * (seed + n) + c) % m;
 						return val / m;
 					};
-					const mockData = Array.from({ length: dataPoints }, (_, i) => ({
-						x: `M${i + 1}`,
-						y: Math.round(40 + 40 * rand(i) + 8 * Math.sin(i / 2)),
+					const mockData = categories.map((name, i) => ({
+						name,
+						value: Math.round(30 + 70 * rand(i)),
 					}));
 
 					setChartData(mockData);
@@ -169,16 +207,21 @@ export const createChartBlock = createReactBlockSpec(
 				block.props.filters, // Use the JSON string directly
 				block.props.operation, // Use the JSON string directly
 				block.props.groupBy, // Use the JSON string directly
-				timeWindow.start.getTime(),
-				timeWindow.end.getTime(),
+				timeWindow,
 				fetchChartData,
 			]);
 
-			// Get available labels from the selected metric
-			const getAvailableLabels = (): string[] => {
-				if (!selectedMetricValue) return [];
-				return selectedMetricValue.labels || [];
-			};
+			// Use local state for UI-only state (doesn't need to be persisted)
+			const [open, setOpen] = useState(false);
+
+			// Sync block.props.open to local state when it changes (e.g., from settings menu)
+			// This is a one-way sync: props -> state, never state -> props
+			useEffect(() => {
+				const propsOpen = Boolean(block.props.open);
+				if (propsOpen) {
+					setOpen(true);
+				}
+			}, [block.props]);
 
 			// Memoize updateProps to prevent creating new function on every render
 			const updateProps = useCallback(
@@ -188,13 +231,21 @@ export const createChartBlock = createReactBlockSpec(
 						title: string;
 						showTitle: boolean;
 						legend: boolean;
+						color: string;
+						orientation: string;
 						selectedMetric: string;
 						filters: string;
 						operation: string;
+						aggregation: string;
+						conditionTarget: string;
+						conditionOp: string;
+						conditionValue: string;
+						conditionValue2: string;
 						groupBy: string;
+						exclude: string;
 					}>,
 				) => {
-					// Always exclude 'open' from being persisted to block props
+					// Only send what changed - BlockNote merges partial updates
 					Promise.resolve().then(() => {
 						editor.updateBlock(block, { props: next });
 					});
@@ -205,6 +256,9 @@ export const createChartBlock = createReactBlockSpec(
 			const updateGroupBy = (labels: string[]) => {
 				updateProps({ groupBy: JSON.stringify(labels) });
 			};
+
+			// Get available labels from the selected metric
+			const availableLabels = selectedMetricValue?.labels || [];
 
 			// Memoize callbacks to prevent infinite loops
 			const handleMetricChange = useCallback(
@@ -236,66 +290,32 @@ export const createChartBlock = createReactBlockSpec(
 						<div className="text-sm font-medium mb-2">{title}</div>
 					)}
 					<ChartContainer
-						config={{
-							value: { label: "Value", color: "var(--color-chart-1)" },
-						}}
+						config={{ value: { label: "Value", color } }}
 						className="h-[220px] w-full"
 					>
-						<LineChart
-							data={chartData}
-							margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
-						>
+						<BarChart data={chartData} layout="vertical" margin={{ left: 0 }}>
 							{grid && <CartesianGrid strokeDasharray="3 3" />}
-							<XAxis
-								dataKey="x"
-								tickLine={false}
-								axisLine={false}
-								tickMargin={8}
-							/>
+							<XAxis type="number" dataKey="value" hide />
 							<YAxis
+								dataKey="name"
+								type="category"
 								tickLine={false}
+								tickMargin={10}
 								axisLine={false}
-								tickMargin={8}
-								width={30}
+								width={100}
 							/>
 							<ChartTooltip content={<ChartTooltipContent />} />
-							<Line
-								type="monotone"
-								dataKey="y"
-								stroke="var(--color-chart-1)"
-								strokeWidth={2}
-								dot={false}
-							/>
-						</LineChart>
+							<Bar dataKey="value" fill={color} radius={5} />
+						</BarChart>
 					</ChartContainer>
-
-					{legend && groupBy.length > 0 && (
-						<div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-							<div className="flex items-center gap-1">
-								<span
-									className="inline-block h-2.5 w-2.5 rounded-full"
-									style={{ backgroundColor: "var(--color-chart-1)" }}
-								/>
-								<span className="font-medium text-foreground">Group 1</span>
-							</div>
-							<div className="flex items-center gap-1">
-								<span
-									className="inline-block h-2.5 w-2.5 rounded-full"
-									style={{ backgroundColor: "var(--color-chart-2)" }}
-								/>
-								<span className="font-medium text-foreground">Group 2</span>
-							</div>
-						</div>
-					)}
 
 					{/* Settings Drawer */}
 					<Sheet
-						open={Boolean(block.props.open)}
+						open={open}
 						onOpenChange={(v) => {
+							setOpen(v);
 							Promise.resolve().then(() => {
-								editor.updateBlock(block, {
-									props: { open: Boolean(v) },
-								});
+								editor.updateBlock(block, { props: { open: v } });
 							});
 						}}
 					>
@@ -305,7 +325,7 @@ export const createChartBlock = createReactBlockSpec(
 									<SheetTitle>Settings</SheetTitle>
 								</SheetHeader>
 							</div>
-							<div className="flex-1 overflow-y-auto p-6 space-y-3">
+							<div className="flex-1 overflow-y-auto p-6 space-y-6">
 								{/* Display Section */}
 								<div className="space-y-3">
 									<h3 className="text-sm font-medium text-muted-foreground">
@@ -336,21 +356,68 @@ export const createChartBlock = createReactBlockSpec(
 										/>
 										<label className="text-sm cursor-pointer">Show grid</label>
 									</div>
-									<div className="flex items-center gap-2">
-										<Checkbox
-											checked={legend}
-											onCheckedChange={(v) =>
-												updateProps({ legend: Boolean(v) })
-											}
-										/>
-										<label className="text-sm cursor-pointer">
-											Show legend
+									<div className="space-y-1">
+										<label className="text-xs text-muted-foreground font-medium">
+											Color
 										</label>
+										<Select
+											value={color}
+											onValueChange={(v) => updateProps({ color: v })}
+										>
+											<SelectTrigger>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="var(--color-chart-1)">
+													<div className="flex items-center gap-2">
+														<span
+															className="inline-block h-0.5 w-6 rounded-full"
+															style={{ background: "var(--color-chart-1)" }}
+														/>
+														<span>Red</span>
+													</div>
+												</SelectItem>
+												<SelectItem value="var(--color-chart-2)">
+													<div className="flex items-center gap-2">
+														<span
+															className="inline-block h-0.5 w-6 rounded-full"
+															style={{ background: "var(--color-chart-2)" }}
+														/>
+														<span>Blue</span>
+													</div>
+												</SelectItem>
+												<SelectItem value="var(--color-chart-3)">
+													<div className="flex items-center gap-2">
+														<span
+															className="inline-block h-0.5 w-6 rounded-full"
+															style={{ background: "var(--color-chart-3)" }}
+														/>
+														<span>Green</span>
+													</div>
+												</SelectItem>
+												<SelectItem value="var(--color-chart-4)">
+													<div className="flex items-center gap-2">
+														<span
+															className="inline-block h-0.5 w-6 rounded-full"
+															style={{ background: "var(--color-chart-4)" }}
+														/>
+														<span>Yellow</span>
+													</div>
+												</SelectItem>
+												<SelectItem value="var(--color-chart-5)">
+													<div className="flex items-center gap-2">
+														<span
+															className="inline-block h-0.5 w-6 rounded-full"
+															style={{ background: "var(--color-chart-5)" }}
+														/>
+														<span>Orange</span>
+													</div>
+												</SelectItem>
+											</SelectContent>
+										</Select>
 									</div>
 								</div>
-
 								<Separator className="my-4" />
-
 								{/* Data Section */}
 								<div className="space-y-3">
 									<h3 className="text-sm font-medium text-muted-foreground">
@@ -363,6 +430,27 @@ export const createChartBlock = createReactBlockSpec(
 										onOperationChange={handleOperationChange}
 										filters={filtersValue}
 										onFiltersChange={handleFiltersChange}
+										enableOperationSelector={false}
+									/>
+
+									<AggregationSettings
+										value={aggregation}
+										onChange={(value) => updateProps({ aggregation: value })}
+										conditionTarget={conditionTarget}
+										onConditionTargetChange={(v) =>
+											updateProps({ conditionTarget: v })
+										}
+										availableLabelTargets={availableLabels}
+										conditionOp={conditionOp}
+										onConditionOpChange={(v) => updateProps({ conditionOp: v })}
+										conditionValue={conditionValue}
+										onConditionValueChange={(v) =>
+											updateProps({ conditionValue: v })
+										}
+										conditionValue2={conditionValue2}
+										onConditionValue2Change={(v) =>
+											updateProps({ conditionValue2: v })
+										}
 									/>
 								</div>
 
@@ -378,7 +466,7 @@ export const createChartBlock = createReactBlockSpec(
 											Split by
 										</label>
 										<MultiSelect
-											options={getAvailableLabels().map((label) => ({
+											options={availableLabels.map((label: string) => ({
 												value: label,
 												label,
 											}))}
@@ -386,6 +474,23 @@ export const createChartBlock = createReactBlockSpec(
 											onChange={updateGroupBy}
 											placeholder="Select labels to group by..."
 											searchPlaceholder="Search labels..."
+										/>
+									</div>
+								</div>
+
+								<Separator className="my-4" />
+								{/* Time Window Section */}
+								<div className="space-y-3">
+									<h3 className="text-sm font-medium text-muted-foreground">
+										Time Window
+									</h3>
+									<div className="space-y-1">
+										<label className="text-xs text-muted-foreground font-medium">
+											Exclude
+										</label>
+										<TimeWindowExclusionSelect
+											value={exclude as ExclusionType}
+											onChange={(v) => updateProps({ exclude: v })}
 										/>
 									</div>
 								</div>

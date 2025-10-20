@@ -1,7 +1,7 @@
 import { ChevronLeft, Info } from "lucide-react";
 import * as React from "react";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
-import type { Metric, Operation } from "@/components/metric-types";
+import type { Metric, Operation } from "@/components/MetricTypes";
 import { Button } from "@/components/ui/button";
 import {
 	Command,

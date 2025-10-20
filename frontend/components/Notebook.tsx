@@ -4,7 +4,7 @@ import { EditorErrorBoundary } from "@/components/EditorErrorBoundary";
 import {
 	type TimeWindow,
 	TimeWindowSelector,
-} from "@/components/time-window-selector";
+} from "@/components/TimeWindowSelector";
 import { Button } from "@/components/ui/button";
 import { notebookStorage } from "@/lib/notebook-storage";
 import type {

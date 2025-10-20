@@ -18,7 +18,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
 import { notebookStorage } from "@/lib/notebook-storage";
 import { cn } from "@/lib/utils";
-import { useNotebooks } from "./notebooks-context";
+import { useNotebooks } from "./NotebooksContext";
 import SearchDialog from "./SearchDialog";
 
 const topMenuItems = [

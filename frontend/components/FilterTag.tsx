@@ -1,6 +1,6 @@
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useState } from "react";
-import type { ValueOption } from "@/components/add-filter-dropdown";
+import type { ValueOption } from "@/components/AddFilterDropdown";
 import { Button } from "@/components/ui/button";
 import {
 	Command,

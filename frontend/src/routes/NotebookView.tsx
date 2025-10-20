@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import Notebook from "@/app/components/Notebook";
+import Notebook from "@/components/Notebook";
 import { notebookStorage } from "@/lib/notebook-storage";
 import type { NotebookData } from "@/lib/notebook-types";
 

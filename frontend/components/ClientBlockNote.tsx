@@ -30,19 +30,19 @@ import {
 import { BarChart3, GitBranch, Hash, TrendingUp, Workflow } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { BarChartSettingsItem } from "@/components/blocks/BarChartSettingsItem";
-import { createBarChartBlock } from "@/components/blocks/bar-chart-block";
+import { createBarChartBlock } from "@/components/blocks/BarChartBlock";
 import { ChartSettingsItem } from "@/components/blocks/ChartSettingsItem";
-import { createChartBlock } from "@/components/blocks/chart-block";
+import { createChartBlock } from "@/components/blocks/ChartBlock";
 import { NumberSettingsItem } from "@/components/blocks/NumberSettingsItem";
-import { createNumberBlock } from "@/components/blocks/number-block";
+import { createNumberBlock } from "@/components/blocks/NumberBlock";
 import { WorkflowSettingsItem } from "@/components/blocks/WorkflowSettingsItem";
 import { WorkflowStatusMapSettingsItem } from "@/components/blocks/WorkflowStatusMapSettingsItem";
-import { createWorkflowBlock } from "@/components/blocks/workflow-block";
-import { createWorkflowStatusMapBlock } from "@/components/blocks/workflow-status-map-block";
+import { createWorkflowBlock } from "@/components/blocks/WorkflowBlock";
+import { createWorkflowStatusMapBlock } from "@/components/blocks/WorkflowStatusMapBlock";
 import {
 	type TimeWindow,
 	TimeWindowProvider,
-} from "@/components/time-window-context";
+} from "@/components/TimeWindowContext";
 import { blockNoteStorage } from "@/lib/blocknote-storage";
 
 interface ClientBlockNoteProps {
