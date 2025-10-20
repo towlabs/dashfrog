@@ -1,20 +1,31 @@
-'use client'
+"use client";
 
-import { DragHandleMenuProps, useBlockNoteEditor, useComponentsContext } from '@blocknote/react'
+import {
+	type DragHandleMenuProps,
+	useBlockNoteEditor,
+	useComponentsContext,
+} from "@blocknote/react";
 
 export function BarChartSettingsItem(props: DragHandleMenuProps) {
-  const Components = useComponentsContext()!
-  const editor = useBlockNoteEditor()
+	const Components = useComponentsContext()!;
+	const editor = useBlockNoteEditor();
 
-  if ((props.block as any).type !== 'barChart') return null
+	if ((props.block as any).type !== "barChart") return null;
 
-  return (
-    <Components.Generic.Menu.Item
-      onClick={() => editor.updateBlock(props.block as any, { props: { ...((props.block as any).props || {}), open: true } } as any)}
-    >
-      <div className="flex items-center gap-2">
-        <span>Settings</span>
-      </div>
-    </Components.Generic.Menu.Item>
-  )
+	return (
+		<Components.Generic.Menu.Item
+			onClick={() =>
+				editor.updateBlock(
+					props.block as any,
+					{
+						props: { ...((props.block as any).props || {}), open: true },
+					} as any,
+				)
+			}
+		>
+			<div className="flex items-center gap-2">
+				<span>Settings</span>
+			</div>
+		</Components.Generic.Menu.Item>
+	);
 }

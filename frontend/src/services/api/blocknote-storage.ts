@@ -11,7 +11,7 @@ if (typeof window !== "undefined") {
 			console.log("Migrating old notebook storage format...");
 			localStorage.removeItem(OLD_STORAGE_KEY);
 		}
-	} catch (e) {
+	} catch (_e) {
 		// Ignore cleanup errors
 	}
 }
@@ -40,7 +40,7 @@ export const blockNoteStorage = {
 			// Clear corrupted data
 			try {
 				localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
-			} catch (e) {
+			} catch (_e) {
 				// Ignore cleanup errors
 			}
 		}
@@ -60,7 +60,7 @@ export const blockNoteStorage = {
 			const keys: string[] = [];
 			for (let i = 0; i < localStorage.length; i++) {
 				const key = localStorage.key(i);
-				if (key && key.startsWith(STORAGE_PREFIX)) {
+				if (key?.startsWith(STORAGE_PREFIX)) {
 					keys.push(key.replace(STORAGE_PREFIX, ""));
 				}
 			}

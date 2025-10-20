@@ -1,5 +1,3 @@
-import EventsPage from '@/app/events/page'
+import EventsPage from "@/app/events/page";
 
-export default EventsPage
-
-
+export default EventsPage;
