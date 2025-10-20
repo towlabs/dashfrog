@@ -1,5 +1,5 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
-import type { Filter } from "@/src/types/filter";
+import type { ApiFilter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
 import type { Step } from "@/src/types/step";
 
@@ -24,7 +24,7 @@ export interface PaginatedResponse<T> {
 }
 
 const Flows = {
-	latest: (filters?: Filter[], pagination?: PaginationParams) => {
+	latest: (filters?: ApiFilter[], pagination?: PaginationParams) => {
 		const params = new URLSearchParams();
 		if (pagination?.page !== undefined) {
 			params.append("page", pagination.page.toString());
@@ -45,7 +45,7 @@ const Flows = {
 	},
 	history: (
 		name: string,
-		filters?: Filter[],
+		filters?: ApiFilter[],
 		pagination?: PaginationParams,
 		dateRange?: DateRangeParams,
 	) => {

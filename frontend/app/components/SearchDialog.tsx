@@ -1,31 +1,20 @@
-"use client";
-
 import {
 	ChartNoAxesGantt,
 	ChartScatter,
 	Hash,
 	Home,
 	RadioTower,
-	Search,
 	Settings,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
-	Command,
 	CommandDialog,
 	CommandEmpty,
 	CommandGroup,
 	CommandInput,
 	CommandItem,
 	CommandList,
-	CommandSeparator,
 } from "@/components/ui/command";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 
 interface SearchDialogProps {
 	open: boolean;
@@ -100,8 +89,6 @@ export default function SearchDialog({
 	open,
 	onOpenChange,
 }: SearchDialogProps) {
-	const [search, setSearch] = useState("");
-
 	useEffect(() => {
 		const down = (e: KeyboardEvent) => {
 			if (e.key === "k" && (e.metaKey || e.ctrlKey)) {

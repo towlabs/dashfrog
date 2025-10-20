@@ -1,26 +1,21 @@
-"use client";
-
 import { addDays, format } from "date-fns";
 import {
-	AlertTriangle,
 	CalendarIcon,
 	Check,
 	ChevronDownIcon,
 	ChevronLeft,
 	ChevronRight,
-	Clock,
 	ClockArrowDown,
 	ClockArrowUp,
-	ClockIcon,
 	Plus,
 	Shapes,
 	TagIcon,
-	Wrench,
 	X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+
 import ClientBlockNote from "@/components/ClientBlockNote";
-import { FilterBar } from "@/components/filter-bar";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -46,7 +41,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Popover,
 	PopoverContent,
@@ -54,6 +48,23 @@ import {
 } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import type { Filter } from "@/src/types/filter";
+
+interface StatusData {
+	date: Date;
+	status: string;
+	dayOfWeek: number;
+	hour: number;
+	minute: number;
+	isFuture: boolean;
+	events: {
+		title: string;
+		description: string;
+		severity: string;
+		workflow: string;
+		tenant: string;
+	}[];
+}
 
 // Generate status data for 7 days with 10-minute intervals
 const generateStatusData = (startOfWeek: Date) => {
@@ -181,7 +192,7 @@ const getWeekStart = (date: Date) => {
 export default function EventsPage() {
 	const [weekStart, setWeekStart] = useState<Date>(getWeekStart(new Date()));
 	const statusData = useMemo(() => generateStatusData(weekStart), [weekStart]);
-	const [selectedDay, setSelectedDay] = useState<any>(null);
+	const [selectedDay, setSelectedDay] = useState<StatusData | null>(null);
 	const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 	const [isSheetOpen, setIsSheetOpen] = useState(false);
 	const [eventTitle, setEventTitle] = useState("");
@@ -196,15 +207,7 @@ export default function EventsPage() {
 		{ id: string; key: string; value: string }[]
 	>([]);
 	const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
-	const [searchTerm, setSearchTerm] = useState("");
-	const [filters, setFilters] = useState<
-		{
-			id: string;
-			column: string;
-			operator: "equals" | "contains" | "starts_with";
-			value: string;
-		}[]
-	>([]);
+	const [filters, setFilters] = useState<Filter[]>([]);
 
 	const getLabelOptions = (key: string): string[] => {
 		switch (key) {
@@ -237,7 +240,7 @@ export default function EventsPage() {
 		setEditingLabelId(null);
 	};
 
-	const handleDayClick = (day: any) => {
+	const handleDayClick = (day: StatusData) => {
 		if (day.status === "incident" || day.status === "maintenance") {
 			setSelectedDay(day);
 			setEventTitle(day.events[0]?.title || "");
@@ -350,28 +353,11 @@ export default function EventsPage() {
 				</div>
 
 				<div className="space-y-4">
-					{/* Filter Bar */}
-					<FilterBar
-						searchTerm={searchTerm}
-						onSearchChange={setSearchTerm}
-						searchPlaceholder="Search events..."
+					{/* Filters */}
+					<FilterBadgesEditor
+						availableLabels={["type", "status", "title"]}
 						filters={filters}
 						onFiltersChange={setFilters}
-						availableColumns={[
-							{ value: "type", label: "Type" },
-							{ value: "status", label: "Status" },
-							{ value: "title", label: "Title" },
-						]}
-						getValueOptions={(column) => {
-							switch (column) {
-								case "type":
-									return ["incident", "maintenance"];
-								case "status":
-									return ["operational", "incident", "maintenance", "future"];
-								default:
-									return [];
-							}
-						}}
 					/>
 
 					{/* Events Timeline */}
@@ -519,7 +505,7 @@ export default function EventsPage() {
 								{selectedDay.events.length > 0 && (
 									<div>
 										<h4 className="font-medium text-sm mb-2">Events</h4>
-										{selectedDay.events.map((event: any, index: number) => (
+										{selectedDay.events.map((event, index) => (
 											<div
 												key={index}
 												className="space-y-2 p-3 rounded-lg border"
@@ -936,6 +922,7 @@ export default function EventsPage() {
 											start: eventStartDate || new Date(),
 											end: eventEndDate || new Date(),
 										}}
+										blockNoteId="wip"
 									/>
 								</div>
 							</div>

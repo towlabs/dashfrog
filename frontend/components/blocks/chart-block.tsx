@@ -1,9 +1,10 @@
-"use client";
-
 import { createReactBlockSpec } from "@blocknote/react";
 import { useCallback, useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { MetricQueryBuilder } from "@/components/metric-query-builder";
+import {
+	type Filter,
+	MetricQueryBuilder,
+} from "@/components/metric-query-builder";
 import type { Metric, Operation } from "@/components/metric-types";
 import { useTimeWindow } from "@/components/time-window-context";
 import {
@@ -31,7 +32,6 @@ export const createChartBlock = createReactBlockSpec(
 	{
 		type: "chart",
 		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-expect-error
 		propSchema: {
 			grid: { default: true },
 			title: { default: "Line Chart" },
@@ -55,15 +55,15 @@ export const createChartBlock = createReactBlockSpec(
 			// Access the time window from context
 			const timeWindow = useTimeWindow();
 
-			const grid = (block.props as any).grid !== false;
-			const title = (block.props as any).title || "Line Chart";
-			const showTitle = (block.props as any).showTitle !== false;
-			const legend = (block.props as any).legend !== false;
+			const grid = block.props.grid !== false;
+			const title = block.props.title || "Line Chart";
+			const showTitle = block.props.showTitle !== false;
+			const legend = block.props.legend !== false;
 
 			// Parse selectedMetric from JSON string
 			const parseSelectedMetric = () => {
 				try {
-					const m = (block.props as any).selectedMetric;
+					const m = block.props.selectedMetric;
 					if (m && typeof m === "string") {
 						return JSON.parse(m);
 					}
@@ -74,7 +74,7 @@ export const createChartBlock = createReactBlockSpec(
 			// Parse filters from JSON string
 			const parseFilters = () => {
 				try {
-					const f = (block.props as any).filters;
+					const f = block.props.filters;
 					if (f && typeof f === "string") {
 						return JSON.parse(f);
 					}
@@ -85,7 +85,7 @@ export const createChartBlock = createReactBlockSpec(
 			// Parse operation from JSON string
 			const parseOperation = (): Operation | null => {
 				try {
-					const op = (block.props as any).operation;
+					const op = block.props.operation;
 					if (op && typeof op === "string") {
 						return JSON.parse(op) as Operation;
 					}
@@ -99,7 +99,7 @@ export const createChartBlock = createReactBlockSpec(
 
 			const parseGroupBy = (): string[] => {
 				try {
-					const g = (block.props as any).groupBy;
+					const g = block.props.groupBy;
 					if (g && typeof g === "string") {
 						const arr = JSON.parse(g);
 						if (Array.isArray(arr)) return arr as string[];
@@ -112,14 +112,18 @@ export const createChartBlock = createReactBlockSpec(
 
 			// State for chart data
 			const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-			const [isLoading, setIsLoading] = useState(false);
+			const [_, setIsLoading] = useState(false);
 
 			// Mock API call - will be replaced with real API later
 			const fetchChartData = useCallback(
 				async (
-					metric: any,
-					filters: any[],
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
+					metric: Metric,
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
+					filters: Filter[],
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 					groupBy: string[],
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 					timeWindow: { start: Date; end: Date },
 				) => {
 					setIsLoading(true);
@@ -150,6 +154,7 @@ export const createChartBlock = createReactBlockSpec(
 			);
 
 			// Fetch data whenever dependencies change
+			// biome-ignore lint/correctness/useExhaustiveDependencies: use only json strings
 			useEffect(() => {
 				if (selectedMetricValue) {
 					fetchChartData(
@@ -160,10 +165,10 @@ export const createChartBlock = createReactBlockSpec(
 					);
 				}
 			}, [
-				(block.props as any).selectedMetric, // Use the JSON string directly
-				(block.props as any).filters, // Use the JSON string directly
-				(block.props as any).operation, // Use the JSON string directly
-				(block.props as any).groupBy, // Use the JSON string directly
+				block.props.selectedMetric, // Use the JSON string directly
+				block.props.filters, // Use the JSON string directly
+				block.props.operation, // Use the JSON string directly
+				block.props.groupBy, // Use the JSON string directly
 				timeWindow.start.getTime(),
 				timeWindow.end.getTime(),
 				fetchChartData,
@@ -191,7 +196,7 @@ export const createChartBlock = createReactBlockSpec(
 				) => {
 					// Always exclude 'open' from being persisted to block props
 					Promise.resolve().then(() => {
-						editor.updateBlock(block, { props: next } as any);
+						editor.updateBlock(block, { props: next });
 					});
 				},
 				[editor, block],
@@ -203,14 +208,14 @@ export const createChartBlock = createReactBlockSpec(
 
 			// Memoize callbacks to prevent infinite loops
 			const handleMetricChange = useCallback(
-				(metric: any) => {
+				(metric: Metric | null) => {
 					updateProps({ selectedMetric: metric ? JSON.stringify(metric) : "" });
 				},
 				[updateProps],
 			);
 
 			const handleFiltersChange = useCallback(
-				(filters: any[]) => {
+				(filters: Filter[]) => {
 					updateProps({ filters: JSON.stringify(filters) });
 				},
 				[updateProps],
@@ -285,12 +290,12 @@ export const createChartBlock = createReactBlockSpec(
 
 					{/* Settings Drawer */}
 					<Sheet
-						open={Boolean((block.props as any).open)}
+						open={Boolean(block.props.open)}
 						onOpenChange={(v) => {
 							Promise.resolve().then(() => {
 								editor.updateBlock(block, {
 									props: { open: Boolean(v) },
-								} as any);
+								});
 							});
 						}}
 					>

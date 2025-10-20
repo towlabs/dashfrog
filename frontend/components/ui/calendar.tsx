@@ -1,5 +1,4 @@
-"use client";
-
+/** biome-ignore-all lint/correctness/noNestedComponentDefinitions: shadcn */
 import {
 	ChevronDownIcon,
 	ChevronLeftIcon,

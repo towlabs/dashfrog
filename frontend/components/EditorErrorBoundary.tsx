@@ -62,6 +62,7 @@ export class EditorErrorBoundary extends React.Component<Props, State> {
 						Something went wrong with the editor.
 					</p>
 					<button
+						type="button"
 						onClick={() => this.setState({ hasError: false })}
 						className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
 					>

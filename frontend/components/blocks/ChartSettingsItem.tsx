@@ -1,4 +1,4 @@
-import { ChevronLeft, Workflow, X } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-type Aggregation =
+export type Aggregation =
 	| "average"
 	| "min"
 	| "max"
@@ -131,7 +131,9 @@ export function AggregationSettings({
 	onConditionOpChange,
 	conditionValue,
 	onConditionValueChange,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 	conditionValue2,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 	onConditionValue2Change,
 }: AggregationSettingsProps) {
 	const [open, setOpen] = React.useState(false);
@@ -343,24 +345,19 @@ import {
 	useBlockNoteEditor,
 	useComponentsContext,
 } from "@blocknote/react";
-import { TrendingUp } from "lucide-react";
-import { LabelList } from "recharts";
 
 export function ChartSettingsItem(props: DragHandleMenuProps) {
 	const Components = useComponentsContext()!;
 	const editor = useBlockNoteEditor();
 
-	if ((props.block as any).type !== "chart") return null;
+	if ((props.block.type as string) !== "chart") return null;
 
 	return (
 		<Components.Generic.Menu.Item
 			onClick={() =>
-				editor.updateBlock(
-					props.block as any,
-					{
-						props: { ...((props.block as any).props || {}), open: true },
-					} as any,
-				)
+				editor.updateBlock(props.block, {
+					props: { ...(props.block.props || {}), open: true },
+				})
 			}
 		>
 			<div className="flex items-center gap-2">

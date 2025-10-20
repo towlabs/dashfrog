@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	type DragHandleMenuProps,
 	useBlockNoteEditor,
@@ -10,17 +8,14 @@ export function BarChartSettingsItem(props: DragHandleMenuProps) {
 	const Components = useComponentsContext()!;
 	const editor = useBlockNoteEditor();
 
-	if ((props.block as any).type !== "barChart") return null;
+	if ((props.block.type as string) !== "barChart") return null;
 
 	return (
 		<Components.Generic.Menu.Item
 			onClick={() =>
-				editor.updateBlock(
-					props.block as any,
-					{
-						props: { ...((props.block as any).props || {}), open: true },
-					} as any,
-				)
+				editor.updateBlock(props.block, {
+					props: { ...(props.block.props || {}), open: true },
+				})
 			}
 		>
 			<div className="flex items-center gap-2">

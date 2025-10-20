@@ -1,5 +1,3 @@
-"use client";
-
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { useState } from "react";
 import type { ValueOption } from "@/components/add-filter-dropdown";
@@ -52,7 +50,6 @@ export function FilterTag({
 	filter,
 	onUpdate,
 	onRemove,
-	columnOptions = [],
 	valueOptions = [],
 }: FilterTagProps) {
 	const [isOpen, setIsOpen] = useState(false);

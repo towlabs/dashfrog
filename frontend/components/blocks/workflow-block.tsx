@@ -1,5 +1,3 @@
-"use client";
-
 import { createReactBlockSpec } from "@blocknote/react";
 import { CheckCircle2, Clock, Plus, X, XCircle } from "lucide-react";
 import * as React from "react";
@@ -98,7 +96,6 @@ export const createWorkflowBlock = createReactBlockSpec(
 	{
 		type: "workflow",
 		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-expect-error
 		propSchema: {
 			workflow: { default: "" },
 			// JSON string containing filters array
@@ -110,22 +107,22 @@ export const createWorkflowBlock = createReactBlockSpec(
 	},
 	{
 		render: ({ block, editor }) => {
-			const workflow = (block.props as any).workflow || "";
+			const workflow = block.props.workflow || "";
 
 			// Use local state for UI-only state
 			const [open, setOpen] = React.useState(false);
 
 			// Sync block.props.open to local state when it changes
 			React.useEffect(() => {
-				const propsOpen = Boolean((block.props as any).open);
+				const propsOpen = Boolean(block.props.open);
 				if (propsOpen) {
 					setOpen(true);
 				}
-			}, [(block.props as any).open]);
+			}, [block.props]);
 
 			const parseFilters = (): Filter[] => {
 				try {
-					const f = (block.props as any).filters;
+					const f = block.props.filters;
 					if (f && typeof f === "string") {
 						const arr = JSON.parse(f);
 						if (Array.isArray(arr)) return arr as Filter[];
@@ -148,14 +145,17 @@ export const createWorkflowBlock = createReactBlockSpec(
 			const updateProps = React.useCallback(
 				(next: Partial<{ workflow: string; filters: string }>) => {
 					// Only send what changed - BlockNote merges partial updates
-					editor.updateBlock(block, { props: next } as any);
+					editor.updateBlock(block, { props: next });
 				},
-				[editor, block.id],
+				[editor, block],
 			);
 
-			const updateFilters = (nextFilters: Filter[]) => {
-				updateProps({ filters: JSON.stringify(nextFilters) });
-			};
+			const updateFilters = React.useCallback(
+				(nextFilters: Filter[]) => {
+					updateProps({ filters: JSON.stringify(nextFilters) });
+				},
+				[updateProps],
+			);
 
 			// Get selected workflow details
 			const selectedWorkflow = AVAILABLE_WORKFLOWS.find(
@@ -185,7 +185,7 @@ export const createWorkflowBlock = createReactBlockSpec(
 				}, 2000); // Wait 2 seconds before removing empty filters
 
 				return () => clearTimeout(timer);
-			}, [filters, editingFilterIndex]);
+			}, [filters, editingFilterIndex, updateFilters]);
 
 			const addFilter = (label: string) => {
 				updateFilters([...filters, { label, operator: "=", value: "" }]);
@@ -269,7 +269,7 @@ export const createWorkflowBlock = createReactBlockSpec(
 						open={open}
 						onOpenChange={(v) => {
 							setOpen(v);
-							editor.updateBlock(block, { props: { open: v } } as any);
+							editor.updateBlock(block, { props: { open: v } });
 						}}
 					>
 						<SheetContent className="w-[360px] sm:max-w-none p-0 flex h-full flex-col">

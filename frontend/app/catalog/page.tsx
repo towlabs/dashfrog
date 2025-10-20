@@ -1,31 +1,15 @@
-"use client";
-
 import { Download, RefreshCcw, TrendingUp, Workflow } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
+import type { Filter } from "@/components/FilterBadgesEditor";
 import { MetricsCatalog } from "@/components/metrics-catalog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkflowsCatalog } from "@/components/workflows-catalog";
 
-type ActiveFilter = {
-	id: string;
-	column: string;
-	operator:
-		| "equals"
-		| "contains"
-		| "starts_with"
-		| "not_equals"
-		| "less_than"
-		| "greater_than"
-		| "in"
-		| "not_in";
-	value: string;
-};
-
 export default function CatalogPage() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [activeTab, setActiveTab] = useState("workflows");
-	const [filters, setFilters] = useState<ActiveFilter[]>([]);
+	const [filters, setFilters] = useState<Filter[]>([]);
 
 	const handleRefresh = async () => {
 		// Refresh will be handled by the child components via their useEffect hooks

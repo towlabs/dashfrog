@@ -1,18 +1,7 @@
-"use client";
-
-import {
-	ArrowLeft,
-	ChartLine,
-	ChartScatter,
-	ChartSpline,
-	ChevronLeft,
-	Info,
-	Plus,
-	X,
-} from "lucide-react";
+import { ChevronLeft, Info } from "lucide-react";
 import * as React from "react";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import type { Metric, Operation } from "@/components/metric-types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	Command,
@@ -22,20 +11,11 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import {
 	Tooltip,
 	TooltipContent,
@@ -43,16 +23,6 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import {
-	Combobox,
-	ComboboxContent,
-	ComboboxEmpty,
-	ComboboxGroup,
-	ComboboxInput,
-	ComboboxItem,
-	ComboboxList,
-	ComboboxTrigger,
-} from "@/src/components/ui/shadcn-io/combobox";
 
 const DEFAULT_METRICS: Metric[] = [
 	{
@@ -177,7 +147,7 @@ interface MetricQueryBuilderProps {
 export type { Filter, FilterOperator };
 
 // Helper component for group heading with tooltip
-const GroupHeadingWithTooltip = ({
+const _GroupHeadingWithTooltip = ({
 	label,
 	tooltip,
 	icon: Icon,
@@ -225,15 +195,7 @@ export function MetricQueryBuilder({
 	const [selectedOperation, setSelectedOperation] =
 		React.useState<Operation | null>(initialOperation || null);
 	const [metricPickerOpen, setMetricPickerOpen] = React.useState(false);
-	const [filterOpen, setFilterOpen] = React.useState(false);
-	const [editingFilterIndex, setEditingFilterIndex] = React.useState<
-		number | null
-	>(null);
-	const [fadingFilters, setFadingFilters] = React.useState<Set<number>>(
-		new Set(),
-	);
-	// Draft state for filter being edited - only committed when popover closes
-	const [draftFilter, setDraftFilter] = React.useState<Filter | null>(null);
+	// Local filter editing state moved into FilterBadgesEditor
 	// State for 2-step statistic selection
 	const [metricSelectionStep, setMetricSelectionStep] = React.useState<
 		"metrics" | "operations"
@@ -279,7 +241,7 @@ export function MetricQueryBuilder({
 			: [];
 
 	// Prepare metrics data for Combobox
-	const metricsData = metrics.map((m) => ({
+	const _metricsData = metrics.map((m) => ({
 		value: m.name,
 		label: m.label,
 	}));
@@ -323,72 +285,7 @@ export function MetricQueryBuilder({
 		onChange?.(query);
 	}, [selectedMetric, filters, selectedOperation, onChange]);
 
-	// Remove filters with empty values after a delay with fade animation
-	React.useEffect(() => {
-		const timer = setTimeout(() => {
-			const filtersToRemove = filters
-				.map((f, i) => ({ filter: f, index: i }))
-				.filter(
-					({ filter, index }) =>
-						filter.value.trim() === "" && editingFilterIndex !== index,
-				);
-
-			if (filtersToRemove.length > 0) {
-				// First add them to fading set
-				setFadingFilters(new Set(filtersToRemove.map((f) => f.index)));
-
-				// Then remove after animation completes
-				setTimeout(() => {
-					setFilters(filters.filter((f) => f.value.trim() !== ""));
-					setFadingFilters(new Set());
-				}, 200); // Match CSS transition duration
-			}
-		}, 2000); // Wait 2 seconds before removing empty filters
-
-		return () => clearTimeout(timer);
-	}, [filters, editingFilterIndex]);
-
-	const addFilter = (label: string) => {
-		const newFilter = { label, operator: "=" as FilterOperator, value: "" };
-		setDraftFilter(newFilter);
-		setFilterOpen(false);
-		setEditingFilterIndex(filters.length);
-	};
-
-	const updateDraftFilter = (updates: Partial<Filter>) => {
-		if (draftFilter) {
-			setDraftFilter({ ...draftFilter, ...updates });
-		} else if (editingFilterIndex !== null) {
-			setDraftFilter({ ...filters[editingFilterIndex], ...updates });
-		}
-	};
-
-	const commitFilter = () => {
-		if (draftFilter && editingFilterIndex !== null) {
-			// Only commit if the filter has a value
-			if (draftFilter.value.trim() !== "") {
-				const newFilters = [...filters];
-				if (editingFilterIndex >= filters.length) {
-					// Adding new filter
-					newFilters.push(draftFilter);
-				} else {
-					// Updating existing filter
-					newFilters[editingFilterIndex] = draftFilter;
-				}
-				setFilters(newFilters);
-			}
-		}
-		setDraftFilter(null);
-		setEditingFilterIndex(null);
-	};
-
-	const removeFilter = (index: number) => {
-		setFilters(filters.filter((_, i) => i !== index));
-		if (editingFilterIndex === index) {
-			setEditingFilterIndex(null);
-			setDraftFilter(null);
-		}
-	};
+	// filter editing is handled inside FilterBadgesEditor
 
 	return (
 		<div className={cn("flex flex-col gap-3", className)}>
@@ -599,199 +496,11 @@ export function MetricQueryBuilder({
 
 			{/* Filters */}
 			{selectedMetric && (
-				<div className="space-y-1">
-					<label className="text-xs text-muted-foreground font-medium">
-						Filters
-					</label>
-					<div className="flex flex-wrap gap-2">
-						{filters.map((filter, index) => {
-							// Don't show filter badge if value is empty and not being edited
-							if (
-								filter.value.trim() === "" &&
-								editingFilterIndex !== index &&
-								!fadingFilters.has(index)
-							) {
-								return null;
-							}
-
-							const isFading = fadingFilters.has(index);
-
-							const currentFilter =
-								editingFilterIndex === index && draftFilter
-									? draftFilter
-									: filter;
-
-							return (
-								<Popover
-									key={index}
-									open={editingFilterIndex === index}
-									onOpenChange={(open) => {
-										if (open) {
-											// Opening - load filter into draft
-											setEditingFilterIndex(index);
-											setDraftFilter(filter);
-										} else {
-											// Closing - commit the draft
-											commitFilter();
-										}
-									}}
-								>
-									<PopoverTrigger asChild>
-										<Badge
-											variant="secondary"
-											className={cn(
-												"gap-1 cursor-pointer hover:bg-secondary/80 transition-all duration-200",
-												isFading && "opacity-0 scale-95",
-											)}
-										>
-											{filter.label} {filter.operator} {filter.value || '""'}
-											<X
-												className="h-3 w-3 cursor-pointer hover:text-destructive"
-												onClick={(e) => {
-													e.stopPropagation();
-													removeFilter(index);
-												}}
-											/>
-										</Badge>
-									</PopoverTrigger>
-									<PopoverContent className="w-[300px] p-4" align="start">
-										<div className="space-y-4">
-											<div className="space-y-2">
-												<Label className="text-xs">Operator</Label>
-												<Select
-													value={currentFilter.operator}
-													onValueChange={(value) =>
-														updateDraftFilter({
-															operator: value as FilterOperator,
-														})
-													}
-												>
-													<SelectTrigger className="h-8">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="=">=</SelectItem>
-														<SelectItem value="!=">!=</SelectItem>
-														<SelectItem value="contains">contains</SelectItem>
-														<SelectItem value="regex">regex</SelectItem>
-													</SelectContent>
-												</Select>
-											</div>
-											<div className="space-y-2">
-												<Label className="text-xs">Value</Label>
-												<Input
-													value={currentFilter.value}
-													onChange={(e) =>
-														updateDraftFilter({ value: e.target.value })
-													}
-													placeholder="Enter value..."
-													className="h-8"
-													autoFocus
-												/>
-											</div>
-										</div>
-									</PopoverContent>
-								</Popover>
-							);
-						})}
-						{/* Render draft filter badge if we're adding a new filter */}
-						{draftFilter &&
-							editingFilterIndex !== null &&
-							editingFilterIndex >= filters.length && (
-								<Popover
-									open={true}
-									onOpenChange={(open) => {
-										if (!open) {
-											// Closing - commit the draft
-											commitFilter();
-										}
-									}}
-								>
-									<PopoverTrigger asChild>
-										<Badge
-											variant="secondary"
-											className="gap-1 cursor-pointer hover:bg-secondary/80 transition-all duration-200"
-										>
-											{draftFilter.label} {draftFilter.operator}{" "}
-											{draftFilter.value || '""'}
-											<X
-												className="h-3 w-3 cursor-pointer hover:text-destructive"
-												onClick={(e) => {
-													e.stopPropagation();
-													setDraftFilter(null);
-													setEditingFilterIndex(null);
-												}}
-											/>
-										</Badge>
-									</PopoverTrigger>
-									<PopoverContent className="w-[300px] p-4" align="start">
-										<div className="space-y-4">
-											<div className="space-y-2">
-												<Label className="text-xs">Operator</Label>
-												<Select
-													value={draftFilter.operator}
-													onValueChange={(value) =>
-														updateDraftFilter({
-															operator: value as FilterOperator,
-														})
-													}
-												>
-													<SelectTrigger className="h-8">
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="=">=</SelectItem>
-														<SelectItem value="!=">!=</SelectItem>
-														<SelectItem value="contains">contains</SelectItem>
-														<SelectItem value="regex">regex</SelectItem>
-													</SelectContent>
-												</Select>
-											</div>
-											<div className="space-y-2">
-												<Label className="text-xs">Value</Label>
-												<Input
-													value={draftFilter.value}
-													onChange={(e) =>
-														updateDraftFilter({ value: e.target.value })
-													}
-													placeholder="Enter value..."
-													className="h-8"
-													autoFocus
-												/>
-											</div>
-										</div>
-									</PopoverContent>
-								</Popover>
-							)}
-						<Popover open={filterOpen} onOpenChange={setFilterOpen}>
-							<PopoverTrigger asChild>
-								<Button variant="outline" size="sm" className="h-6">
-									<Plus className="h-3 w-3 mr-1" />
-									Add filter
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent className="w-[300px] p-0" align="start">
-								<Command>
-									<CommandInput placeholder="Search labels..." />
-									<CommandList>
-										<CommandEmpty>No labels found.</CommandEmpty>
-										<CommandGroup heading="Available Labels">
-											{selectedMetric.labels?.map((label) => (
-												<CommandItem
-													key={label}
-													value={label}
-													onSelect={() => addFilter(label)}
-												>
-													{label}
-												</CommandItem>
-											))}
-										</CommandGroup>
-									</CommandList>
-								</Command>
-							</PopoverContent>
-						</Popover>
-					</div>
-				</div>
+				<FilterBadgesEditor
+					availableLabels={selectedMetric.labels}
+					filters={filters}
+					onFiltersChange={setFilters}
+				/>
 			)}
 		</div>
 	);

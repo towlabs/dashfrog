@@ -8,6 +8,7 @@ import {
 	combineByGroup,
 	defaultBlockSpecs,
 } from "@blocknote/core";
+// @ts-expect-error - TODO: typing error in blocknote
 import * as locales from "@blocknote/core/locales";
 import {
 	BlockColorsItem,
@@ -83,6 +84,7 @@ export default function ClientBlockNote({
 	// Notify parent when editor is ready
 	useEffect(() => {
 		if (editor && onEditorReady) {
+			// @ts-expect-error - TODO: typing error in blocknote
 			onEditorReady(editor);
 		}
 	}, [editor, onEditorReady]);
@@ -140,7 +142,7 @@ export default function ClientBlockNote({
 						<SideMenu
 							{...props}
 							dragHandleMenu={(menuProps: DragHandleMenuProps) => {
-								const blockType = (menuProps.block as any).type;
+								const blockType = menuProps.block.type as string;
 								if (blockType === "chart") {
 									return (
 										<DragHandleMenu {...menuProps}>
@@ -201,19 +203,18 @@ export default function ClientBlockNote({
 								const target = selection?.blocks?.[0];
 								if (target) {
 									editor.replaceBlocks(
-										[target as any],
-										[{ type: "chart" as any, props: { open: true } }],
+										[target],
+										[{ type: "chart", props: { open: true } }],
 									);
 									return;
 								}
 								// Fallback: use the block at the cursor position (covers empty blocks)
-								const cursor =
-									(editor.getTextCursorPosition?.() as any) || null;
+								const cursor = editor.getTextCursorPosition?.() || null;
 								const cursorBlock = cursor?.block;
 								if (cursorBlock) {
 									editor.replaceBlocks(
-										[cursorBlock as any],
-										[{ type: "chart" as any, props: { open: true } }],
+										[cursorBlock],
+										[{ type: "chart", props: { open: true } }],
 									);
 									return;
 								}
@@ -222,7 +223,7 @@ export default function ClientBlockNote({
 								const ref = last ?? editor.document[0];
 								if (ref) {
 									editor.insertBlocks(
-										[{ type: "chart" as any, props: { open: true } }],
+										[{ type: "chart", props: { open: true } }],
 										ref,
 										"after",
 									);
@@ -240,18 +241,17 @@ export default function ClientBlockNote({
 								const target = selection?.blocks?.[0];
 								if (target) {
 									editor.replaceBlocks(
-										[target as any],
-										[{ type: "number" as any, props: { open: true } }],
+										[target],
+										[{ type: "number", props: { open: true } }],
 									);
 									return;
 								}
-								const cursor =
-									(editor.getTextCursorPosition?.() as any) || null;
+								const cursor = editor.getTextCursorPosition?.() || null;
 								const cursorBlock = cursor?.block;
 								if (cursorBlock) {
 									editor.replaceBlocks(
-										[cursorBlock as any],
-										[{ type: "number" as any, props: { open: true } }],
+										[cursorBlock],
+										[{ type: "number", props: { open: true } }],
 									);
 									return;
 								}
@@ -259,7 +259,7 @@ export default function ClientBlockNote({
 								const ref = last ?? editor.document[0];
 								if (ref) {
 									editor.insertBlocks(
-										[{ type: "number" as any, props: { open: true } }],
+										[{ type: "number", props: { open: true } }],
 										ref,
 										"after",
 									);
@@ -277,18 +277,17 @@ export default function ClientBlockNote({
 								const target = selection?.blocks?.[0];
 								if (target) {
 									editor.replaceBlocks(
-										[target as any],
-										[{ type: "barChart" as any, props: { open: true } }],
+										[target],
+										[{ type: "barChart", props: { open: true } }],
 									);
 									return;
 								}
-								const cursor =
-									(editor.getTextCursorPosition?.() as any) || null;
+								const cursor = editor.getTextCursorPosition?.() || null;
 								const cursorBlock = cursor?.block;
 								if (cursorBlock) {
 									editor.replaceBlocks(
-										[cursorBlock as any],
-										[{ type: "barChart" as any, props: { open: true } }],
+										[cursorBlock],
+										[{ type: "barChart", props: { open: true } }],
 									);
 									return;
 								}
@@ -296,7 +295,7 @@ export default function ClientBlockNote({
 								const ref = last ?? editor.document[0];
 								if (ref) {
 									editor.insertBlocks(
-										[{ type: "barChart" as any, props: { open: true } }],
+										[{ type: "barChart", props: { open: true } }],
 										ref,
 										"after",
 									);
@@ -314,18 +313,17 @@ export default function ClientBlockNote({
 								const target = selection?.blocks?.[0];
 								if (target) {
 									editor.replaceBlocks(
-										[target as any],
-										[{ type: "workflow" as any, props: { open: true } }],
+										[target],
+										[{ type: "workflow", props: { open: true } }],
 									);
 									return;
 								}
-								const cursor =
-									(editor.getTextCursorPosition?.() as any) || null;
+								const cursor = editor.getTextCursorPosition?.() || null;
 								const cursorBlock = cursor?.block;
 								if (cursorBlock) {
 									editor.replaceBlocks(
-										[cursorBlock as any],
-										[{ type: "workflow" as any, props: { open: true } }],
+										[cursorBlock],
+										[{ type: "workflow", props: { open: true } }],
 									);
 									return;
 								}
@@ -333,7 +331,7 @@ export default function ClientBlockNote({
 								const ref = last ?? editor.document[0];
 								if (ref) {
 									editor.insertBlocks(
-										[{ type: "workflow" as any, props: { open: true } }],
+										[{ type: "workflow", props: { open: true } }],
 										ref,
 										"after",
 									);
@@ -351,25 +349,24 @@ export default function ClientBlockNote({
 								const target = selection?.blocks?.[0];
 								if (target) {
 									editor.replaceBlocks(
-										[target as any],
+										[target],
 										[
 											{
-												type: "workflowStatusMap" as any,
+												type: "workflowStatusMap",
 												props: { open: true },
 											},
 										],
 									);
 									return;
 								}
-								const cursor =
-									(editor.getTextCursorPosition?.() as any) || null;
+								const cursor = editor.getTextCursorPosition?.() || null;
 								const cursorBlock = cursor?.block;
 								if (cursorBlock) {
 									editor.replaceBlocks(
-										[cursorBlock as any],
+										[cursorBlock],
 										[
 											{
-												type: "workflowStatusMap" as any,
+												type: "workflowStatusMap",
 												props: { open: true },
 											},
 										],
@@ -382,7 +379,7 @@ export default function ClientBlockNote({
 									editor.insertBlocks(
 										[
 											{
-												type: "workflowStatusMap" as any,
+												type: "workflowStatusMap",
 												props: { open: true },
 											},
 										],
@@ -410,7 +407,7 @@ export default function ClientBlockNote({
 							? all.filter(
 									(i) =>
 										i.title?.toLowerCase().includes(q) ||
-										(i as any).aliases?.some((a: string) => a.includes(q)),
+										i.aliases?.some((a: string) => a.includes(q)),
 								)
 							: all;
 					}}

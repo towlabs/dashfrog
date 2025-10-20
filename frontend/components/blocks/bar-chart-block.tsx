@@ -1,16 +1,16 @@
-"use client";
-
 import { createReactBlockSpec } from "@blocknote/react";
 import { useCallback, useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { MetricQueryBuilder } from "@/components/metric-query-builder";
+import {
+	type Filter,
+	MetricQueryBuilder,
+} from "@/components/metric-query-builder";
 import type { Metric, Operation } from "@/components/metric-types";
 import { useTimeWindow } from "@/components/time-window-context";
 import {
 	type ExclusionType,
 	TimeWindowExclusionSelect,
 } from "@/components/time-window-exclusion";
-import { Button } from "@/components/ui/button";
 import {
 	ChartContainer,
 	ChartTooltip,
@@ -33,7 +33,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "../ui/separator";
-import { AggregationSettings } from "./ChartSettingsItem";
+import { type Aggregation, AggregationSettings } from "./ChartSettingsItem";
 
 type BarChartDataPoint = {
 	name: string;
@@ -44,7 +44,6 @@ export const createBarChartBlock = createReactBlockSpec(
 	{
 		type: "barChart",
 		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-expect-error
 		propSchema: {
 			// Display
 			grid: { default: true },
@@ -79,17 +78,15 @@ export const createBarChartBlock = createReactBlockSpec(
 	},
 	{
 		render: ({ block, editor }) => {
-			const grid = (block.props as any).grid !== false;
-			const title = (block.props as any).title || "Bar Chart";
-			const showTitle = (block.props as any).showTitle !== false;
-			const legend = (block.props as any).legend !== false;
-			const color = (block.props as any).color || "var(--color-chart-1)";
-			const orientation = (block.props as any).orientation || "horizontal";
+			const grid = block.props.grid !== false;
+			const title = block.props.title || "Bar Chart";
+			const showTitle = block.props.showTitle !== false;
+			const color = block.props.color || "var(--color-chart-1)";
 
 			// Parse selectedMetric from JSON string
 			const parseSelectedMetric = (): Metric | null => {
 				try {
-					const m = (block.props as any).selectedMetric;
+					const m = block.props.selectedMetric;
 					if (m && typeof m === "string") {
 						return JSON.parse(m) as Metric;
 					}
@@ -100,7 +97,7 @@ export const createBarChartBlock = createReactBlockSpec(
 			// Parse filters from JSON string
 			const parseFilters = () => {
 				try {
-					const f = (block.props as any).filters;
+					const f = block.props.filters;
 					if (f && typeof f === "string") {
 						return JSON.parse(f);
 					}
@@ -111,7 +108,7 @@ export const createBarChartBlock = createReactBlockSpec(
 			// Parse operation from JSON string
 			const parseOperation = (): Operation | null => {
 				try {
-					const op = (block.props as any).operation;
+					const op = block.props.operation;
 					if (op && typeof op === "string") {
 						return JSON.parse(op) as Operation;
 					}
@@ -123,15 +120,15 @@ export const createBarChartBlock = createReactBlockSpec(
 			const filtersValue = parseFilters();
 			const selectedOperationValue = parseOperation();
 
-			const aggregation = (block.props as any).aggregation || null;
-			const conditionTarget = (block.props as any).conditionTarget || "value";
-			const conditionOp = (block.props as any).conditionOp || "eq";
-			const conditionValue = (block.props as any).conditionValue || "";
-			const conditionValue2 = (block.props as any).conditionValue2 || "";
+			const aggregation = block.props.aggregation as Aggregation | null;
+			const conditionTarget = block.props.conditionTarget || "value";
+			const conditionOp = block.props.conditionOp || "eq";
+			const conditionValue = block.props.conditionValue || "";
+			const conditionValue2 = block.props.conditionValue2 || "";
 
 			const parseGroupBy = (): string[] => {
 				try {
-					const g = (block.props as any).groupBy;
+					const g = block.props.groupBy;
 					if (g && typeof g === "string") {
 						const arr = JSON.parse(g);
 						if (Array.isArray(arr)) return arr as string[];
@@ -141,21 +138,25 @@ export const createBarChartBlock = createReactBlockSpec(
 			};
 
 			const groupBy = parseGroupBy();
-			const exclude = (block.props as any).exclude || "none";
+			const exclude = block.props.exclude || "none";
 
 			// Access the time window from context
 			const timeWindow = useTimeWindow();
 
 			// State for chart data
 			const [chartData, setChartData] = useState<BarChartDataPoint[]>([]);
-			const [isLoading, setIsLoading] = useState(false);
+			const [_, setIsLoading] = useState(false);
 
 			// Mock API call - will be replaced with real API later
 			const fetchChartData = useCallback(
 				async (
-					metric: any,
-					filters: any[],
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
+					metric: Metric,
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
+					filters: Filter[],
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 					groupBy: string[],
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 					timeWindow: { start: Date; end: Date },
 				) => {
 					setIsLoading(true);
@@ -191,6 +192,7 @@ export const createBarChartBlock = createReactBlockSpec(
 			);
 
 			// Fetch data whenever dependencies change
+			// biome-ignore lint/correctness/useExhaustiveDependencies: use only json strings
 			useEffect(() => {
 				if (selectedMetricValue) {
 					fetchChartData(
@@ -201,13 +203,11 @@ export const createBarChartBlock = createReactBlockSpec(
 					);
 				}
 			}, [
-				(block.props as any).selectedMetric,
-				(block.props as any).filters,
-				(block.props as any).operation,
-				(block.props as any).groupBy,
-				exclude,
-				timeWindow.start.getTime(),
-				timeWindow.end.getTime(),
+				block.props.selectedMetric, // Use the JSON string directly
+				block.props.filters, // Use the JSON string directly
+				block.props.operation, // Use the JSON string directly
+				block.props.groupBy, // Use the JSON string directly
+				timeWindow,
 				fetchChartData,
 			]);
 
@@ -217,11 +217,11 @@ export const createBarChartBlock = createReactBlockSpec(
 			// Sync block.props.open to local state when it changes (e.g., from settings menu)
 			// This is a one-way sync: props -> state, never state -> props
 			useEffect(() => {
-				const propsOpen = Boolean((block.props as any).open);
+				const propsOpen = Boolean(block.props.open);
 				if (propsOpen) {
 					setOpen(true);
 				}
-			}, [(block.props as any).open]);
+			}, [block.props]);
 
 			// Memoize updateProps to prevent creating new function on every render
 			const updateProps = useCallback(
@@ -247,7 +247,7 @@ export const createBarChartBlock = createReactBlockSpec(
 				) => {
 					// Only send what changed - BlockNote merges partial updates
 					Promise.resolve().then(() => {
-						editor.updateBlock(block, { props: next } as any);
+						editor.updateBlock(block, { props: next });
 					});
 				},
 				[editor, block],
@@ -269,7 +269,7 @@ export const createBarChartBlock = createReactBlockSpec(
 			);
 
 			const handleFiltersChange = useCallback(
-				(filters: any[]) => {
+				(filters: Filter[]) => {
 					updateProps({ filters: JSON.stringify(filters) });
 				},
 				[updateProps],
@@ -315,7 +315,7 @@ export const createBarChartBlock = createReactBlockSpec(
 						onOpenChange={(v) => {
 							setOpen(v);
 							Promise.resolve().then(() => {
-								editor.updateBlock(block, { props: { open: v } } as any);
+								editor.updateBlock(block, { props: { open: v } });
 							});
 						}}
 					>
@@ -434,7 +434,7 @@ export const createBarChartBlock = createReactBlockSpec(
 									/>
 
 									<AggregationSettings
-										value={aggregation as any}
+										value={aggregation}
 										onChange={(value) => updateProps({ aggregation: value })}
 										conditionTarget={conditionTarget}
 										onConditionTargetChange={(v) =>
