@@ -1,57 +1,64 @@
-'use client'
+"use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { Labels, processLabels, type LabelsStore } from '@/src/services/api/labels'
+import type React from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import {
+	Labels,
+	type LabelsStore,
+	processLabels,
+} from "@/src/services/api/labels";
 
 interface LabelsContextType {
-  labels: LabelsStore
-  loading: boolean
-  error: string | null
-  refreshLabels: () => Promise<void>
+	labels: LabelsStore;
+	loading: boolean;
+	error: string | null;
+	refreshLabels: () => Promise<void>;
 }
 
-const LabelsContext = createContext<LabelsContextType | undefined>(undefined)
+const LabelsContext = createContext<LabelsContextType | undefined>(undefined);
 
 export function LabelsProvider({ children }: { children: React.ReactNode }) {
-  const [labels, setLabels] = useState<LabelsStore>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+	const [labels, setLabels] = useState<LabelsStore>({});
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
-  const fetchLabels = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await Labels.getAll()
-      const processedLabels = processLabels(response.data)
-      setLabels(processedLabels)
-    } catch (err) {
-      console.error('Failed to fetch labels:', err)
-      setError('Failed to load labels')
-      setLabels({})
-    } finally {
-      setLoading(false)
-    }
-  }
+	const fetchLabels = async () => {
+		try {
+			setLoading(true);
+			setError(null);
+			const response = await Labels.getAll();
+			const processedLabels = processLabels(response.data);
+			setLabels(processedLabels);
+		} catch (err) {
+			console.error("Failed to fetch labels:", err);
+			setError("Failed to load labels");
+			setLabels({});
+		} finally {
+			setLoading(false);
+		}
+	};
 
-  // Load labels on mount
-  useEffect(() => {
-    fetchLabels()
-  }, [])
+	// Load labels on mount
+	useEffect(() => {
+		fetchLabels();
+	}, []);
 
-  const value: LabelsContextType = {
-    labels,
-    loading,
-    error,
-    refreshLabels: fetchLabels
-  }
+	const value: LabelsContextType = {
+		labels,
+		loading,
+		error,
+		refreshLabels: fetchLabels,
+	};
 
-  return <LabelsContext.Provider value={value}>{children}</LabelsContext.Provider>
+	return (
+		<LabelsContext.Provider value={value}>{children}</LabelsContext.Provider>
+	);
 }
 
 export function useLabels() {
-  const context = useContext(LabelsContext)
-  if (context === undefined) {
-    throw new Error('useLabels must be used within a LabelsProvider')
-  }
-  return context
+	const context = useContext(LabelsContext);
+	if (context === undefined) {
+		throw new Error("useLabels must be used within a LabelsProvider");
+	}
+	return context;
 }
