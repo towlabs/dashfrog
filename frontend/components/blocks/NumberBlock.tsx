@@ -3,13 +3,13 @@ import * as React from "react";
 import {
 	type Filter,
 	MetricQueryBuilder,
-} from "@/components/metric-query-builder";
-import type { Metric, Operation } from "@/components/metric-types";
-import { useTimeWindow } from "@/components/time-window-context";
+} from "@/components/MetricQueryBuilder";
+import type { Metric, Operation } from "@/components/MetricTypes";
+import { useTimeWindow } from "@/components/TimeWindowContext";
 import {
 	type ExclusionType,
 	TimeWindowExclusionSelect,
-} from "@/components/time-window-exclusion";
+} from "@/components/TimeWindowExclusion";
 import { Input } from "@/components/ui/input";
 import {
 	Sheet,

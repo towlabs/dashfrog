@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { LabelsProvider } from "@/src/contexts/labels-context";
-import { NotebooksProvider } from "./notebooks-context";
+import { NotebooksProvider } from "./NotebooksContext";
 import SideMenu from "./SideMenu";
 
 export default function LayoutClient({

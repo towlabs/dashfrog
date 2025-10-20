@@ -12,7 +12,7 @@ import {
 import React, { useCallback, useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
-import { StepTimeline } from "@/components/step-timeline";
+import { StepTimeline } from "@/components/StepTimeline";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {

@@ -1,8 +1,9 @@
 import * as React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import "@/app/globals.css";
-import LayoutClient from "@/app/components/LayoutClient";
+
+import "@/src/globals.css";
+import LayoutClient from "@/components/LayoutClient";
 import CatalogPage from "@/src/routes/Catalog";
 import EventsPage from "@/src/routes/Events";
 import Home from "@/src/routes/Home";
