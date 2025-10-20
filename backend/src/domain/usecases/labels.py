@@ -7,6 +7,7 @@ from src.adapters.stores import (
     Metrics as MetricsStore,
 )
 from src.core import AsyncSessionMaker
+from src.core.stringcase import titlecase
 from src.domain.entities import (
     Label,
     LabelSrcKind,
@@ -97,7 +98,7 @@ class Labels:
                 ]
             else:
                 detected_used_ins = [
-                    Label.Usage(used_in=used_in, kind=kind)
+                    Label.Usage(used_in=titlecase(used_in), kind=kind)
                     for used_in in label_data["used_in"]
                     if used_in not in existing_labels.get(label_key, {}).get("used_by", [])
                 ]

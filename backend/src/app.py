@@ -95,7 +95,7 @@ class Application(BaseApplication[Config]):
             "flows": Flows(flow_store, self.logger),
             "steps": Steps(step_store, self.logger),
             "labels": Labels(label_store, metrics_store, self.sessionmaker, self.logger),
-            "metrics": Metrics(metrics_store, self.sessionmaker, self.logger),
+            "metrics": Metrics(metrics_store, self.sessionmaker, self.prom_client, self.logger),
         }
 
     def log(self, name: str, **kwargs) -> BoundLogger:

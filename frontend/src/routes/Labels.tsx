@@ -56,6 +56,7 @@ interface RenamedValue {
 
 export default function LabelsPage() {
   const { labels: labelsStore, loading, error, refreshLabels } = useLabels()
+  const { getMetricDisplayName } = useMetrics()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<'all' | 'workflows' | 'metrics'>('all')
   const [renamedSearch, setRenamedSearch] = useState('')
