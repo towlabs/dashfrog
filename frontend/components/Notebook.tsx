@@ -6,13 +6,13 @@ import {
 	TimeWindowSelector,
 } from "@/components/TimeWindowSelector";
 import { Button } from "@/components/ui/button";
-import { notebookStorage } from "@/lib/notebook-storage";
-import type {
-	NotebookData,
-	NotebookUpdateInput,
-	TimeWindowConfig,
-} from "@/lib/notebook-types";
-import { resolveTimeWindow } from "@/lib/notebook-types";
+import { notebookStorage } from "@/src/services/api/notebook";
+import {
+	type NotebookData,
+	type NotebookUpdateInput,
+	resolveTimeWindow,
+	type TimeWindowConfig,
+} from "@/src/types/notebook";
 import { ShareNotebook } from "./ShareNotebook";
 
 interface NotebookProps {

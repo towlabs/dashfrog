@@ -29,21 +29,21 @@ import {
 } from "@blocknote/xl-multi-column";
 import { BarChart3, GitBranch, Hash, TrendingUp, Workflow } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { BarChartSettingsItem } from "@/components/blocks/BarChartSettingsItem";
 import { createBarChartBlock } from "@/components/blocks/BarChartBlock";
-import { ChartSettingsItem } from "@/components/blocks/ChartSettingsItem";
+import { BarChartSettingsItem } from "@/components/blocks/BarChartSettingsItem";
 import { createChartBlock } from "@/components/blocks/ChartBlock";
-import { NumberSettingsItem } from "@/components/blocks/NumberSettingsItem";
+import { ChartSettingsItem } from "@/components/blocks/ChartSettingsItem";
 import { createNumberBlock } from "@/components/blocks/NumberBlock";
-import { WorkflowSettingsItem } from "@/components/blocks/WorkflowSettingsItem";
-import { WorkflowStatusMapSettingsItem } from "@/components/blocks/WorkflowStatusMapSettingsItem";
+import { NumberSettingsItem } from "@/components/blocks/NumberSettingsItem";
 import { createWorkflowBlock } from "@/components/blocks/WorkflowBlock";
+import { WorkflowSettingsItem } from "@/components/blocks/WorkflowSettingsItem";
 import { createWorkflowStatusMapBlock } from "@/components/blocks/WorkflowStatusMapBlock";
+import { WorkflowStatusMapSettingsItem } from "@/components/blocks/WorkflowStatusMapSettingsItem";
 import {
 	type TimeWindow,
 	TimeWindowProvider,
 } from "@/components/TimeWindowContext";
-import { blockNoteStorage } from "@/lib/blocknote-storage";
+import { blockNoteStorage } from "@/src/services/api/blocknote";
 
 interface ClientBlockNoteProps {
 	timeWindow: TimeWindow;

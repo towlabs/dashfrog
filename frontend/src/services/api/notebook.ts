@@ -2,7 +2,7 @@ import type {
 	NotebookCreateInput,
 	NotebookData,
 	NotebookUpdateInput,
-} from "./notebook-types";
+} from "../../types/notebook";
 
 const STORAGE_KEY_PREFIX = "dashfrog_notebook_";
 const NOTEBOOKS_INDEX_KEY = "dashfrog_notebooks_index";
