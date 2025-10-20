@@ -1,0 +1,7 @@
+{
+	"editor.formatOnSave": true,
+	"biome.enabled": true,
+	"editor.defaultFormatter": "biomejs.biome",
+	"biome.lsp.trace.server": "verbose",
+	"biome.lsp.bin": "./node_modules/@biomejs/biome/bin/biome"
+}
