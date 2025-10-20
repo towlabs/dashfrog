@@ -14,7 +14,7 @@ import {
 	X,
 } from "lucide-react";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -82,17 +82,20 @@ export default function LabelsPage() {
 	 * Helper to get display value for used_in field
 	 * Replaces metric IDs with their display_as names when applicable
 	 */
-	const getUsedInDisplayValue = (usedIn: string, kind: string): string => {
-		// Check if this is a metric-related usage
-		if (kind === "metric" || kind === "metrics") {
-			// Try to get the metric display name
-			const displayName = getMetricDisplayName(usedIn);
-			// Return display name if found, otherwise return original value
-			return displayName || usedIn;
-		}
-		// For non-metric kinds, return as-is
-		return usedIn;
-	};
+	const getUsedInDisplayValue = useCallback(
+		(usedIn: string, kind: string): string => {
+			// Check if this is a metric-related usage
+			if (kind === "metric" || kind === "metrics") {
+				// Try to get the metric display name
+				const displayName = getMetricDisplayName(usedIn);
+				// Return display name if found, otherwise return original value
+				return displayName || usedIn;
+			}
+			// For non-metric kinds, return as-is
+			return usedIn;
+		},
+		[getMetricDisplayName],
+	);
 
 	// Transform labels from store to UI format
 	const labelsWithType = useMemo(() => {

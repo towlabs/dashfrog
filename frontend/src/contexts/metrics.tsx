@@ -1,6 +1,7 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import type React from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { Metrics, processMetrics, type MetricsStore } from '@/src/services/api/metrics'
 
 interface MetricsContextType {
@@ -18,7 +19,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -32,12 +33,12 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // Load metrics on mount
   useEffect(() => {
-    fetchMetrics()
-  }, [])
+    void fetchMetrics()
+  }, [fetchMetrics])
 
   /**
    * Helper function to get the display name for a metric ID
@@ -48,7 +49,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
     const id = typeof metricId === 'string' ? parseInt(metricId, 10) : metricId
 
     // Return null if not a valid number
-    if (isNaN(id)) {
+    if (Number.isNaN(id)) {
       return null
     }
 
