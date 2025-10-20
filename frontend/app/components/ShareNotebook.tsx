@@ -1,5 +1,3 @@
-"use client";
-
 import { jsPDF } from "jspdf";
 import { Check, FileDown, Link, Share2 } from "lucide-react";
 import { domToPng } from "modern-screenshot";

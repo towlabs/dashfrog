@@ -1,5 +1,4 @@
-"use client";
-
+/** biome-ignore-all lint/suspicious/noExplicitAny: wip */
 import {
 	Calendar,
 	CheckCircle2,
@@ -10,9 +9,9 @@ import {
 	PlayCircle,
 	XCircle,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { FilterBar, op_to_request } from "@/components/filter-bar";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { StepTimeline } from "@/components/step-timeline";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -48,7 +47,7 @@ import {
 } from "@/components/ui/table";
 import { useLabels } from "@/src/contexts/labels-context";
 import { Flows } from "@/src/services/api";
-import type { Filter } from "@/src/types/filter";
+import type { ApiFilter, Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
 import type { Step } from "@/src/types/step";
 import {
@@ -57,26 +56,11 @@ import {
 	formatRelativeTime,
 } from "@/src/utils/date";
 
-type ActiveFilter = {
-	id: string;
-	column: string;
-	operator:
-		| "equals"
-		| "contains"
-		| "starts_with"
-		| "not_equals"
-		| "less_than"
-		| "greater_than"
-		| "in"
-		| "not_in";
-	value: string;
-};
-
 interface WorkflowsCatalogProps {
 	searchTerm: string;
 	onSearchChange: (value: string) => void;
-	filters: ActiveFilter[];
-	onFiltersChange: (filters: ActiveFilter[]) => void;
+	filters: Filter[];
+	onFiltersChange: (filters: Filter[]) => void;
 }
 
 // Chart configuration
@@ -97,7 +81,6 @@ const chartConfig: ChartConfig = {
 
 export function WorkflowsCatalog({
 	searchTerm,
-	onSearchChange,
 	filters,
 	onFiltersChange,
 }: WorkflowsCatalogProps) {
@@ -135,7 +118,7 @@ export function WorkflowsCatalog({
 	};
 
 	// Helper function to convert timeWindow to date range params
-	const getDateRangeFromTimeWindow = (): {
+	const getDateRangeFromTimeWindow = useCallback((): {
 		from_date?: string;
 		to_date?: string;
 	} => {
@@ -177,7 +160,7 @@ export function WorkflowsCatalog({
 		dateRange.to_date = toDate.toISOString();
 
 		return dateRange;
-	};
+	}, [timeWindow, customDateRange]);
 
 	useEffect(() => {
 		const fetchFlows = async () => {
@@ -185,24 +168,23 @@ export function WorkflowsCatalog({
 				setLoading(true);
 				setError(null);
 
-				const apiFilters: Filter[] = [];
+				const apiFilters: ApiFilter[] = [];
 
 				if (searchTerm) {
 					apiFilters.push({
 						key: "name",
 						value: searchTerm,
-						op: op_to_request["contains"],
+						operator: "contains",
 						is_label: false,
 					});
 				}
 
 				filters.forEach((f) => {
-					// Status is a special field, not a label
-					const isLabel = f.column !== "status";
+					const isLabel = f.label !== "status";
 					apiFilters.push({
-						key: f.column,
+						key: f.label,
 						value: f.value,
-						op: op_to_request[f.operator],
+						operator: f.operator,
 						is_label: isLabel,
 					});
 				});
@@ -231,14 +213,14 @@ export function WorkflowsCatalog({
 				setLoadingHistory(true);
 				setCurrentPage(1);
 
-				const filters: Filter[] = Object.entries(selectedWorkflow.labels).map(
-					([key, value]) => ({
-						key,
-						value: String(value),
-						op: "=",
-						is_label: true,
-					}),
-				);
+				const filters: ApiFilter[] = Object.entries(
+					selectedWorkflow.labels,
+				).map(([key, value]) => ({
+					key,
+					value: String(value),
+					operator: "=",
+					is_label: true,
+				}));
 
 				const dateRange = getDateRangeFromTimeWindow();
 				const historyResponse = await Flows.history(
@@ -259,7 +241,48 @@ export function WorkflowsCatalog({
 		};
 
 		reloadWorkflowHistory();
-	}, [timeWindow, customDateRange, selectedWorkflow]);
+	}, [selectedWorkflow, getDateRangeFromTimeWindow]);
+
+	// Load more workflow history for infinite scroll
+	const maybeLoadMoreHistory = useCallback(async () => {
+		if (!selectedWorkflow || loadingMoreHistory || currentPage >= totalPages)
+			return;
+
+		try {
+			setLoadingMoreHistory(true);
+
+			const filters: ApiFilter[] = Object.entries(selectedWorkflow.labels).map(
+				([key, value]) => ({
+					key,
+					value: String(value),
+					operator: "=",
+					is_label: true,
+				}),
+			);
+
+			const dateRange = getDateRangeFromTimeWindow();
+			const nextPage = currentPage + 1;
+			const historyResponse = await Flows.history(
+				selectedWorkflow.name,
+				filters,
+				{ page: nextPage, nb_items: 20 },
+				dateRange,
+			);
+
+			setRecentRuns((prev) => [...prev, ...historyResponse.data.items]);
+			setCurrentPage(historyResponse.data.page);
+		} catch (err) {
+			console.error("Failed to load more history:", err);
+		} finally {
+			setLoadingMoreHistory(false);
+		}
+	}, [
+		selectedWorkflow,
+		loadingMoreHistory,
+		currentPage,
+		totalPages,
+		getDateRangeFromTimeWindow,
+	]);
 
 	// Intersection observer for infinite scroll
 	useEffect(() => {
@@ -271,7 +294,7 @@ export function WorkflowsCatalog({
 					!loadingMoreHistory &&
 					currentPage < totalPages
 				) {
-					loadMoreHistory();
+					maybeLoadMoreHistory();
 				}
 			},
 			{ threshold: 0.1, rootMargin: "100px" },
@@ -287,7 +310,7 @@ export function WorkflowsCatalog({
 				observer.unobserve(currentRef);
 			}
 		};
-	}, [currentPage, totalPages, loadingMoreHistory]);
+	}, [currentPage, totalPages, loadingMoreHistory, maybeLoadMoreHistory]);
 
 	const getTimeWindowLabel = () => {
 		switch (timeWindow) {
@@ -329,11 +352,11 @@ export function WorkflowsCatalog({
 			setLoadingHistory(true);
 			setCurrentPage(1);
 
-			const filters: Filter[] = Object.entries(flow.labels).map(
+			const filters: ApiFilter[] = Object.entries(flow.labels).map(
 				([key, value]) => ({
 					key,
 					value: String(value),
-					op: "=",
+					operator: "=",
 					is_label: true,
 				}),
 			);
@@ -356,39 +379,7 @@ export function WorkflowsCatalog({
 		}
 	};
 
-	const loadMoreHistory = async () => {
-		if (!selectedWorkflow || loadingMoreHistory || currentPage >= totalPages)
-			return;
-
-		try {
-			setLoadingMoreHistory(true);
-
-			const filters: Filter[] = Object.entries(selectedWorkflow.labels).map(
-				([key, value]) => ({
-					key,
-					value: String(value),
-					op: "=",
-					is_label: true,
-				}),
-			);
-
-			const dateRange = getDateRangeFromTimeWindow();
-			const nextPage = currentPage + 1;
-			const historyResponse = await Flows.history(
-				selectedWorkflow.name,
-				filters,
-				{ page: nextPage, nb_items: 20 },
-				dateRange,
-			);
-
-			setRecentRuns((prev) => [...prev, ...historyResponse.data.items]);
-			setCurrentPage(historyResponse.data.page);
-		} catch (err) {
-			console.error("Failed to load more history:", err);
-		} finally {
-			setLoadingMoreHistory(false);
-		}
-	};
+	// (removed duplicate loadMoreHistory; using maybeLoadMoreHistory above)
 
 	const handleFlowRowClick = async (flow: Flow) => {
 		if (expandedFlowTraceId === flow.trace_id) {
@@ -419,65 +410,24 @@ export function WorkflowsCatalog({
 		e.stopPropagation();
 
 		const existingFilter = filters.find(
-			(f) => f.column === key && f.value === value && f.operator === "equals",
+			(f) => f.label === key && f.value === value && f.operator === "=",
 		);
 		if (existingFilter) {
 			return;
 		}
 
-		const newFilter: ActiveFilter = {
-			id: `${key}-${Date.now()}`,
-			column: key,
-			operator: "equals",
-			value: value,
-		};
+		const newFilter: Filter = { label: key, operator: "=", value };
 
 		onFiltersChange([...filters, newFilter]);
 	};
 
 	return (
 		<>
-			{/* Filter Bar */}
-			<FilterBar
-				searchTerm={searchTerm}
-				onSearchChange={onSearchChange}
-				searchPlaceholder="Search workflows..."
+			{/* Filters */}
+			<FilterBadgesEditor
+				availableLabels={["status", ...Object.keys(labelsStore).sort()]}
 				filters={filters}
 				onFiltersChange={onFiltersChange}
-				availableColumns={[
-					{ value: "status", label: "Status" },
-					...Object.keys(labelsStore)
-						.sort()
-						.map((labelName) => ({
-							value: labelName,
-							label: labelName,
-							description: labelsStore[labelName].description || undefined,
-						})),
-				]}
-				getValueOptions={(column) => {
-					// Provide status values as ValueOptions
-					if (column === "status") {
-						const statuses = [
-							...new Set(
-								flows.map((w: any) => w.status).filter(Boolean) as string[],
-							),
-						];
-						const statusList =
-							statuses.length > 0
-								? statuses
-								: ["SUCCESS", "FAILED", "completed", "failed", "running"];
-						return statusList.map((s) => ({ value: s, display: s }));
-					}
-
-					// Provide label values as ValueOptions with proxy display
-					// ONLY actual queryable values, NOT proxies
-					return (
-						labelsStore[column]?.values.map((val) => ({
-							value: val,
-							display: getDisplayValue(column, val),
-						})) || []
-					);
-				}}
 			/>
 
 			{/* Workflows Table */}

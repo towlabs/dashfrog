@@ -1,5 +1,3 @@
-"use client";
-
 import { createReactBlockSpec } from "@blocknote/react";
 import { Plus, X } from "lucide-react";
 import * as React from "react";
@@ -34,17 +32,6 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import {
-	Combobox,
-	ComboboxContent,
-	ComboboxEmpty,
-	ComboboxGroup,
-	ComboboxInput,
-	ComboboxItem,
-	ComboboxList,
-	ComboboxTrigger,
-} from "@/src/components/ui/shadcn-io/combobox";
-import { Separator } from "../ui/separator";
 
 // Available workflows
 const AVAILABLE_WORKFLOWS = [
@@ -97,7 +84,6 @@ export const createWorkflowStatusMapBlock = createReactBlockSpec(
 	{
 		type: "workflowStatusMap",
 		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-expect-error
 		propSchema: {
 			// JSON array of workflow objects: [{ workflow: string, filters: Filter[] }]
 			workflows: { default: "" },
@@ -113,18 +99,18 @@ export const createWorkflowStatusMapBlock = createReactBlockSpec(
 
 			// Sync block.props.open to local state when it changes
 			React.useEffect(() => {
-				const propsOpen = Boolean((block.props as any).open);
+				const propsOpen = Boolean(block.props.open);
 				if (propsOpen) {
 					setOpen(true);
 				}
-			}, [(block.props as any).open]);
+			}, [block.props]);
 
 			const parseWorkflows = (): Array<{
 				workflow: string;
 				filters: Filter[];
 			}> => {
 				try {
-					const w = (block.props as any).workflows;
+					const w = block.props.workflows;
 					if (w && typeof w === "string") {
 						const arr = JSON.parse(w);
 						if (Array.isArray(arr)) return arr;
@@ -151,9 +137,9 @@ export const createWorkflowStatusMapBlock = createReactBlockSpec(
 					// Only send what changed - BlockNote merges partial updates
 					editor.updateBlock(block, {
 						props: { workflows: JSON.stringify(next) },
-					} as any);
+					});
 				},
-				[editor, block.id],
+				[editor, block],
 			);
 
 			const addWorkflow = (workflowName: string) => {
@@ -167,14 +153,14 @@ export const createWorkflowStatusMapBlock = createReactBlockSpec(
 				updateWorkflows(workflows.filter((_, i) => i !== index));
 			};
 
-			const updateWorkflowFilters = (
-				workflowIndex: number,
-				filters: Filter[],
-			) => {
-				const next = [...workflows];
-				next[workflowIndex] = { ...next[workflowIndex], filters };
-				updateWorkflows(next);
-			};
+			const updateWorkflowFilters = React.useCallback(
+				(workflowIndex: number, filters: Filter[]) => {
+					const next = [...workflows];
+					next[workflowIndex] = { ...next[workflowIndex], filters };
+					updateWorkflows(next);
+				},
+				[workflows, updateWorkflows],
+			);
 
 			const addFilter = (workflowIndex: number, label: string) => {
 				const workflow = workflows[workflowIndex];
@@ -237,7 +223,12 @@ export const createWorkflowStatusMapBlock = createReactBlockSpec(
 				}, 2000);
 
 				return () => clearTimeout(timer);
-			}, [workflows, editingWorkflowIndex, editingFilterIndex]);
+			}, [
+				workflows,
+				editingWorkflowIndex,
+				editingFilterIndex,
+				updateWorkflowFilters,
+			]);
 
 			const getStatusColor = (status: string) => {
 				switch (status) {
@@ -256,36 +247,6 @@ export const createWorkflowStatusMapBlock = createReactBlockSpec(
 
 			// Generate demo data for selected workflows
 			const demoData = generateDemoData(workflows.map((w) => w.workflow));
-
-			const getStatusBadgeStyle = (status: string) => {
-				switch (status) {
-					case "success":
-						return "bg-green-100 text-green-800 border-green-200";
-					case "failed":
-						return "bg-red-100 text-red-800 border-red-200";
-					case "running":
-						return "bg-blue-100 text-blue-800 border-blue-200";
-					case "pending":
-						return "bg-yellow-100 text-yellow-800 border-yellow-200";
-					default:
-						return "bg-gray-100 text-gray-800 border-gray-200";
-				}
-			};
-
-			const getStatusLabel = (status: string) => {
-				switch (status) {
-					case "success":
-						return "Success";
-					case "failed":
-						return "Failed";
-					case "running":
-						return "Running";
-					case "pending":
-						return "Pending";
-					default:
-						return status;
-				}
-			};
 
 			return (
 				<div className="w-full max-w-full relative">
@@ -373,7 +334,7 @@ export const createWorkflowStatusMapBlock = createReactBlockSpec(
 						open={open}
 						onOpenChange={(v) => {
 							setOpen(v);
-							editor.updateBlock(block, { props: { open: v } } as any);
+							editor.updateBlock(block, { props: { open: v } });
 						}}
 					>
 						<SheetContent className="w-[360px] sm:max-w-none p-0 flex h-full flex-col">

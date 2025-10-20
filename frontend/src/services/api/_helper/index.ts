@@ -20,12 +20,13 @@ const NewRestAPI = (basePath: string) => {
 			if (options === undefined) {
 				options = {};
 			}
-
-			options.headers
-				? (options.headers.X_REQUEST_ID = crypto.randomUUID())
-				: (options.headers = {
-						X_REQUEST_ID: crypto.randomUUID(),
-					});
+			if (options.headers) {
+				options.headers.X_REQUEST_ID = crypto.randomUUID();
+			} else {
+				options.headers = {
+					X_REQUEST_ID: crypto.randomUUID(),
+				};
+			}
 
 			return Axios.request<ResponseType>({
 				...options,

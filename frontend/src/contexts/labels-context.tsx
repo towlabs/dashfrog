@@ -1,7 +1,11 @@
-"use client";
-
 import type React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useState,
+} from "react";
 import {
 	Labels,
 	type LabelsStore,
@@ -22,7 +26,7 @@ export function LabelsProvider({ children }: { children: React.ReactNode }) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	const fetchLabels = async () => {
+	const fetchLabels = useCallback(async () => {
 		try {
 			setLoading(true);
 			setError(null);
@@ -36,12 +40,12 @@ export function LabelsProvider({ children }: { children: React.ReactNode }) {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, []);
 
 	// Load labels on mount
 	useEffect(() => {
 		fetchLabels();
-	}, []);
+	}, [fetchLabels]);
 
 	const value: LabelsContextType = {
 		labels,

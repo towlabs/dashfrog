@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	Calendar,
 	ChevronDown,
@@ -18,7 +16,7 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
-import { FilterBar } from "@/components/filter-bar";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
@@ -67,6 +65,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLabels } from "@/src/contexts/labels-context";
+import type { Filter } from "@/src/types/filter";
 
 interface Rule {
 	id: string;
@@ -96,18 +95,11 @@ interface Metric {
 	rules?: Rule[];
 }
 
-type ActiveFilter = {
-	id: string;
-	column: string;
-	operator: "equals" | "contains" | "not_equals" | "in" | "not_in";
-	value: string;
-};
-
 interface MetricsCatalogProps {
 	searchTerm: string;
 	onSearchChange: (value: string) => void;
-	filters: ActiveFilter[];
-	onFiltersChange: (filters: ActiveFilter[]) => void;
+	filters: Filter[];
+	onFiltersChange: (filters: Filter[]) => void;
 }
 
 // Metric chart configuration
@@ -119,7 +111,7 @@ const metricChartConfig: ChartConfig = {
 };
 
 // Sample Metrics data
-const sampleMetrics = [
+const sampleMetrics: Metric[] = [
 	{
 		id: 1,
 		name: "API Response Time",
@@ -273,17 +265,23 @@ const sampleMetrics = [
 	},
 ];
 
+interface MetricHistory {
+	time: string;
+	value: number;
+	count: number;
+}
+
 // Generate sample metric history data
 const generateMetricHistory = (
 	metricName: string,
-	thresholds?: { warning?: number; critical?: number },
-) => {
+	_thresholds?: { warning?: number; critical?: number },
+): MetricHistory[] => {
 	const data = [];
 	const now = new Date();
 	for (let i = 23; i >= 0; i--) {
 		const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-		let value;
-		let count;
+		let value: number;
+		let count: number;
 
 		// Generate different patterns based on metric type, considering thresholds
 		if (metricName.includes("Response Time")) {
@@ -323,21 +321,14 @@ const generateMetricHistory = (
 
 export function MetricsCatalog({
 	searchTerm,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: provided by parent; search UI not rendered here
 	onSearchChange,
 	filters,
 	onFiltersChange,
 }: MetricsCatalogProps) {
 	const { labels: labelsStore } = useLabels();
-	const normalizeLabels = (arr: any[]) =>
-		arr.map((m) => ({
-			...m,
-			labels: Object.fromEntries(
-				Object.entries(m.labels).filter(([_, v]) => typeof v === "string"),
-			),
-		}));
-	const [metrics, setMetrics] = useState<Metric[]>(
-		normalizeLabels(sampleMetrics) as Metric[],
-	);
+
+	const [metrics, setMetrics] = useState<Metric[]>(sampleMetrics);
 
 	// Helper to get display value for a label (uses proxy if available)
 	const getDisplayValue = (labelKey: string, value: string): string => {
@@ -345,7 +336,7 @@ export function MetricsCatalog({
 	};
 	const [isMetricSheetOpen, setIsMetricSheetOpen] = useState(false);
 	const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
-	const [metricHistory, setMetricHistory] = useState<any[]>([]);
+	const [metricHistory, setMetricHistory] = useState<MetricHistory[]>([]);
 	const [metricChartTab, setMetricChartTab] = useState<"count" | "value">(
 		"value",
 	);
@@ -382,23 +373,25 @@ export function MetricsCatalog({
 		if (filters.length > 0) {
 			result = result.filter((it) => {
 				return filters.every((f) => {
-					const val = it.labels?.[f.column] || "";
-					const target = f.value.toLowerCase();
-					const cur = String(val).toLowerCase();
-					if (f.operator === "equals") return cur === target;
-					if (f.operator === "contains") return cur.includes(target);
-					if (f.operator === "not_equals") return cur !== target;
-					if (f.operator === "in")
-						return target
-							.split(",")
-							.map((v) => v.trim())
-							.includes(cur);
-					if (f.operator === "not_in")
-						return !target
-							.split(",")
-							.map((v) => v.trim())
-							.includes(cur);
-					return true;
+					const val = it.labels?.[f.label] || "";
+					const cur = String(val);
+					switch (f.operator) {
+						case "=":
+							return cur === f.value;
+						case "!=":
+							return cur !== f.value;
+						case "contains":
+							return cur.toLowerCase().includes(f.value.toLowerCase());
+						case "regex":
+							try {
+								const re = new RegExp(f.value);
+								return re.test(cur);
+							} catch {
+								return false;
+							}
+						default:
+							return true;
+					}
 				});
 			});
 		}
@@ -454,17 +447,16 @@ export function MetricsCatalog({
 
 		// Check if filter already exists
 		const existingFilter = filters.find(
-			(f) => f.column === key && f.value === value && f.operator === "equals",
+			(f) => f.label === key && f.value === value && f.operator === "=",
 		);
 		if (existingFilter) {
 			return; // Filter already exists, don't add duplicate
 		}
 
 		// Add new equals filter
-		const newFilter: ActiveFilter = {
-			id: `${key}-${Date.now()}`,
-			column: key,
-			operator: "equals",
+		const newFilter: Filter = {
+			label: key,
+			operator: "=",
 			value: value,
 		};
 
@@ -537,30 +529,11 @@ export function MetricsCatalog({
 
 	return (
 		<>
-			{/* Filter Bar */}
-			<FilterBar
-				searchTerm={searchTerm}
-				onSearchChange={onSearchChange}
-				searchPlaceholder="Search metrics..."
+			{/* Filters */}
+			<FilterBadgesEditor
+				availableLabels={Object.keys(labelsStore).sort()}
 				filters={filters}
 				onFiltersChange={onFiltersChange}
-				availableColumns={Object.keys(labelsStore)
-					.sort()
-					.map((labelName) => ({
-						value: labelName,
-						label: labelName,
-						description: labelsStore[labelName].description || undefined,
-					}))}
-				getValueOptions={(column) => {
-					// Provide label values as ValueOptions with proxy display
-					// ONLY actual queryable values, NOT proxies
-					return (
-						labelsStore[column]?.values.map((val) => ({
-							value: val,
-							display: getDisplayValue(column, val),
-						})) || []
-					);
-				}}
 			/>
 
 			{/* Metrics Table */}
@@ -953,7 +926,6 @@ export function MetricsCatalog({
 							<Label htmlFor="threshold">Threshold</Label>
 							<div className="flex items-center gap-2">
 								<Input
-									id="threshold"
 									type="number"
 									value={ruleForm.threshold}
 									onChange={(e) =>
@@ -972,7 +944,6 @@ export function MetricsCatalog({
 						<div className="grid gap-2">
 							<Label htmlFor="duration">Duration (minutes)</Label>
 							<Input
-								id="duration"
 								type="number"
 								value={ruleForm.duration}
 								onChange={(e) =>

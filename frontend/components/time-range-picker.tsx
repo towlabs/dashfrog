@@ -1,22 +1,12 @@
-"use client";
-
 import { format, subMinutes } from "date-fns";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 
 interface TimeRange {
 	from: Date;

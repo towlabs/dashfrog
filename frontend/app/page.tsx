@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { MetricQueryBuilder } from "@/components/metric-query-builder";
 import {

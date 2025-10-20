@@ -1,8 +1,9 @@
-"use client";
-
 import { createReactBlockSpec } from "@blocknote/react";
 import * as React from "react";
-import { MetricQueryBuilder } from "@/components/metric-query-builder";
+import {
+	type Filter,
+	MetricQueryBuilder,
+} from "@/components/metric-query-builder";
 import type { Metric, Operation } from "@/components/metric-types";
 import { useTimeWindow } from "@/components/time-window-context";
 import {
@@ -17,13 +18,12 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "../ui/separator";
-import { AggregationSettings } from "./ChartSettingsItem";
+import { type Aggregation, AggregationSettings } from "./ChartSettingsItem";
 
 export const createNumberBlock = createReactBlockSpec(
 	{
 		type: "number",
 		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-		// @ts-expect-error
 		propSchema: {
 			label: { default: "Metric" },
 			selectedMetric: { default: "" }, // JSON string of Metric object
@@ -46,24 +46,24 @@ export const createNumberBlock = createReactBlockSpec(
 
 			// Sync block.props.open to local state when it changes
 			React.useEffect(() => {
-				const propsOpen = Boolean((block.props as any).open);
+				const propsOpen = Boolean(block.props.open);
 				if (propsOpen) {
 					setOpen(true);
 				}
-			}, [(block.props as any).open]);
+			}, [block.props]);
 
-			const label = (block.props as any).label || "Metric";
-			const aggregation = (block.props as any).aggregation || "average";
-			const conditionTarget = (block.props as any).conditionTarget || "";
-			const conditionOp = (block.props as any).conditionOp || "";
-			const conditionValue = (block.props as any).conditionValue || "";
-			const conditionValue2 = (block.props as any).conditionValue2 || "";
-			const exclude = (block.props as any).exclude || "none";
+			const label = block.props.label || "Metric";
+			const aggregation = (block.props.aggregation as Aggregation) || "average";
+			const conditionTarget = block.props.conditionTarget || "";
+			const conditionOp = block.props.conditionOp || "";
+			const conditionValue = block.props.conditionValue || "";
+			const conditionValue2 = block.props.conditionValue2 || "";
+			const exclude = block.props.exclude || "none";
 
 			// Parse selectedMetric from JSON string
 			const parseSelectedMetric = () => {
 				try {
-					const m = (block.props as any).selectedMetric;
+					const m = block.props.selectedMetric;
 					if (m && typeof m === "string") {
 						return JSON.parse(m);
 					}
@@ -74,7 +74,7 @@ export const createNumberBlock = createReactBlockSpec(
 			// Parse filters from JSON string
 			const parseFilters = () => {
 				try {
-					const f = (block.props as any).filters;
+					const f = block.props.filters;
 					if (f && typeof f === "string") {
 						return JSON.parse(f);
 					}
@@ -85,7 +85,7 @@ export const createNumberBlock = createReactBlockSpec(
 			// Parse operation from JSON string
 			const parseOperation = (): Operation | null => {
 				try {
-					const op = (block.props as any).operation;
+					const op = block.props.operation;
 					if (op && typeof op === "string") {
 						return JSON.parse(op) as Operation;
 					}
@@ -102,14 +102,18 @@ export const createNumberBlock = createReactBlockSpec(
 
 			// State for number value
 			const [numberValue, setNumberValue] = React.useState<string>("-");
-			const [isLoading, setIsLoading] = React.useState(false);
+			const [_, setIsLoading] = React.useState(false);
 
 			// Mock API call - will be replaced with real API later
 			const fetchNumberData = React.useCallback(
 				async (
-					metric: any,
-					filters: any[],
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
+					metric: Metric,
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
+					filters: Filter[],
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 					aggregation: string,
+					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 					timeWindow: { start: Date; end: Date },
 				) => {
 					setIsLoading(true);
@@ -135,6 +139,7 @@ export const createNumberBlock = createReactBlockSpec(
 			);
 
 			// Fetch data whenever dependencies change
+			// biome-ignore lint/correctness/useExhaustiveDependencies: use only json strings
 			React.useEffect(() => {
 				if (selectedMetricValue) {
 					fetchNumberData(
@@ -145,13 +150,10 @@ export const createNumberBlock = createReactBlockSpec(
 					);
 				}
 			}, [
-				(block.props as any).selectedMetric,
-				(block.props as any).filters,
-				(block.props as any).operation,
-				aggregation,
-				exclude,
-				timeWindow.start.getTime(),
-				timeWindow.end.getTime(),
+				block.props.selectedMetric, // Use the JSON string directly
+				block.props.filters, // Use the JSON string directly
+				block.props.operation, // Use the JSON string directly
+				timeWindow,
 				fetchNumberData,
 			]);
 
@@ -172,7 +174,7 @@ export const createNumberBlock = createReactBlockSpec(
 					}>,
 				) => {
 					Promise.resolve().then(() => {
-						editor.updateBlock(block, { props: next } as any);
+						editor.updateBlock(block, { props: next });
 					});
 				},
 				[editor, block],
@@ -193,7 +195,7 @@ export const createNumberBlock = createReactBlockSpec(
 			);
 
 			const handleFiltersChange = React.useCallback(
-				(filters: any[]) => {
+				(filters: Filter[]) => {
 					updateProps({ filters: JSON.stringify(filters) });
 				},
 				[updateProps],
@@ -226,7 +228,7 @@ export const createNumberBlock = createReactBlockSpec(
 						onOpenChange={(v) => {
 							setOpen(v);
 							Promise.resolve().then(() => {
-								editor.updateBlock(block, { props: { open: v } } as any);
+								editor.updateBlock(block, { props: { open: v } });
 							});
 						}}
 					>
@@ -267,7 +269,7 @@ export const createNumberBlock = createReactBlockSpec(
 
 								{/* Aggregation Section */}
 								<AggregationSettings
-									value={aggregation as any}
+									value={aggregation}
 									onChange={(value) => updateProps({ aggregation: value })}
 									conditionTarget={conditionTarget}
 									onConditionTargetChange={(value) =>

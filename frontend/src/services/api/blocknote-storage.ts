@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: wip */
 import type { Block } from "@blocknote/core";
 
 const STORAGE_PREFIX = "dashfrog_notebook_";

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import Notebook from "@/app/components/Notebook";
 import { useNotebooks } from "@/app/components/notebooks-context";
@@ -11,7 +11,7 @@ export default function NotebookById() {
 	const [isLoading, setIsLoading] = useState(true);
 	const { refreshNotebooks, setCurrentNotebookId } = useNotebooks();
 
-	const loadNotebook = () => {
+	const loadNotebook = useCallback(() => {
 		if (!id) return;
 
 		setIsLoading(true);
@@ -25,7 +25,7 @@ export default function NotebookById() {
 		} finally {
 			setIsLoading(false);
 		}
-	};
+	}, [id, setCurrentNotebookId]);
 
 	useEffect(() => {
 		loadNotebook();
@@ -33,7 +33,7 @@ export default function NotebookById() {
 		return () => {
 			setCurrentNotebookId(undefined);
 		};
-	}, [id, setCurrentNotebookId]);
+	}, [loadNotebook, setCurrentNotebookId]);
 
 	const handleUpdate = () => {
 		// Reload the notebook from storage and refresh the sidebar

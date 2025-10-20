@@ -1,5 +1,3 @@
-"use client";
-
 import {
 	BarChart3,
 	Check,
@@ -10,7 +8,6 @@ import {
 	Eye,
 	Globe,
 	RefreshCcw,
-	Save,
 	Search,
 	Settings,
 	Tags,
@@ -193,8 +190,7 @@ export default function LabelsPage() {
 	const handleExport = () => {
 		// Export labels data as JSON
 		const dataStr = JSON.stringify(labelsStore, null, 2);
-		const dataUri =
-			"data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+		const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
 		const exportFileDefaultName = `labels-export-${new Date().toISOString()}.json`;
 
 		const linkElement = document.createElement("a");
@@ -393,6 +389,7 @@ export default function LabelsPage() {
 												>
 													<TableCell>
 														<button
+															type="button"
 															onClick={(e) => toggleRowExpansion(label.name, e)}
 															className="p-1 hover:bg-muted rounded"
 														>

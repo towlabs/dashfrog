@@ -1,9 +1,6 @@
-"use client";
-
 import * as React from "react";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { LabelsProvider } from "@/src/contexts/labels-context";
-import Header from "./Header";
 import { NotebooksProvider } from "./notebooks-context";
 import SideMenu from "./SideMenu";
 
@@ -36,7 +33,7 @@ export default function LayoutClient({
 					<div
 						className={`flex flex-1 flex-col transition-all duration-300 ${sidebarCollapsed ? "md:ml-16" : "md:ml-64"}`}
 					>
-						<Header onMenuClick={() => setMobileMenuOpen(true)} />
+						<header className="border-b bg-background"></header>
 						<main className="flex-1 overflow-y-auto">{children}</main>
 					</div>
 				</div>

@@ -1,7 +1,4 @@
-"use client";
-
 import { Lock, Unlock } from "lucide-react";
-import { useState } from "react";
 import ClientBlockNote from "@/components/ClientBlockNote";
 import { EditorErrorBoundary } from "@/components/EditorErrorBoundary";
 import {
@@ -102,13 +99,9 @@ export default function Notebook({
 								onClick={handleLockToggle}
 							>
 								{notebook.locked ? (
-									<>
-										<Lock className="h-4 w-4" />
-									</>
+									<Lock className="h-4 w-4" />
 								) : (
-									<>
-										<Unlock className="h-4 w-4" />
-									</>
+									<Unlock className="h-4 w-4" />
 								)}
 							</Button>
 						</div>

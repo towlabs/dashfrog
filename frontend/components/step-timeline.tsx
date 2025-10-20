@@ -141,6 +141,7 @@ const StepItem: React.FC<StepItemProps> = ({
 							{/* Expand/Collapse button for steps with children */}
 							{hasChildren ? (
 								<button
+									type="button"
 									onClick={() => setIsExpanded(!isExpanded)}
 									className="flex-shrink-0 mt-1 p-0.5 hover:bg-muted rounded transition-colors"
 								>

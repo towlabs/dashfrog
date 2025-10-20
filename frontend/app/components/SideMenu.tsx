@@ -1,9 +1,6 @@
-"use client";
-
 import {
 	BookOpen,
 	Calendar,
-	ChartScatter,
 	ChevronLeft,
 	ChevronRight,
 	Hash,
@@ -14,7 +11,6 @@ import {
 	Settings,
 	Tags,
 	User,
-	Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -127,6 +123,7 @@ export default function SideMenu({
 						if (isSearchItem) {
 							return (
 								<button
+									type="button"
 									key={item.id}
 									onClick={() => setSearchOpen(true)}
 									className={cn(
@@ -189,6 +186,7 @@ export default function SideMenu({
 							</h3>
 							{notebooks.length > 0 && (
 								<button
+									type="button"
 									onClick={handleCreateNotebook}
 									className="opacity-0 group-hover:opacity-100 hover:bg-accent rounded p-1 transition-all"
 									title="Add notebook"
