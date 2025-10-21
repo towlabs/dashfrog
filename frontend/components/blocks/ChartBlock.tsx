@@ -366,28 +366,21 @@ export const createChartBlock = createReactBlockSpec(
 									/>
 								</div>
 
-								<Separator className="my-4" />
-
 								{/* Group Section */}
 								<div className="space-y-3">
-									<h3 className="text-sm font-medium text-muted-foreground">
-										Group
-									</h3>
-									<div className="space-y-1">
-										<label className="text-xs text-muted-foreground font-medium">
-											Split by
-										</label>
-										<MultiSelect
-											options={getAvailableLabels().map((label) => ({
-												value: label,
-												label,
-											}))}
-											value={groupBy}
-											onChange={updateGroupBy}
-											placeholder="Select labels to group by..."
-											searchPlaceholder="Search labels..."
-										/>
-									</div>
+									<label className="text-xs text-muted-foreground font-medium">
+										Split by
+									</label>
+									<MultiSelect
+										options={getAvailableLabels().map((label) => ({
+											value: label,
+											label,
+										}))}
+										value={groupBy}
+										onChange={updateGroupBy}
+										placeholder="Select labels to group by..."
+										searchPlaceholder="Search labels..."
+									/>
 								</div>
 							</div>
 						</SheetContent>

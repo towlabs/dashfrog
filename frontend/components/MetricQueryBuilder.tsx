@@ -288,7 +288,7 @@ export function MetricQueryBuilder({
 	// filter editing is handled inside FilterBadgesEditor
 
 	return (
-		<div className={cn("flex flex-col gap-3", className)}>
+		<div className={cn("flex flex-col gap-1", className)}>
 			{/* Metric Selection */}
 			<div className="space-y-1">
 				<label className="text-xs text-muted-foreground font-medium">
