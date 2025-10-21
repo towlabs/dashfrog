@@ -13,7 +13,6 @@ data:
     click_house:
       database: {{ .Values.clickhouse.config.database }}
       host: {{ include "dashfrog_kube.fullname" . }}-clickhouse
-      port: {{ .Values.clickhouse.config.port }}
       user: {{ .Values.clickhouse.config.user }}
       # Password will be provided via secret
     psql:
