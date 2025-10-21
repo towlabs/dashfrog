@@ -28,12 +28,21 @@ import {
 	locales as multiColumnLocales,
 	withMultiColumn,
 } from "@blocknote/xl-multi-column";
-import { BarChart3, GitBranch, Hash, TrendingUp, Workflow } from "lucide-react";
+import {
+	BarChart3,
+	GitBranch,
+	Hash,
+	Table2,
+	TrendingUp,
+	Workflow,
+} from "lucide-react";
 import { useEffect, useRef } from "react";
 import { createBarChartBlock } from "@/components/blocks/BarChartBlock";
 import { BarChartSettingsItem } from "@/components/blocks/BarChartSettingsItem";
 import { createChartBlock } from "@/components/blocks/ChartBlock";
 import { ChartSettingsItem } from "@/components/blocks/ChartSettingsItem";
+import { createMetricTableBlock } from "@/components/blocks/MetricTableBlock";
+import { MetricTableSettingsItem } from "@/components/blocks/MetricTableSettingsItem";
 import { createNumberBlock } from "@/components/blocks/NumberBlock";
 import { NumberSettingsItem } from "@/components/blocks/NumberSettingsItem";
 import { createWorkflowBlock } from "@/components/blocks/WorkflowBlock";
@@ -83,6 +92,7 @@ export default function ClientBlockNote({
 					chart: createChartBlock(),
 					number: createNumberBlock(),
 					barChart: createBarChartBlock(),
+					metricTable: createMetricTableBlock(),
 					workflow: createWorkflowBlock(),
 					workflowStatusMap: createWorkflowStatusMapBlock(),
 				},
@@ -204,6 +214,14 @@ export default function ClientBlockNote({
 											<BarChartSettingsItem {...menuProps} />
 										</DragHandleMenu>
 									);
+								} else if (blockType === "metricTable") {
+									return (
+										<DragHandleMenu {...menuProps}>
+											<RemoveBlockItem {...menuProps}>Delete</RemoveBlockItem>
+											<BlockColorsItem {...menuProps}>Colors</BlockColorsItem>
+											<MetricTableSettingsItem {...menuProps} />
+										</DragHandleMenu>
+									);
 								} else if (blockType === "workflow") {
 									return (
 										<DragHandleMenu {...menuProps}>
@@ -233,7 +251,7 @@ export default function ClientBlockNote({
 						const chartItem: DefaultReactSuggestionItem = {
 							title: "Line Chart",
 							subtext: "Insert a line chart",
-							group: "Charts",
+							group: "Metrics",
 							icon: <TrendingUp className="h-4 w-4" />,
 							onItemClick: () => {
 								const selection = editor.getSelection();
@@ -271,7 +289,7 @@ export default function ClientBlockNote({
 						const numberItem: DefaultReactSuggestionItem = {
 							title: "Number",
 							subtext: "Insert a metric number display",
-							group: "Charts",
+							group: "Metrics",
 							icon: <Hash className="h-4 w-4" />,
 							onItemClick: () => {
 								const selection = editor.getSelection();
@@ -307,7 +325,7 @@ export default function ClientBlockNote({
 						const barChartItem: DefaultReactSuggestionItem = {
 							title: "Bar Chart",
 							subtext: "Insert a bar chart",
-							group: "Charts",
+							group: "Metrics",
 							icon: <BarChart3 className="h-4 w-4" />,
 							onItemClick: () => {
 								const selection = editor.getSelection();
@@ -333,6 +351,42 @@ export default function ClientBlockNote({
 								if (ref) {
 									editor.insertBlocks(
 										[{ type: "barChart", props: { open: true } }],
+										ref,
+										"after",
+									);
+								}
+							},
+						};
+
+						const metricTableItem: DefaultReactSuggestionItem = {
+							title: "Table",
+							subtext: "Insert a metric table",
+							group: "Metrics",
+							icon: <Table2 className="h-4 w-4" />,
+							onItemClick: () => {
+								const selection = editor.getSelection();
+								const target = selection?.blocks?.[0];
+								if (target) {
+									editor.replaceBlocks(
+										[target],
+										[{ type: "metricTable", props: { open: true } }],
+									);
+									return;
+								}
+								const cursor = editor.getTextCursorPosition?.() || null;
+								const cursorBlock = cursor?.block;
+								if (cursorBlock) {
+									editor.replaceBlocks(
+										[cursorBlock],
+										[{ type: "metricTable", props: { open: true } }],
+									);
+									return;
+								}
+								const last = editor.document[editor.document.length - 1];
+								const ref = last ?? editor.document[0];
+								if (ref) {
+									editor.insertBlocks(
+										[{ type: "metricTable", props: { open: true } }],
 										ref,
 										"after",
 									);
@@ -432,6 +486,7 @@ export default function ClientBlockNote({
 							chartItem,
 							numberItem,
 							barChartItem,
+							metricTableItem,
 							workflowItem,
 							workflowStatusMapItem,
 							...combineByGroup(

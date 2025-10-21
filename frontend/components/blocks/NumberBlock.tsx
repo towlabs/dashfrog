@@ -17,7 +17,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { Separator } from "../ui/separator";
 import { type Aggregation, AggregationSettings } from "./ChartSettingsItem";
 
 export const createNumberBlock = createReactBlockSpec(

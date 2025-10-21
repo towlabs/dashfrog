@@ -71,3 +71,11 @@
 body {
 	@apply bg-background text-foreground;
 }
+
+/* Override ProseMirror table styles that conflict with shadcn/ui tables */
+.ProseMirror td:not(.ProseMirror-table-cell),
+.ProseMirror th:not(.ProseMirror-table-cell) {
+	vertical-align: inherit;
+	box-sizing: border-box;
+	position: static;
+}
