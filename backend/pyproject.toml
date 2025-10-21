@@ -75,7 +75,7 @@ max-line-length = 120
 
 [tool.pyright]
 include = ["**"]
-exclude = ["tests/**"]
+exclude = ["tests/**", ".venv/**"]
 pythonVersion = "3.12"
 stubPath = "typings"
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md#diagnostic-rule-defaults

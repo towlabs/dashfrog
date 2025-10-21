@@ -24,11 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Set up Node
-        run: actions/setup-node@v5
+        uses: actions/setup-node@v6
       - name: Install the project
         run: |
           cd frontend
-          npm install
+          npm ci
       - name: Cache NPM packages
         uses: actions/cache@v4
         with:
@@ -46,7 +46,7 @@ jobs:
     needs: setup
     steps:
       - uses: actions/checkout@v5
-      - run: actions/setup-node@v5
+      - uses: actions/setup-node@v6
       - name: Cache NPM packages
         uses: actions/cache@v4
         id: cache-npm
@@ -87,12 +87,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build backend image
+      - name: Build front image
         run: |
-          docker-compose -f docker-compose.yml build frontend
+          docker compose -f docker-compose.yml build frontend
       - name: Tag images
         run: |
-          docker tag ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:lastest ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${TAG}
+          docker tag ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${TAG}
 
       - name: Push images to GHCR
         run: |

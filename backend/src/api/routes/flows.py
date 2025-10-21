@@ -116,8 +116,8 @@ class Flows:
             to_date_ts = datetime.fromisoformat(to_date) if to_date else None
 
             flows = Flows.__uc.list_flows(
-                ctx,
-                filters.from_date or from_date_ts,
+                ctx,  # pyright: ignore[reportArgumentType]
+                filters.from_date or from_date_ts,  #  pyright: ignore[reportArgumentType]
                 filters.to_date or to_date_ts,
                 order_by=filters.get_orders(),
                 filters=filters.get_filters(),
@@ -176,12 +176,12 @@ class Flows:
             raw_pagination = paginate.to_raw_params()
 
             flows, qty = Flows.__uc.get_single_history(
-                ctx,
-                name,
-                raw_pagination.limit,
+                ctx,  # pyright: ignore[reportArgumentType]
+                name,  # pyright: ignore[reportArgumentType]
+                raw_pagination.limit,  # pyright: ignore[reportArgumentType]
                 raw_pagination.offset,
-                filters.get_filters(with_times=True),
-                filters.get_orders(),
+                filters.get_filters(with_times=True),  # pyright: ignore[reportArgumentType]
+                filters.get_orders(),  # pyright: ignore[reportArgumentType]
             )
 
             return Page[Flow].create(flows, qty, paginate)

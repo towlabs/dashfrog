@@ -31,10 +31,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Build collector image
         run: |
-          docker-compose -f docker-compose.yml build collector
+          docker compose -f docker-compose.yml build collector
       - name: Tag images
         run: |
-          docker tag ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:lastest ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${TAG}
+          docker tag ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${TAG}
 
       - name: Push images to GHCR
         run: |

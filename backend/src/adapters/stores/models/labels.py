@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql.sqltypes import ARRAY, Enum
 
-from domain import entities
+from src.domain import entities
 
 from . import Base
 
@@ -12,9 +12,9 @@ from . import Base
 class LabelValue(Base):
     __tablename__ = "label_values"
 
-    label_id = Column(Integer, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
-    value = Column(String, nullable=False, primary_key=True)
-    mapped_to = Column(String, nullable=True)
+    label_id: Mapped[str] = mapped_column(Integer, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
+    value: Mapped[str] = mapped_column(String, nullable=False, primary_key=True)
+    mapped_to: Mapped[str | None] = mapped_column(String, nullable=True)
 
     def to_entity(self) -> entities.Label.Value:
         return entities.Label.Value(

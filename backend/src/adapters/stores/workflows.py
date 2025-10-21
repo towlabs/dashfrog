@@ -1,7 +1,8 @@
+from collections.abc import Iterable
 from contextvars import Context
-from typing import Any, Iterable
+from typing import Any
 
-from clickhouse_connect.driver import Client
+from clickhouse_connect.driver.client import Client
 
 from src.domain import entities
 

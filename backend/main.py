@@ -9,7 +9,6 @@ from starlette.responses import JSONResponse
 from src import router
 from src.app import Application
 
-# dashfrog = DashFrog("dashfrog.backend")
 app = Application()
 app.init_web()
 api = FastAPI(name="Dashfrog backend", version=app.configuration.release)
@@ -19,11 +18,6 @@ logger = app.logger
 
 @api.exception_handler(Exception)
 async def global_exception_handler(request: Request, e: Exception):
-    # logger.error(
-    #     "Unhandled exception occurred",
-    #     e,
-    #     exc_info=True,
-    # )
     return JSONResponse(
         status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
         content={"detail": "An internal server error occurred"},

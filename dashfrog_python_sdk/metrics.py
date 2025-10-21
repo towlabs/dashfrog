@@ -17,7 +17,9 @@ class Metric(ABC):
     default_labels: dict
 
     def __init__(self, **labels):
-        self.default_labels = {f"dashfrog.label.glob.{key}": value for key, value in labels.items()}
+        self.default_labels = {
+            f"dashfrog.label.glob.{key}": value for key, value in labels.items()
+        }
 
     def __repr__(self):
         return f"<Observable::({self.name!r})>"
@@ -32,7 +34,11 @@ class Metric(ABC):
         return {f"dashfrog.label.{key}": value for key, value in labels.items()}
 
 
-def new_metric(meter: Meter, kind: Kind, name: str, description: str, unit: str, **labels) -> Metric:
+def new_metric(
+    meter: Meter, kind: Kind, name: str, description: str, unit: str, **labels
+) -> Metric:
+    """Create new observable metric."""
+
     match kind:
         case Kind.COUNTER:
             return __Counter(meter, name, description, unit, **labels)
@@ -72,6 +78,8 @@ class __Statistic(Metric):
         self.__meter = meter.create_histogram(f"{name}_stats", unit, description)
 
     def record(self, value: int | float, **labels):
-        self.__meter.record(value, {**self._prepare_labels(labels), **self.default_labels})
+        self.__meter.record(
+            value, {**self._prepare_labels(labels), **self.default_labels}
+        )
 
         return self

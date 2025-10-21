@@ -19,11 +19,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Set up Python
-        run: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version-file: ".python-version"
+          python-version-file: "backend/.python-version"
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - name: Install the project
@@ -37,9 +37,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Set up Python
-        run: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version-file: ".python-version"
+          python-version-file: "backend/.python-version"
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
@@ -55,9 +55,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Set up Python
-        run: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version-file: ".python-version"
+          python-version-file: "backend/.python-version"
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
@@ -87,10 +87,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Build backend image
         run: |
-          docker-compose -f docker-compose.yml build backend
+          docker compose -f docker-compose.yml build backend
       - name: Tag images
         run: |
-          docker tag ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:lastest ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${TAG}
+          docker tag ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:latest ${REGISTRY}/${IMAGE_NAMESPACE}/${IMAGE_NAME}:${TAG}
 
       - name: Push images to GHCR
         run: |
