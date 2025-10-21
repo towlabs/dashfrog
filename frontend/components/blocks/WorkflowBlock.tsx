@@ -234,15 +234,13 @@ export const createWorkflowBlock = createReactBlockSpec(
 
 			return (
 				<div className="w-full max-w-full relative">
-					<div className="rounded-md border">
+					<div>
 						<Table>
 							<TableHeader>
-								<TableRow className="h-10">
-									<TableHead className="align-middle">Step</TableHead>
-									<TableHead className="align-middle">Status</TableHead>
-									<TableHead className="text-right align-middle">
-										Duration
-									</TableHead>
+								<TableRow>
+									<TableHead>Step</TableHead>
+									<TableHead>Status</TableHead>
+									<TableHead>Duration</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>

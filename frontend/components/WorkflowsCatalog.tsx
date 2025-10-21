@@ -443,7 +443,7 @@ export function WorkflowsCatalog({
 			/>
 
 			{/* Workflows Table */}
-			<div className="rounded-lg border bg-card">
+			<div>
 				<Table>
 					<TableHeader>
 						<TableRow>
