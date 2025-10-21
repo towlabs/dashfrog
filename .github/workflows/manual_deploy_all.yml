@@ -1,4 +1,4 @@
-name: Backend branch deploy
+name: Manual deploy all images
 on:
   workflow_dispatch:
     inputs:

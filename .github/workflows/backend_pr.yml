@@ -1,4 +1,4 @@
-name: Backend branch deploy
+name: Backend Pull Request
 on:
   pull_request:
     types:
