@@ -136,16 +136,17 @@ class BaseSpan(AbstractContextManager):
         return None
 
     def __observe(self):
-        if self._kind == "step":
-            if self.__entity.status:
-                get_step_status().record(1, status=self.__entity.status, step=self.name)
-            if self.__entity.duration is not None:
-                get_step_duration().record(self.__entity.duration, step=self.name)
-        if self._kind == "flow":
-            if self.__entity.status:
-                get_workflow_status().record(1, status=self.__entity.status, flow=self.name)
-            if self.__entity.duration is not None:
-                get_workflow_duration().record(self.__entity.duration, flow=self.name)
+        match self._kind:
+            case "step":
+                if self.__entity.status:
+                    get_step_status().record(1, status=self.__entity.status, step=self.name)
+                if self.__entity.duration is not None:
+                    get_step_duration().record(self.__entity.duration, step=self.name)
+            case "flow":
+                if self.__entity.status:
+                    get_workflow_status().record(1, status=self.__entity.status, flow=self.name)
+                if self.__entity.duration is not None:
+                    get_workflow_duration().record(self.__entity.duration, flow=self.name)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.name!r})"

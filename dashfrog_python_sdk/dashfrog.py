@@ -83,7 +83,7 @@ class DashFrog:
 
         resource = Resource.create(
             attributes={
-                **{f"dashfrog.label.{key}": value for key, value in labels.items()},
+                **labels,
                 "service.name": service_name,
                 "service.provider": "tower.dashfrog",
                 "dashfrog.version": "alpha",
@@ -96,7 +96,9 @@ class DashFrog:
         metric_exporter = (
             HTTPMetricExporter(endpoint=f"{http_server}/metrics")
             if config.infra.disable_grpc
-            else OTLPMetricExporter(endpoint=grpc_server, insecure=config.infra.grpc_insecure)
+            else OTLPMetricExporter(
+                endpoint=grpc_server, insecure=config.infra.grpc_insecure
+            )
         )
 
         reader = PeriodicExportingMetricReader(
@@ -233,7 +235,9 @@ class DashFrog:
         auto_end: bool = True,
     ):
         """Start a new step inside the existing flow. Step does not nest with steps."""
-        with Step("", auto_end=auto_end, auto_start=auto_start, from_context=True) as step:
+        with Step(
+            "", auto_end=auto_end, auto_start=auto_start, from_context=True
+        ) as step:
             yield step
 
     def metrics(
