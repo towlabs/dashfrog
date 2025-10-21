@@ -18,15 +18,11 @@ RUN npm run build
 # Production stage with nginx
 FROM nginx:alpine
 
-# Copy custom nginx config as template
-COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf.template
+# Copy custom nginx config
+COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy entrypoint script
-COPY --from=builder /app/docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
 
 # Create non-root user
 RUN addgroup -g 101 -S nginx && \
@@ -38,8 +34,7 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/log/nginx && \
     chown -R nginx:nginx /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid && \
-    chown nginx:nginx /docker-entrypoint.sh
+    chown -R nginx:nginx /var/run/nginx.pid
 
 # Switch to non-root user
 USER nginx
@@ -51,5 +46,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Use custom entrypoint to substitute env vars
-ENTRYPOINT ["/docker-entrypoint.sh"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

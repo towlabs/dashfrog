@@ -289,22 +289,45 @@ tolerations: []
 affinity: {}
 
 # Ingress configuration
+# Ingress provides a single entry point to access both frontend and backend
+#
+# For local development without a domain:
+#   1. Add to /etc/hosts: 127.0.0.1 dashfrog.local
+#   2. Port-forward ingress: kubectl port-forward -n ingress-nginx svc/ingress-nginx-controller 8080:80
+#   3. Access at: http://dashfrog.local:8080
+#
+# For production with a domain:
+#   1. Set host to your domain (e.g., dashfrog.yourdomain.com)
+#   2. Configure TLS with cert-manager or provide your own certificate
+#   3. Set ingressClassName to your ingress controller (e.g., nginx, traefik)
 ingress:
   enabled: false
-  className: ""
+  className: "nginx"  # Change to your ingress controller class
   annotations: {}
+    # For Let's Encrypt with cert-manager:
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # For larger uploads:
+    # nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   hosts:
-    - host: chart-example.local
+    - host: dashfrog.local  # Change to your domain
       paths:
+        # Frontend - serves the React application
         - path: /
-          pathType: ImplementationSpecific
+          pathType: Prefix
           service:
-            name: dashfrog-prometheus
-            port: 9090
+            name: ""  # Will be set to {{ .Release.Name }}-frontend
+            port: 8080
+        # Backend API - proxies to backend service
+        - path: /api
+          pathType: Prefix
+          service:
+            name: ""  # Will be set to {{ .Release.Name }}-backend
+            port: 8080
   tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+    # Example TLS configuration:
+    # - secretName: dashfrog-tls
+    #   hosts:
+    #     - dashfrog.local
 
 # HTTPRoute configuration
 httpRoute:

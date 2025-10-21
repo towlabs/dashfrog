@@ -31,9 +31,6 @@ spec:
             - name: http
               containerPort: {{ .Values.frontend.config.port }}
               protocol: TCP
-          env:
-            - name: BACKEND_URL
-              value: "http://{{ include "dashfrog_kube.fullname" . }}-backend:{{ .Values.backend.service.port }}"
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
           livenessProbe:
