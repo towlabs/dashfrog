@@ -5,7 +5,7 @@ on:
       - main
       - dev
     paths:
-      - 'collector'
+      - 'collector/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

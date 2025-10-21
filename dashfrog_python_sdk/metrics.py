@@ -17,9 +17,7 @@ class Metric(ABC):
     default_labels: dict
 
     def __init__(self, **labels):
-        self.default_labels = {
-            f"dashfrog.label.glob.{key}": value for key, value in labels.items()
-        }
+        self.default_labels = labels
 
     def __repr__(self):
         return f"<Observable::({self.name!r})>"
@@ -30,13 +28,8 @@ class Metric(ABC):
 
         raise NotImplementedError()
 
-    def _prepare_labels(self, labels: dict) -> dict:
-        return {f"dashfrog.label.{key}": value for key, value in labels.items()}
 
-
-def new_metric(
-    meter: Meter, kind: Kind, name: str, description: str, unit: str, **labels
-) -> Metric:
+def new_metric(meter: Meter, kind: Kind, name: str, description: str, unit: str, **labels) -> Metric:
     """Create new observable metric."""
 
     match kind:
@@ -56,7 +49,7 @@ class __Counter(Metric):
         self.__meter = meter.create_counter(f"{name}_counter", unit, description)
 
     def record(self, value: int | float, **labels):
-        self.__meter.add(value, {**self._prepare_labels(labels), **self.default_labels})
+        self.__meter.add(value, {**labels, **self.default_labels})
 
         return self
 
@@ -67,7 +60,7 @@ class __Measure(Metric):
         self.__meter = meter.create_gauge(f"{name}_measure", unit, description)
 
     def record(self, value: int | float, **labels):
-        self.__meter.set(value, {**self._prepare_labels(labels), **self.default_labels})
+        self.__meter.set(value, {**labels, **self.default_labels})
 
         return self
 
@@ -78,8 +71,6 @@ class __Statistic(Metric):
         self.__meter = meter.create_histogram(f"{name}_stats", unit, description)
 
     def record(self, value: int | float, **labels):
-        self.__meter.record(
-            value, {**self._prepare_labels(labels), **self.default_labels}
-        )
+        self.__meter.record(value, {**labels, **self.default_labels})
 
         return self
