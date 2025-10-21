@@ -1,14 +1,13 @@
-name: SDK branch deploy
+name: Backend branch deploy
 on:
-  push:
-    branches:
-      - main
-      - dev
+  pull_request:
+    types:
+      - opened
+      - edited
     paths:
-      - 'dashfrog_python_sdk/*.py'
-      - 'dashfrog_python_sdk/tests'
-      - 'dashfrog_python_sdk/uv.lock'
-      - 'dashfrog_python_sdk/Dockerfile'
+      - 'backend/**.py'
+      - 'backend/uv.lock'
+      - 'backend/Dockerfile'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,27 +21,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version-file: "dashfrog_python_sdk/.python-version"
+          python-version-file: "backend/.python-version"
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-          working-directory: dashfrog_python_sdk
-          cache-suffix: "sdk"
+          cache-suffix: "backend"
       - name: Install the project
-        run: |
-          cd dashfrog_python_sdk
-          uv sync --locked --all-groups \
-            --extra aws \
-            --extra celery \
-            --extra console \
-            --extra demo \
-            --extra fastapi \
-            --extra flask \
-            --extra httpx \
-            --extra mongo \
-            --extra openai \
-            --extra sqlalchemy
+        run:  |
+          cd backend
+          uv sync --locked --all-groups --all-extras
 
   lint:
     runs-on: ubuntu-latest
@@ -52,15 +40,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version-file: "dashfrog_python_sdk/.python-version"
+          python-version-file: "backend/.python-version"
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-          working-directory: dashfrog_python_sdk
-          cache-suffix: "sdk"
+          cache-suffix: "backend"
       - name: Lint
-        run:  |
-          cd dashfrog_python_sdk
+        run: |
+          cd backend
           uv run pyright
           uv run ruff check
 
@@ -72,12 +59,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version-file: "dashfrog_python_sdk/.python-version"
+          python-version-file: "backend/.python-version"
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-          cache-suffix: "sdk"
+          cache-suffix: "backend"
       - name: Lint
         run: |
-          cd dashfrog_python_sdk
+          cd backend
           uv run bandit -c pyproject.toml -r .

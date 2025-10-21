@@ -1,9 +1,9 @@
 name: SDK branch deploy
 on:
-  push:
-    branches:
-      - main
-      - dev
+  pull_request:
+    types:
+      - opened
+      - edited
     paths:
       - 'dashfrog_python_sdk/*.py'
       - 'dashfrog_python_sdk/tests'
