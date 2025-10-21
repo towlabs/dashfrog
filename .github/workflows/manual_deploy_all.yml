@@ -1,0 +1,58 @@
+name: Backend branch deploy
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to add to the image'
+        type: string
+        required: true
+      push_as_latest:
+        description: 'Push build under latest tag if true'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAMESPACE: ${{ github.repository_owner }}
+      BACKEND_IMAGE_NAME: dashfrog/backend
+      COLLECTOR_IMAGE_NAME: dashfrog/collector
+      FRONTEND_IMAGE_NAME: dashfrog/frontend
+      TAG: ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build backend image
+        run: |
+          docker compose -f docker-compose.yml build
+      - name: Tag images
+        run: |
+          docker tag ${REGISTRY}/${IMAGE_NAMESPACE}/${BACKEND_IMAGE_NAME}:latest ${REGISTRY}/${IMAGE_NAMESPACE}/${BACKEND_IMAGE_NAME}:${TAG}
+          docker tag ${REGISTRY}/${IMAGE_NAMESPACE}/${COLLECTOR_IMAGE_NAME}:latest ${REGISTRY}/${IMAGE_NAMESPACE}/${COLLECTOR_IMAGE_NAME}:${TAG}
+          docker tag ${REGISTRY}/${IMAGE_NAMESPACE}/${FRONTEND_IMAGE_NAME}:latest ${REGISTRY}/${IMAGE_NAMESPACE}/${FRONTEND_IMAGE_NAME}:${TAG}
+
+      - name: Push images to GHCR
+        run: |
+          docker push ${REGISTRY}/${IMAGE_NAMESPACE}/${BACKEND_IMAGE_NAME}:${TAG}
+          docker push ${REGISTRY}/${IMAGE_NAMESPACE}/${COLLECTOR_IMAGE_NAME}:${TAG}
+          docker push ${REGISTRY}/${IMAGE_NAMESPACE}/${FRONTEND_IMAGE_NAME}:${TAG}
+      - name: Push images as latest to GHCR
+        if: ${{ inputs.push_as_latest }}
+        run: |
+          docker push ${REGISTRY}/${IMAGE_NAMESPACE}/${BACKEND_IMAGE_NAME}:latest
+          docker push ${REGISTRY}/${IMAGE_NAMESPACE}/${COLLECTOR_IMAGE_NAME}:latest
+          docker push ${REGISTRY}/${IMAGE_NAMESPACE}/${FRONTEND_IMAGE_NAME}:latest
