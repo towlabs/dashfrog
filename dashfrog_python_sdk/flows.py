@@ -260,7 +260,7 @@ class Step(BaseSpan):
 
                 _step.created_at = datetime.now(UTC)
             else:
-                src_step_id = str(current_baggage.get(f"current_{self._kind}_id"))
+                src_step_id = str(current_baggage.get(f"current_{self._kind}_id", ""))
 
                 _step = entities.Step(
                     id=shortuuid.uuid(),
