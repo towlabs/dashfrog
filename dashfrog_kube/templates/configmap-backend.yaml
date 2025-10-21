@@ -9,18 +9,22 @@ metadata:
 data:
   config.yaml: |
     env: {{ .Values.backend.config.env }}
+    release: {{ .Values.backend.config.release | quote }}
     click_house:
       database: {{ .Values.clickhouse.config.database }}
       host: {{ include "dashfrog_kube.fullname" . }}-clickhouse
       port: {{ .Values.clickhouse.config.port }}
       user: {{ .Values.clickhouse.config.user }}
       # Password will be provided via secret
-    postgresql:
+    psql:
       database: {{ .Values.postgresql.config.database }}
       host: {{ include "dashfrog_kube.fullname" . }}-postgresql
       port: {{ .Values.postgresql.config.port }}
       user: {{ .Values.postgresql.config.user }}
       # Password will be provided via secret
+    prometheus:
+      url: "http://{{ include "dashfrog_kube.fullname" . }}-prometheus:{{ .Values.prometheus.service.port }}"
+      disable_ssl: true
     logs:
       level: {{ .Values.backend.config.logs.level | quote }}
       activate_axiom: {{ .Values.backend.config.logs.activateAxiom }}

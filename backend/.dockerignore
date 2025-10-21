@@ -38,7 +38,7 @@ docs/
 http_requests/
 
 # Config (will be mounted as ConfigMap)
-config.yaml
+config/
 
 # Development
 .env

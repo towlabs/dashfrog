@@ -36,12 +36,12 @@ class Config(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_ignore_empty=True,
-        env_nested_delimiter=".",
+        env_nested_delimiter="__",
         env_parse_enums=True,
         extra="ignore",
         env_file=".env",
         json_file="config.json",
-        yaml_file="config.yaml",
+        yaml_file="config/config.yaml",
     )
 
     @classmethod

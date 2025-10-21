@@ -50,13 +50,21 @@ class Application(BaseApplication[Config]):
 
         self.clickhouse_client = clickhouse_connect.get_client(
             host=self.configuration.click_house.host,
+
+            port=self.configuration.click_house.port,
             user=self.configuration.click_house.user,
             password=self.configuration.click_house.password,
+            database=self.configuration.click_house.database,
             autogenerate_session_id=False,
         )
 
+        # Build PostgreSQL connection string with optional port
+        psql_host = self.configuration.psql.host
+        if self.configuration.psql.port:
+            psql_host = f"{psql_host}:{self.configuration.psql.port}"
+
         self.engine = create_async_engine(
-            f"postgresql+asyncpg://{self.configuration.psql.user}:{self.configuration.psql.password}@{self.configuration.psql.host}/{self.configuration.psql.database}",
+            f"postgresql+asyncpg://{self.configuration.psql.user}:{self.configuration.psql.password}@{psql_host}/{self.configuration.psql.database}",
             json_serializer=lambda x: orjson.dumps(x).decode(),
             json_deserializer=orjson.loads,
             echo=self.configuration.logs.log_libs,

@@ -40,14 +40,14 @@ spec:
             - name: RELEASE
               value: "{{ .Values.backend.config.release }}"
             {{- if .Values.clickhouse.enabled }}
-            - name: CLICKHOUSE_PASSWORD
+            - name: CLICK_HOUSE__PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "dashfrog_kube.fullname" . }}-secret
                   key: clickhouse-password
             {{- end }}
             {{- if .Values.postgresql.enabled }}
-            - name: POSTGRESQL_PASSWORD
+            - name: PSQL__PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "dashfrog_kube.fullname" . }}-secret

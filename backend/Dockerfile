@@ -31,10 +31,10 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 # Copy virtual environment from builder
 COPY --from=builder /app/.venv /app/.venv
 
-# Copy application code
+# Copy application code (excluding config directory from build context)
 COPY --from=builder /app /app
 
-# Create config directory and set ownership
+# Create empty config directory for ConfigMap mounting
 RUN mkdir -p /app/config && chown -R appuser:appuser /app
 
 # Switch to non-root user
