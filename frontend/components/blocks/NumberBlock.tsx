@@ -265,8 +265,6 @@ export const createNumberBlock = createReactBlockSpec(
 									/>
 								</div>
 
-								<Separator className="my-4" />
-
 								{/* Aggregation Section */}
 								<AggregationSettings
 									value={aggregation}
@@ -290,22 +288,15 @@ export const createNumberBlock = createReactBlockSpec(
 									}
 								/>
 
-								<Separator className="my-4" />
-
 								{/* Time Window Section */}
 								<div className="space-y-3">
-									<h3 className="text-sm font-medium text-muted-foreground">
-										Time Window
-									</h3>
-									<div className="space-y-1">
-										<label className="text-xs text-muted-foreground font-medium">
-											Exclude
-										</label>
-										<TimeWindowExclusionSelect
-											value={exclude as ExclusionType}
-											onChange={(v) => updateProps({ exclude: v })}
-										/>
-									</div>
+									<label className="text-xs text-muted-foreground font-medium">
+										Exclusions
+									</label>
+									<TimeWindowExclusionSelect
+										value={exclude as ExclusionType}
+										onChange={(v) => updateProps({ exclude: v })}
+									/>
 								</div>
 							</div>
 						</SheetContent>

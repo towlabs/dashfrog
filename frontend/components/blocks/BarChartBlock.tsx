@@ -325,7 +325,7 @@ export const createBarChartBlock = createReactBlockSpec(
 									<SheetTitle>Settings</SheetTitle>
 								</SheetHeader>
 							</div>
-							<div className="flex-1 overflow-y-auto p-6 space-y-6">
+							<div className="flex-1 overflow-y-auto p-6 space-y-3">
 								{/* Display Section */}
 								<div className="space-y-3">
 									<h3 className="text-sm font-medium text-muted-foreground">
@@ -454,45 +454,32 @@ export const createBarChartBlock = createReactBlockSpec(
 									/>
 								</div>
 
-								<Separator className="my-4" />
-
 								{/* Group Section */}
 								<div className="space-y-3">
-									<h3 className="text-sm font-medium text-muted-foreground">
-										Group
-									</h3>
-									<div className="space-y-1">
-										<label className="text-xs text-muted-foreground font-medium">
-											Split by
-										</label>
-										<MultiSelect
-											options={availableLabels.map((label: string) => ({
-												value: label,
-												label,
-											}))}
-											value={groupBy}
-											onChange={updateGroupBy}
-											placeholder="Select labels to group by..."
-											searchPlaceholder="Search labels..."
-										/>
-									</div>
+									<label className="text-xs text-muted-foreground font-medium">
+										Split by
+									</label>
+									<MultiSelect
+										options={availableLabels.map((label: string) => ({
+											value: label,
+											label,
+										}))}
+										value={groupBy}
+										onChange={updateGroupBy}
+										placeholder="Select labels to group by..."
+										searchPlaceholder="Search labels..."
+									/>
 								</div>
 
-								<Separator className="my-4" />
 								{/* Time Window Section */}
 								<div className="space-y-3">
-									<h3 className="text-sm font-medium text-muted-foreground">
-										Time Window
-									</h3>
-									<div className="space-y-1">
-										<label className="text-xs text-muted-foreground font-medium">
-											Exclude
-										</label>
-										<TimeWindowExclusionSelect
-											value={exclude as ExclusionType}
-											onChange={(v) => updateProps({ exclude: v })}
-										/>
-									</div>
+									<label className="text-xs text-muted-foreground font-medium">
+										Exclusions
+									</label>
+									<TimeWindowExclusionSelect
+										value={exclude as ExclusionType}
+										onChange={(v) => updateProps({ exclude: v })}
+									/>
 								</div>
 							</div>
 						</SheetContent>
