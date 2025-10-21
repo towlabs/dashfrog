@@ -1,6 +1,8 @@
 import Axios, { type AxiosError, type AxiosRequestConfig } from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://0.0.0.0:8080";
+// Use relative URL (empty string) to go through nginx proxy in production
+// Set VITE_API_URL in .env for local development (e.g., http://localhost:8080)
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 export type APIError = {
 	status: number;

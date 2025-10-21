@@ -240,8 +240,9 @@ frontend:
   # Frontend configuration
   config:
     port: 8080
-    # Backend API URL (will be passed as env var)
-    backendUrl: "http://dashfrog-backend:8080"
+    # Backend API URL (will be dynamically set to match backend service name)
+    # Format: http://<release-name>-backend:8080
+    backendUrl: ""  # Set dynamically in deployment template
 
   # Service configuration
   service:
