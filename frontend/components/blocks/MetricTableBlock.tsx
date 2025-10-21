@@ -1,11 +1,7 @@
 import { createReactBlockSpec } from "@blocknote/react";
+import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
-import {
-	type Filter,
-	MetricQueryBuilder,
-} from "@/components/MetricQueryBuilder";
-import type { Metric, Operation } from "@/components/MetricTypes";
-import { useTimeWindow } from "@/components/TimeWindowContext";
+import { MetricQueryBuilder } from "@/components/MetricQueryBuilder";
 import {
 	type ExclusionType,
 	TimeWindowExclusionSelect,
@@ -25,6 +21,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useTimeWindow } from "@/src/contexts/time-window";
+import type { Filter } from "@/src/types/filter";
+import type { Metric, MetricKind } from "@/src/types/metric";
 import { type Aggregation, AggregationSettings } from "./ChartSettingsItem";
 
 type MetricTableRow = {
@@ -62,50 +61,30 @@ export const createMetricTableBlock = createReactBlockSpec(
 	},
 	{
 		render: ({ block, editor }) => {
-			// Parse selectedMetric from JSON string
-			const parseSelectedMetric = (): Metric | null => {
+			// Memoize parsed values to prevent unnecessary re-parsing
+			const selectedMetricValue = React.useMemo(() => {
 				try {
 					const m = block.props.selectedMetric;
 					if (m && typeof m === "string") {
-						return JSON.parse(m) as Metric;
+						return JSON.parse(m) as Metric<MetricKind>;
 					}
 				} catch {}
 				return null;
-			};
+			}, [block.props.selectedMetric]);
 
-			// Parse filters from JSON string
-			const parseFilters = () => {
+			const filtersValue = React.useMemo(() => {
 				try {
 					const f = block.props.filters;
 					if (f && typeof f === "string") {
-						return JSON.parse(f);
+						return JSON.parse(f) as Filter[];
 					}
 				} catch {}
 				return [];
-			};
+			}, [block.props.filters]);
 
-			// Parse operation from JSON string
-			const parseOperation = (): Operation | null => {
-				try {
-					const op = block.props.operation;
-					if (op && typeof op === "string") {
-						return JSON.parse(op) as Operation;
-					}
-				} catch {}
-				return null;
-			};
+			const aggregation = (block.props.aggregation as Aggregation) || "";
 
-			const selectedMetricValue = parseSelectedMetric();
-			const filtersValue = parseFilters();
-			const selectedOperationValue = parseOperation();
-
-			const aggregation = block.props.aggregation as Aggregation | null;
-			const conditionTarget = block.props.conditionTarget || "value";
-			const conditionOp = block.props.conditionOp || "eq";
-			const conditionValue = block.props.conditionValue || "";
-			const conditionValue2 = block.props.conditionValue2 || "";
-
-			const parseGroupBy = (): string[] => {
+			const groupBy = React.useMemo(() => {
 				try {
 					const g = block.props.groupBy;
 					if (g && typeof g === "string") {
@@ -114,9 +93,7 @@ export const createMetricTableBlock = createReactBlockSpec(
 					}
 				} catch {}
 				return [];
-			};
-
-			const groupBy = parseGroupBy();
+			}, [block.props.groupBy]);
 			const exclude = block.props.exclude || "none";
 
 			// Access the time window from context
@@ -177,9 +154,11 @@ export const createMetricTableBlock = createReactBlockSpec(
 				if (propsOpen) {
 					setOpen(true);
 				}
-			}, [block.props]);
+			}, [block.props.open]);
 
 			// Memoize updateProps to prevent creating new function on every render
+			// Use block.id instead of block to avoid recreating on every BlockNote render
+			// biome-ignore lint/correctness/useExhaustiveDependencies: block is captured but we only want to recreate when block.id changes
 			const updateProps = useCallback(
 				(
 					next: Partial<{
@@ -200,7 +179,7 @@ export const createMetricTableBlock = createReactBlockSpec(
 						editor.updateBlock(block, { props: next });
 					});
 				},
-				[editor, block],
+				[editor, block.id],
 			);
 
 			const updateGroupBy = (labels: string[]) => {
@@ -212,8 +191,12 @@ export const createMetricTableBlock = createReactBlockSpec(
 
 			// Memoize callbacks to prevent infinite loops
 			const handleMetricChange = useCallback(
-				(metric: Metric | null) => {
-					updateProps({ selectedMetric: metric ? JSON.stringify(metric) : "" });
+				(metric: Metric<MetricKind> | null) => {
+					updateProps({
+						selectedMetric: metric ? JSON.stringify(metric) : "",
+						// Reset aggregation when metric changes since different kinds have different allowed aggregations
+						aggregation: "",
+					});
 				},
 				[updateProps],
 			);
@@ -221,15 +204,6 @@ export const createMetricTableBlock = createReactBlockSpec(
 			const handleFiltersChange = useCallback(
 				(filters: Filter[]) => {
 					updateProps({ filters: JSON.stringify(filters) });
-				},
-				[updateProps],
-			);
-
-			const handleOperationChange = useCallback(
-				(operation: Operation | null) => {
-					updateProps({
-						operation: operation ? JSON.stringify(operation) : "",
-					});
 				},
 				[updateProps],
 			);
@@ -291,32 +265,17 @@ export const createMetricTableBlock = createReactBlockSpec(
 									<MetricQueryBuilder
 										selectedMetric={selectedMetricValue}
 										onMetricChange={handleMetricChange}
-										selectedOperation={selectedOperationValue}
-										onOperationChange={handleOperationChange}
 										filters={filtersValue}
 										onFiltersChange={handleFiltersChange}
-										enableOperationSelector={false}
 									/>
 
-									<AggregationSettings
-										value={aggregation}
-										onChange={(value) => updateProps({ aggregation: value })}
-										conditionTarget={conditionTarget}
-										onConditionTargetChange={(v) =>
-											updateProps({ conditionTarget: v })
-										}
-										availableLabelTargets={availableLabels}
-										conditionOp={conditionOp}
-										onConditionOpChange={(v) => updateProps({ conditionOp: v })}
-										conditionValue={conditionValue}
-										onConditionValueChange={(v) =>
-											updateProps({ conditionValue: v })
-										}
-										conditionValue2={conditionValue2}
-										onConditionValue2Change={(v) =>
-											updateProps({ conditionValue2: v })
-										}
-									/>
+									{selectedMetricValue && (
+										<AggregationSettings
+											value={aggregation}
+											onChange={(value) => updateProps({ aggregation: value })}
+											metric={selectedMetricValue}
+										/>
+									)}
 								</div>
 
 								{/* Group Section */}
@@ -325,9 +284,9 @@ export const createMetricTableBlock = createReactBlockSpec(
 										Split by
 									</label>
 									<MultiSelect
-										options={availableLabels.map((label: string) => ({
+										options={availableLabels.map((label) => ({
 											value: label,
-											label,
+											label: label,
 										}))}
 										value={groupBy}
 										onChange={updateGroupBy}

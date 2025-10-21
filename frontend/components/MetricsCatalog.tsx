@@ -224,9 +224,25 @@ export function MetricsCatalog({
 		if (filters.length > 0) {
 			result = result.filter((_it) => {
 				return filters.every((f) => {
-					// This won't work correctly without proper label mapping
-					// TODO: Implement proper label filtering using label IDs
-					return true;
+					const val = it.labels?.[f.label] || "";
+					const cur = String(val);
+					switch (f.operator) {
+						case "equals":
+							return cur === f.value;
+						case "not_equals":
+							return cur !== f.value;
+						case "contains":
+							return cur.toLowerCase().includes(f.value.toLowerCase());
+						case "not_contains":
+							try {
+								const re = new RegExp(f.value);
+								return re.test(cur);
+							} catch {
+								return false;
+							}
+						default:
+							return true;
+					}
 				});
 			});
 		}
@@ -269,7 +285,9 @@ export function MetricsCatalog({
 
 	const handleMetricClick = (metric: MetricWithRules) => {
 		setSelectedMetric(metric);
-		setMetricHistory(generateMetricHistory(metric.displayAs, metric.thresholds));
+		setMetricHistory(
+			generateMetricHistory(metric.displayAs, metric.thresholds),
+		);
 		setIsMetricSheetOpen(true);
 	};
 

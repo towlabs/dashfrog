@@ -7,8 +7,8 @@ import {
 	useState,
 } from "react";
 import { Events, processEvents, toEvent } from "@/src/services/api/events";
-import type { ApiFilter } from "@/src/types/filter";
 import type { Event, EventCreateInput, EventsStore } from "@/src/types/event";
+import type { ApiFilter } from "@/src/types/filter";
 
 interface EventsContextType {
 	events: EventsStore;

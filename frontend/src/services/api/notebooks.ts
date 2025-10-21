@@ -1,8 +1,8 @@
 import type { Block } from "@blocknote/core";
 import { NewRestAPI } from "@/src/services/api/_helper";
 import type {
-	NotebookData,
 	NotebookCreateInput,
+	NotebookData,
 	NotebookUpdateInput,
 	TimeWindowConfig,
 } from "@/src/types/notebook";
@@ -307,9 +307,12 @@ const Blocks = {
 	 * Returns blocks in BlockNote format
 	 */
 	getAll: async (notebookId: string) => {
-		const response = await NotebooksAPI.get<BlocksApiResponse>(`notes/${notebookId}/blocks/`, {
-			meta: { action: "fetch", resource: "blocks" },
-		});
+		const response = await NotebooksAPI.get<BlocksApiResponse>(
+			`notes/${notebookId}/blocks/`,
+			{
+				meta: { action: "fetch", resource: "blocks" },
+			},
+		);
 
 		// Transform backend blocks to BlockNote format
 		return {
@@ -325,10 +328,13 @@ const Blocks = {
 	create: async (notebookId: string, block: Block, position: number) => {
 		const payload = blockToApiPayload(block, position);
 
-		const response = await NotebooksAPI.post<BlockApiResponse>(`notes/${notebookId}/blocks/`, {
-			data: payload,
-			meta: { action: "create", resource: "block" },
-		});
+		const response = await NotebooksAPI.post<BlockApiResponse>(
+			`notes/${notebookId}/blocks/`,
+			{
+				data: payload,
+				meta: { action: "create", resource: "block" },
+			},
+		);
 
 		// Transform response back to BlockNote format
 		return {
@@ -341,7 +347,12 @@ const Blocks = {
 	 * Update an existing block
 	 * Accepts BlockNote block and transforms it for the backend
 	 */
-	update: async (notebookId: string, blockId: string, block: Block, position: number) => {
+	update: async (
+		notebookId: string,
+		blockId: string,
+		block: Block,
+		position: number,
+	) => {
 		const payload = blockToApiPayload(block, position);
 
 		const response = await NotebooksAPI.put<BlockApiResponse>(
@@ -382,7 +393,9 @@ const Blocks = {
 		blocks: Array<Block & { position: number }>,
 	) => {
 		// Transform BlockNote blocks to backend format
-		const payload = blocks.map((block) => blockToApiPayload(block, block.position));
+		const payload = blocks.map((block) =>
+			blockToApiPayload(block, block.position),
+		);
 
 		const response = await NotebooksAPI.put<BlocksApiResponse>(
 			`notes/${notebookId}/blocks/batch/`,

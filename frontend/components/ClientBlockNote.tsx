@@ -52,7 +52,7 @@ import { WorkflowStatusMapSettingsItem } from "@/components/blocks/WorkflowStatu
 import {
 	type TimeWindow,
 	TimeWindowProvider,
-} from "@/components/TimeWindowContext";
+} from "@/src/contexts/time-window";
 import { blockNoteStorage } from "@/src/services/api/blocknote";
 
 interface ClientBlockNoteProps {
@@ -149,7 +149,6 @@ export default function ClientBlockNote({
 				// Replace all blocks with saved content
 				editor.replaceBlocks(editor.document, contentToLoad);
 			} else {
-				console.log("No saved content, using empty document");
 				// Clear to a single empty paragraph if no saved content
 				editor.replaceBlocks(editor.document, [{ type: "paragraph" }]);
 			}

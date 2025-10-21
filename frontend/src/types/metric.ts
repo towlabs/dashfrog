@@ -12,7 +12,7 @@
  * Metric types (matches backend Kind enum)
  * other comes from OTEL direct metrics not managed by SDK
  */
-export type MetricKind = "counter" | "measure" | "stats" | "other";
+export type MetricKind = "events" | "values" | "distribution";
 
 /**
  * custom is used to indicate that metrics comes for user.
@@ -20,27 +20,27 @@ export type MetricKind = "counter" | "measure" | "stats" | "other";
  * that don't match any supported scope.
  */
 export type MetricScope =
-    | "api"
-    | "tasks"
-    | "workflow"
-    | "custom"
-    | "UNKNOW"
-    | string;
+	| "api"
+	| "tasks"
+	| "workflow"
+	| "custom"
+	| "UNKNOW"
+	| string;
 
 export type MetricUnits =
-    | "seconds"
-    | "milliseconds"
-    | "microseconds"
-    | "nanoseconds"
-    | "bytes"
-    | "kilobytes"
-    | "megabytes"
-    | "gigabytes"
-    | "ratio"
-    | "percent"
-    | "count"
-    | "requests"
-    | string;
+	| "seconds"
+	| "milliseconds"
+	| "microseconds"
+	| "nanoseconds"
+	| "bytes"
+	| "kilobytes"
+	| "megabytes"
+	| "gigabytes"
+	| "ratio"
+	| "percent"
+	| "count"
+	| "requests"
+	| string;
 
 /**
  * Metric data structure (JavaScript conventions)
@@ -48,25 +48,27 @@ export type MetricUnits =
  * This is the canonical metric type used throughout the application.
  * API services convert backend responses to this format.
  */
-export interface Metric {
-    /** Unique identifier for the metric */
-    id: number;
-    /** Metric key/name as it appears in the system */
-    key: string;
-    /** Type of metric (counter, gauge, etc.) */
-    kind: MetricKind;
-    /** Scope of the metric (common: api, tasks, workflow) */
-    scope: MetricScope;
-    /** Unit of measurement (e.g., bytes, seconds, count) */
-    unit: MetricUnits;
-    /** Human-readable display name for the metric */
-    displayAs: string;
-    /** Description explaining what this metric measures */
-    description: string;
-    /** List of identifiers associated with this metric */
-    associatedIdentifiers: string[];
-    /** List of label IDs attached to this metric */
-    labels: number[];
+export interface Metric<KindT extends MetricKind = MetricKind> {
+	/** Unique metric ID from backend */
+	id: number;
+	/** Metric key/name as it appears in the system */
+	key: string;
+	/** Type of metric (counter, gauge, etc.) */
+	kind: KindT;
+	/** Scope of the metric (common: api, tasks, workflow) */
+	scope: MetricScope;
+	/** Unit of measurement (e.g., bytes, seconds, count) */
+	unit: MetricUnits;
+	/** Human-readable display name for the metric */
+	displayAs: string;
+	/** Description explaining what this metric measures */
+	description: string;
+	/** Prometheus name of the metric */
+	prometheusName: string;
+	/** List of associated identifiers */
+	prometheusMetricName: string;
+	/** List of label names */
+	labels: string[];
 }
 
 /**
@@ -74,5 +76,38 @@ export interface Metric {
  * Maps metric IDs to their data
  */
 export interface MetricsStore {
-    [metricId: number]: Metric;
+	[metricId: number]: Metric<MetricKind>;
 }
+
+/**
+ * Aggregation functions for metrics
+ */
+export type Aggregation =
+	| "avg"
+	| "min"
+	| "max"
+	| "sum"
+	| "p50"
+	| "p90"
+	| "p95"
+	| "p99";
+
+/**
+ * Type-level mapping from metric kind to allowed aggregation type
+ */
+type KindAggregationMap = {
+	events: "sum";
+	values: "avg" | "min" | "max";
+	distribution: "p50" | "p90" | "p95" | "p99";
+};
+
+export type AggregationForKind<K extends MetricKind> = KindAggregationMap[K];
+
+/**
+ * Runtime mapping of allowed aggregations for each kind
+ */
+export const allowedAggregationsByKind: Record<MetricKind, Aggregation[]> = {
+	events: ["sum"],
+	values: ["avg", "min", "max"],
+	distribution: ["p50", "p90", "p95", "p99"],
+};

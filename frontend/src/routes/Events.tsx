@@ -1,3 +1,4 @@
+import type { BlockNoteEditor } from "@blocknote/core";
 import { addDays, format } from "date-fns";
 import {
 	AlertCircle,
@@ -16,7 +17,6 @@ import {
 	X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { BlockNoteEditor } from "@blocknote/core";
 
 import ClientBlockNote from "@/components/ClientBlockNote";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
@@ -43,11 +43,11 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { blockNoteStorage } from "@/src/services/api/blocknote";
 import { useEvents } from "@/src/contexts/events";
 import { useLabels } from "@/src/contexts/labels";
-import type { ApiFilter, Filter } from "@/src/types/filter";
+import { blockNoteStorage } from "@/src/services/api/blocknote";
 import type { Event, EventKind } from "@/src/types/event";
+import type { ApiFilter, Filter } from "@/src/types/filter";
 
 interface StatusData {
 	date: Date;
@@ -87,7 +87,9 @@ const generateStatusData = (startOfWeek: Date, realEvents: Event[]) => {
 				let status = "operational";
 				if (overlappingEvents.length > 0) {
 					// If there are multiple events, prioritize incidents over maintenance
-					const hasIncident = overlappingEvents.some((e) => e.kind === "incident");
+					const hasIncident = overlappingEvents.some(
+						(e) => e.kind === "incident",
+					);
 					status = hasIncident ? "incident" : "maintenance";
 				} else if (isFuture) {
 					// No events and it's in the future
@@ -133,7 +135,14 @@ const getWeekStart = (date: Date) => {
 };
 
 export default function EventsPage() {
-	const { events: eventsStore, loading, error, refreshEvents, createEvent, updateEvent } = useEvents();
+	const {
+		events: eventsStore,
+		loading,
+		error,
+		refreshEvents,
+		createEvent,
+		updateEvent,
+	} = useEvents();
 	const { labels: labelsStore } = useLabels();
 	const [weekStart, setWeekStart] = useState<Date>(getWeekStart(new Date()));
 	const [filters, setFilters] = useState<Filter[]>([]);
@@ -141,7 +150,10 @@ export default function EventsPage() {
 	// Convert events store to array
 	const eventsArray = useMemo(() => Object.values(eventsStore), [eventsStore]);
 
-	const statusData = useMemo(() => generateStatusData(weekStart, eventsArray), [weekStart, eventsArray]);
+	const statusData = useMemo(
+		() => generateStatusData(weekStart, eventsArray),
+		[weekStart, eventsArray],
+	);
 	const [selectedDay, setSelectedDay] = useState<StatusData | null>(null);
 	const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 	const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -270,10 +282,11 @@ export default function EventsPage() {
 			if (editorRef.current) {
 				const editorContent = editorRef.current.document;
 				// Only send description if there's actual content (not just empty paragraph)
-				const hasContent = editorContent.length > 1 ||
+				const hasContent =
+					editorContent.length > 1 ||
 					(editorContent.length === 1 &&
-					 editorContent[0].type !== "paragraph" ||
-					 (editorContent[0].content && editorContent[0].content.length > 0));
+						editorContent[0].type !== "paragraph") ||
+					(editorContent[0].content && editorContent[0].content.length > 0);
 
 				if (hasContent) {
 					descriptionJson = JSON.stringify(editorContent);
@@ -330,14 +343,21 @@ export default function EventsPage() {
 			setEventTitle(firstEvent?.title || "");
 
 			// Parse start/end times from the event
-			const eventStart = firstEvent ? new Date(firstEvent.startedAt) : new Date(day.date);
-			const eventEnd = firstEvent ? new Date(firstEvent.endedAt) : new Date(day.date.getTime() + 60 * 60 * 1000);
+			const eventStart = firstEvent
+				? new Date(firstEvent.startedAt)
+				: new Date(day.date);
+			const eventEnd = firstEvent
+				? new Date(firstEvent.endedAt)
+				: new Date(day.date.getTime() + 60 * 60 * 1000);
 
 			setEventStartDate(eventStart);
 			setEventEndDate(eventEnd);
 			setEventStartTime(eventStart.toTimeString().slice(0, 5));
 			setEventEndTime(eventEnd.toTimeString().slice(0, 5));
-			setEventType(firstEvent?.kind || (day.status === "maintenance" ? "maintenance" : "incident"));
+			setEventType(
+				firstEvent?.kind ||
+					(day.status === "maintenance" ? "maintenance" : "incident"),
+			);
 
 			// Convert event labels to local format
 			const labelsList = firstEvent?.labels
@@ -500,94 +520,94 @@ export default function EventsPage() {
 							</CardContent>
 						</Card>
 					) : (
-					<Card>
-						<CardContent className="pt-6">
-							<div className="space-y-3">
-								{/* Legend */}
-								<div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-									<div className="flex items-center space-x-4">
-										<div className="flex items-center space-x-1">
-											<div
-												className="w-3 h-3 rounded-sm"
-												style={{ backgroundColor: "#addf7d" }}
-											></div>
-											<span>Normal</span>
-										</div>
-										<div className="flex items-center space-x-1">
-											<div
-												className="w-3 h-3 rounded-sm"
-												style={{ backgroundColor: "#e56458" }}
-											></div>
-											<span>Incident</span>
-										</div>
-										<div className="flex items-center space-x-1">
-											<div
-												className="w-3 h-3 rounded-sm"
-												style={{ backgroundColor: "#2783de" }}
-											></div>
-											<span>Planned Maintenance</span>
+						<Card>
+							<CardContent className="pt-6">
+								<div className="space-y-3">
+									{/* Legend */}
+									<div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
+										<div className="flex items-center space-x-4">
+											<div className="flex items-center space-x-1">
+												<div
+													className="w-3 h-3 rounded-sm"
+													style={{ backgroundColor: "#addf7d" }}
+												></div>
+												<span>Normal</span>
+											</div>
+											<div className="flex items-center space-x-1">
+												<div
+													className="w-3 h-3 rounded-sm"
+													style={{ backgroundColor: "#e56458" }}
+												></div>
+												<span>Incident</span>
+											</div>
+											<div className="flex items-center space-x-1">
+												<div
+													className="w-3 h-3 rounded-sm"
+													style={{ backgroundColor: "#2783de" }}
+												></div>
+												<span>Planned Maintenance</span>
+											</div>
 										</div>
 									</div>
-								</div>
 
-								{/* Hour markers */}
-								<div className="flex gap-0.5 w-full mb-2">
-									<div className="w-20 flex-shrink-0"></div>{" "}
-									{/* Space for day labels */}
-									{Array.from({ length: 24 }, (_, hour) => (
-										<div key={hour} className="flex gap-0.5">
-											{Array.from({ length: 6 }, (_, interval) => (
-												<div
-													key={interval}
-													className="flex-1"
-													style={{ minWidth: "2px" }}
-												>
-													{interval === 0 && (
-														<span className="text-xs text-muted-foreground">
-															{hour.toString().padStart(2, "0")}
-														</span>
-													)}
-												</div>
-											))}
+									{/* Hour markers */}
+									<div className="flex gap-0.5 w-full mb-2">
+										<div className="w-20 flex-shrink-0"></div>{" "}
+										{/* Space for day labels */}
+										{Array.from({ length: 24 }, (_, hour) => (
+											<div key={hour} className="flex gap-0.5">
+												{Array.from({ length: 6 }, (_, interval) => (
+													<div
+														key={interval}
+														className="flex-1"
+														style={{ minWidth: "2px" }}
+													>
+														{interval === 0 && (
+															<span className="text-xs text-muted-foreground">
+																{hour.toString().padStart(2, "0")}
+															</span>
+														)}
+													</div>
+												))}
+											</div>
+										))}
+									</div>
+
+									{/* Status bars - one row per day of week */}
+									{[
+										"Sunday",
+										"Monday",
+										"Tuesday",
+										"Wednesday",
+										"Thursday",
+										"Friday",
+										"Saturday",
+									].map((dayName, dayIndex) => (
+										<div key={dayName} className="flex items-center gap-2">
+											<div className="w-20 flex-shrink-0 text-xs text-muted-foreground font-medium">
+												{dayName}
+											</div>
+											<div className="flex gap-0.5 w-full">
+												{statusData
+													.filter((day) => day.date.getDay() === dayIndex)
+													.map((day, index) => (
+														<div
+															key={index}
+															className={`h-8 flex-1 rounded-sm cursor-pointer transition-opacity hover:opacity-80 ${
+																statusColors[
+																	day.status as keyof typeof statusColors
+																]
+															}`}
+															onClick={() => handleDayClick(day)}
+															style={{ minWidth: "2px" }}
+														/>
+													))}
+											</div>
 										</div>
 									))}
 								</div>
-
-								{/* Status bars - one row per day of week */}
-								{[
-									"Sunday",
-									"Monday",
-									"Tuesday",
-									"Wednesday",
-									"Thursday",
-									"Friday",
-									"Saturday",
-								].map((dayName, dayIndex) => (
-									<div key={dayName} className="flex items-center gap-2">
-										<div className="w-20 flex-shrink-0 text-xs text-muted-foreground font-medium">
-											{dayName}
-										</div>
-										<div className="flex gap-0.5 w-full">
-											{statusData
-												.filter((day) => day.date.getDay() === dayIndex)
-												.map((day, index) => (
-													<div
-														key={index}
-														className={`h-8 flex-1 rounded-sm cursor-pointer transition-opacity hover:opacity-80 ${
-															statusColors[
-																day.status as keyof typeof statusColors
-															]
-														}`}
-														onClick={() => handleDayClick(day)}
-														style={{ minWidth: "2px" }}
-													/>
-												))}
-										</div>
-									</div>
-								))}
-							</div>
-						</CardContent>
-					</Card>
+							</CardContent>
+						</Card>
 					)}
 				</div>
 			</div>
@@ -651,7 +671,10 @@ export default function EventsPage() {
 											>
 												<div className="flex justify-between items-start">
 													<h5 className="font-medium text-sm">{event.title}</h5>
-													<Badge variant="outline" className="text-xs capitalize">
+													<Badge
+														variant="outline"
+														className="text-xs capitalize"
+													>
 														{event.kind}
 													</Badge>
 												</div>
@@ -660,11 +683,17 @@ export default function EventsPage() {
 												</p>
 												{Object.keys(event.labels).length > 0 && (
 													<div className="flex gap-1 flex-wrap mt-2">
-														{Object.entries(event.labels).map(([key, value]) => (
-															<Badge key={key} variant="secondary" className="text-xs">
-																{key}: {value}
-															</Badge>
-														))}
+														{Object.entries(event.labels).map(
+															([key, value]) => (
+																<Badge
+																	key={key}
+																	variant="secondary"
+																	className="text-xs"
+																>
+																	{key}: {value}
+																</Badge>
+															),
+														)}
 													</div>
 												)}
 											</div>
@@ -917,7 +946,9 @@ export default function EventsPage() {
 														{/* Key Input */}
 														<Input
 															value={label.key}
-															onChange={(e) => updateLabelKey(label.id, e.target.value)}
+															onChange={(e) =>
+																updateLabelKey(label.id, e.target.value)
+															}
 															onBlur={(e) => {
 																if (!e.target.value.trim()) {
 																	removeLabel(label.id);
@@ -931,9 +962,14 @@ export default function EventsPage() {
 														{/* Value Input */}
 														<Input
 															value={label.value}
-															onChange={(e) => updateLabelValue(label.id, e.target.value)}
+															onChange={(e) =>
+																updateLabelValue(label.id, e.target.value)
+															}
 															onBlur={(e) => {
-																if (!e.target.value.trim() && !label.key.trim()) {
+																if (
+																	!e.target.value.trim() &&
+																	!label.key.trim()
+																) {
 																	removeLabel(label.id);
 																}
 															}}
@@ -971,13 +1007,19 @@ export default function EventsPage() {
 
 								{/* Rich Text Editor */}
 								<div className="min-h-[400px] mb-4">
-									<div className="text-sm text-muted-foreground mb-2">Description</div>
+									<div className="text-sm text-muted-foreground mb-2">
+										Description
+									</div>
 									<ClientBlockNote
 										timeWindow={{
 											start: eventStartDate || new Date(),
 											end: eventEndDate || new Date(),
 										}}
-										blockNoteId={editingEventId ? `event-${editingEventId}` : `event-new-${selectedDay?.date.toISOString() || "new"}`}
+										blockNoteId={
+											editingEventId
+												? `event-${editingEventId}`
+												: `event-new-${selectedDay?.date.toISOString() || "new"}`
+										}
 										onEditorReady={(editor) => {
 											editorRef.current = editor;
 										}}
@@ -999,8 +1041,10 @@ export default function EventsPage() {
 												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
 												{editingEventId ? "Updating..." : "Saving..."}
 											</>
+										) : editingEventId ? (
+											"Update Event"
 										) : (
-											editingEventId ? "Update Event" : "Save Event"
+											"Save Event"
 										)}
 									</Button>
 								</div>
@@ -1013,9 +1057,7 @@ export default function EventsPage() {
 			{/* Alert Dialog */}
 			<Dialog
 				open={alertDialog.open}
-				onOpenChange={(open) =>
-					setAlertDialog({ ...alertDialog, open })
-				}
+				onOpenChange={(open) => setAlertDialog({ ...alertDialog, open })}
 			>
 				<DialogContent className="sm:max-w-md">
 					<DialogHeader>
@@ -1045,9 +1087,7 @@ export default function EventsPage() {
 					</div>
 					<div className="flex justify-end gap-2">
 						<Button
-							onClick={() =>
-								setAlertDialog({ ...alertDialog, open: false })
-							}
+							onClick={() => setAlertDialog({ ...alertDialog, open: false })}
 						>
 							OK
 						</Button>

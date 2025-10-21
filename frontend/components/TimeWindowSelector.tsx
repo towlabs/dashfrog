@@ -17,8 +17,8 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import type { RelativeTimeValue, TimeWindowConfig } from "@/lib/notebook-types";
 import { cn } from "@/lib/utils";
+import type { RelativeTimeValue, TimeWindowConfig } from "@/src/types/notebook";
 
 export type TimeWindow = {
 	start: Date;

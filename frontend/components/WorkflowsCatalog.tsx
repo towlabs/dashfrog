@@ -201,7 +201,10 @@ export function WorkflowsCatalog({
 				if (Array.isArray(response.data)) {
 					setFlows(response.data);
 				} else {
-					console.error("Expected array from Flows.latest but got:", response.data);
+					console.error(
+						"Expected array from Flows.latest but got:",
+						response.data,
+					);
 					setFlows([]);
 				}
 			} catch (err) {
@@ -230,7 +233,7 @@ export function WorkflowsCatalog({
 				).map(([key, value]) => ({
 					key,
 					value: String(value),
-					operator: "=",
+					operator: "equals",
 					is_label: true,
 				}));
 
@@ -267,7 +270,7 @@ export function WorkflowsCatalog({
 				([key, value]) => ({
 					key,
 					value: String(value),
-					operator: "=",
+					operator: "equals",
 					is_label: true,
 				}),
 			);
@@ -368,7 +371,7 @@ export function WorkflowsCatalog({
 				([key, value]) => ({
 					key,
 					value: String(value),
-					operator: "=",
+					operator: "equals",
 					is_label: true,
 				}),
 			);
@@ -422,13 +425,13 @@ export function WorkflowsCatalog({
 		e.stopPropagation();
 
 		const existingFilter = filters.find(
-			(f) => f.label === key && f.value === value && f.operator === "=",
+			(f) => f.label === key && f.value === value && f.operator === "equals",
 		);
 		if (existingFilter) {
 			return;
 		}
 
-		const newFilter: Filter = { label: key, operator: "=", value };
+		const newFilter: Filter = { label: key, operator: "equals", value };
 
 		onFiltersChange([...filters, newFilter]);
 	};
@@ -501,7 +504,8 @@ export function WorkflowsCatalog({
 													onClick={(e) => handleLabelClick(e, key, value)}
 													title={`${key}: ${value}`}
 												>
-													{getLabelDisplayName(key)}: {getDisplayValue(key, value)}
+													{getLabelDisplayName(key)}:{" "}
+													{getDisplayValue(key, value)}
 												</span>
 											))}
 										</div>
@@ -563,7 +567,8 @@ export function WorkflowsCatalog({
 													className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
 													onClick={(e) => handleLabelClick(e, key, value)}
 												>
-													{getLabelDisplayName(key)}: {getDisplayValue(key, value)}
+													{getLabelDisplayName(key)}:{" "}
+													{getDisplayValue(key, value)}
 												</span>
 											),
 										)}
