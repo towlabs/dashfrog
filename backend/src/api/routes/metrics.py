@@ -14,7 +14,7 @@ class _Query(BaseModel):
 
 
 class Metrics:
-    __uc = usecases.Metrics
+    __uc: usecases.Metrics
 
     ep = APIRouter(prefix="/metrics", tags=["metrics"])
 

@@ -16,7 +16,11 @@ from src.domain.entities import (
 
 class Labels:
     def __init__(
-        self, store: LabelsStore, metrics: MetricsStore, session_maker: AsyncSessionMaker, logger: BoundLogger
+        self,
+        store: LabelsStore,
+        metrics: MetricsStore,
+        session_maker: AsyncSessionMaker,
+        logger: BoundLogger,
     ):
         self.__log = logger.bind(name="usecases.Labels")
         self.__labels = store
@@ -65,7 +69,11 @@ class Labels:
 
             existing_metrics = {metric.key: metric.id for metric in (await self.__metrics.list())}
 
-            await self.__process_labels(existing_labels, self.__labels.list_workflow_labels(), LabelSrcKind.workflow)
+            await self.__process_labels(
+                existing_labels,
+                self.__labels.list_workflow_labels(),
+                LabelSrcKind.workflow,
+            )
             await self.__process_labels(
                 existing_labels,
                 self.__labels.list_metrics_labels(),
@@ -76,7 +84,11 @@ class Labels:
         log.debug("Success !")
 
     async def __process_labels(
-        self, existing_labels, labels, kind: LabelSrcKind, existing_metrics: None | dict[str, int] = None
+        self,
+        existing_labels,
+        labels,
+        kind: LabelSrcKind,
+        existing_metrics: None | dict[str, int] = None,
     ):
         if kind == LabelSrcKind.metrics and existing_metrics is None:
             self.__log.error("No existing metrics found for processing metrics labels!")
@@ -91,7 +103,10 @@ class Labels:
 
             if kind == LabelSrcKind.metrics:
                 detected_used_ins = [
-                    Label.Usage(used_in=existing_metrics[used_in], kind=kind)
+                    Label.Usage(
+                        used_in=existing_metrics[used_in],  # type: ignore[reportOptionalSubscript]
+                        kind=kind,
+                    )
                     for used_in in label_data["used_in"]
                     if used_in not in existing_labels.get(label_key, {}).get("used_by", [])
                     and used_in in existing_metrics

@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Request
 
-from api.payloads import ResponsesDefinition
-from domain import usecases
-from domain.entities import Step
+from src.api.payloads import ResponsesDefinition
 from src.core.context import context
+from src.domain import usecases
+from src.domain.entities import Step
 
 
 class Steps:
-    __uc = usecases.Steps
+    __uc: usecases.Steps
 
     ep = APIRouter(prefix="/flows/{name}/{trace_id}/steps", tags=["flows", "steps"])
 

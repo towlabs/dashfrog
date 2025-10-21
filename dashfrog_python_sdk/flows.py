@@ -38,7 +38,7 @@ class BaseSpan(AbstractContextManager):
         auto_end: bool = True,
     ) -> None:
         entity.labels = {key: str(val) for key, val in entity.labels.items()}
-        self.name = entity.name
+        self.name = entity.name or ""
         self.identifier = identifier
         self.initialized = initialized
 
@@ -88,9 +88,7 @@ class BaseSpan(AbstractContextManager):
             if self.__entity.started_at is None:
                 self.__entity.started_at = datetime.now(UTC)
 
-            ctx = baggage.set_baggage(
-                f"current_{self._kind}_started_at", self.__entity.started_at
-            )
+            ctx = baggage.set_baggage(f"current_{self._kind}_started_at", self.__entity.started_at)
             self.__ctx_token = self.__ctx_token or context.attach(ctx)
             self.__entity.status = entities.Status.UNSET
             self._store.insert(self.__entity)
@@ -105,25 +103,20 @@ class BaseSpan(AbstractContextManager):
         traceback: TracebackType | None,
     ):
         """Raise any exception triggered within the runtime context."""
-        logger = get_logger(
-            kind=self._kind, name=self.name, attached_context=baggage.get_all()
-        )
+        logger = get_logger(kind=self._kind, name=self.name, attached_context=baggage.get_all())
 
         if self.__auto_end or exc_value is not None:
             self.__entity.ended_at = datetime.now(UTC)
             if self.__entity.started_at:
                 self.__entity.duration = int(
                     (
-                        time.Converts.to_utc(self.__entity.ended_at)
-                        - time.Converts.to_utc(self.__entity.started_at)
+                        time.Converts.to_utc(self.__entity.ended_at) - time.Converts.to_utc(self.__entity.started_at)
                     ).total_seconds()
                     * 1000
                 )
 
             if exc_value is not None:
-                logger.error(
-                    f"ending object {self._kind}::{self.name} with error"
-                )  # , exc_info=exc_value)
+                logger.error(f"ending object {self._kind}::{self.name} with error")  # , exc_info=exc_value)
                 self.__entity.status = entities.Status.FAILED
                 self.__entity.status_message = str(exc_value)
             else:
@@ -150,9 +143,7 @@ class BaseSpan(AbstractContextManager):
                 get_step_duration().record(self.__entity.duration, step=self.name)
         if self._kind == "flow":
             if self.__entity.status:
-                get_workflow_status().record(
-                    1, status=self.__entity.status, flow=self.name
-                )
+                get_workflow_status().record(1, status=self.__entity.status, flow=self.name)
             if self.__entity.duration is not None:
                 get_workflow_duration().record(self.__entity.duration, flow=self.name)
 
@@ -181,9 +172,7 @@ class Flow(BaseSpan):
             trace_id = str(span.get_span_context().trace_id)
 
             if from_context:
-                started_at = current_baggage.get(
-                    f"current_{Flow._kind}_started_at", None
-                )
+                started_at = str(current_baggage.get(f"current_{Flow._kind}_started_at", None))
                 if started_at:
                     started_at = datetime.fromisoformat(started_at)
 
@@ -228,9 +217,7 @@ class Flow(BaseSpan):
         )
 
     @contextmanager
-    def step(
-        self, name: str, description: str | None = None, **labels
-    ) -> Generator["Step", None, None]:
+    def step(self, name: str, description: str | None = None, **labels) -> Generator["Step", None, None]:
         """Start a child flow"""
 
         with Step(name, description, **labels) as step:
@@ -258,9 +245,7 @@ class Step(BaseSpan):
             src_flow = str(current_baggage.get(f"current_{Flow._kind}_id"))
 
             if from_context:
-                started_at = current_baggage.get(
-                    f"current_{Flow._kind}_started_at", None
-                )
+                started_at = str(current_baggage.get(f"current_{Flow._kind}_started_at", None))
                 if started_at:
                     started_at = datetime.fromisoformat(started_at)
                 _step = entities.Step(
@@ -274,7 +259,7 @@ class Step(BaseSpan):
 
                 _step.created_at = datetime.now(UTC)
             else:
-                src_step_id = current_baggage.get(f"current_{self._kind}_id")
+                src_step_id = str(current_baggage.get(f"current_{self._kind}_id"))
 
                 _step = entities.Step(
                     id=shortuuid.uuid(),
@@ -285,6 +270,7 @@ class Step(BaseSpan):
                     status=entities.Status.WAITING,
                     trace_id=trace_id,
                     labels=labels,
+                    created_at=datetime.now(UTC),
                 )
 
             return _step

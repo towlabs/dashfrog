@@ -17,6 +17,7 @@ class Status(str, Enum):
 
 
 class Base(BaseModel):
+    name: str | None = None
     description: str | None = None
     labels: dict[str, LabelValue] = Field(default_factory=dict)
 
@@ -38,7 +39,7 @@ class Base(BaseModel):
 
 class Flow(Base):
     service_name: str | None = None
-    name: str
+    name: str  # type: ignore[reportIncompatibleVariableOverride] str | None becomes str witch is incompatible but stricter so does not lead to any issues.
 
     @property
     def identifier(self) -> str:
@@ -48,7 +49,6 @@ class Flow(Base):
 class Step(Base):
     id: str
 
-    name: str | None = None
     parent_id: str | None = None
     for_flow: str
 

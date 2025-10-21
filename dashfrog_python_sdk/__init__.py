@@ -5,7 +5,6 @@ Doc module ?
 from logging import DEBUG
 
 import structlog
-from structlog.processors import CallsiteParameter
 
 from .core import Config
 from .dashfrog import DashFrog
@@ -29,5 +28,5 @@ structlog.configure(
     cache_logger_on_first_use=False,
 )
 
-__all__ = ["DashFrog", "Config", "Flow"]
+__all__ = ["DashFrog", "Config", "Flow", "MetricKind"]
 __version__ = "0.1.0"

@@ -30,7 +30,17 @@ jobs:
       - name: Install the project
         run: |
           cd dashfrog_python_sdk
-          uv sync --locked --all-groups --all-extras
+          uv sync --locked --all-groups \
+            --extra aws \
+            --extra celery \
+            --extra console \
+            --extra demo \
+            --extra fastapi \
+            --extra flask \
+            --extra httpx \
+            --extra mongo \
+            --extra openai \
+            --extra sqlalchemy
 
   lint:
     runs-on: ubuntu-latest

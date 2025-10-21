@@ -50,7 +50,7 @@ class Flows(AbstractStore):
         WHERE trace_id = %(trace_id)s AND name = %(identifier)s
         GROUP BY name, trace_id
         LIMIT 1
-        """,
+        """, # nosec B608: _fields comes from internal code-only source, not user input
             parameters={"identifier": identifier, "trace_id": trace_id},
         )
 
@@ -90,7 +90,7 @@ class Steps(AbstractStore):
         WHERE trace_id = %(trace_id)s AND id = %(identifier)s
         GROUP BY id, trace_id, for_flow
         LIMIT 1
-        """,
+        """, # nosec B608: _fields comes from internal code-only source, not user input
             parameters={"identifier": identifier, "trace_id": trace_id},
         )
 

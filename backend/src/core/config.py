@@ -10,7 +10,7 @@ from pydantic_settings import (
 
 class Config(BaseSettings):
     class Database(BaseModel):
-        host: str = "0.0.0.0"
+        host: str = "localhost"
         user: str = "dev"
         database: str = "dashfrog"
         port: int | None = None
@@ -18,7 +18,7 @@ class Config(BaseSettings):
 
     class Prometheus(BaseModel):
         url: str = "http://localhost:9090"
-        disable_ssl: bool = True  # insecured default
+        disable_ssl: bool = True  # unsecured default
 
     class Logs(BaseModel):
         level: str = "INFO"

@@ -9,7 +9,7 @@ dependencies = [
     "clickhouse-connect>=0.9.2",
     "fastapi>=0.118.0",
     "orjson>=3.11.3",
-    "prometheus-api-client",
+    "prometheus-api-client>=0.6.0",
     "pydantic>=2.11.9",
     "pydantic-settings>=2.11.0",
     "sqlalchemy[asyncio]>=2.0.44",
@@ -36,7 +36,8 @@ exclude = [
     "typings",
     "src/test",
     "src/tests",
-    "src/alembic"
+    "src/alembic",
+    "tests"
 ]
 
 [tool.ruff.lint]
@@ -85,10 +86,6 @@ typeCheckingMode = "standard"
 [tool.bandit]
 exclude_dirs =  ["tests", ".venv"]
 skips = ["B101"]
-
-[tool.uv.sources]
-prometheus-api-client = { git = "https://github.com/titouanfreville/prometheus-api-client-python" }
-
 
 [build-system]
 requires = ["setuptools>=42"]

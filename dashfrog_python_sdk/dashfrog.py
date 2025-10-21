@@ -76,7 +76,7 @@ class DashFrog:
         config: Config | None = None,
         **labels,
     ):
-        config = config or Config()
+        config = config or Config()  # type: ignore[reportCallIssue]
         self.__config = config
         self.service_name = service_name
         self.__labels = labels
@@ -246,7 +246,14 @@ class DashFrog:
     ) -> Metric:
         """Observe metrics. /!\\ observable metrics are identified by the name, description and unit tuple."""
 
-        return new_metric(self.__meter, kind, f"dashfrog_user_custom_{name}", description, unit, **labels)
+        return new_metric(
+            self.__meter,
+            kind,
+            f"dashfrog_user_custom_{name}",
+            description,
+            unit,
+            **labels,
+        )
 
     ### Instrumentation ####
     #### Web
@@ -342,7 +349,7 @@ class DashFrog:
 
         label = {}
         if val:
-            label[self.__config.auto_steps.label_key] = val
+            label[self.__config.auto_steps.label_key] = val  # type: ignore[reportOptionalMemberAccess] as hook is build only if auto_steps exists
 
         def fn(span, _):
             Step(clean_methods(getattr(span, "name")), **label)

@@ -38,11 +38,7 @@ class _FilterParams(BaseModel):
     def get_orders(self) -> StoreOrder:
         orders = []
         for order in self.order_by:
-            orders.append(
-                StoreOrderClause(
-                    key=order.key, order=order.order, nulls_first=order.nulls_first
-                )
-            )
+            orders.append(StoreOrderClause(key=order.key, order=order.order, nulls_first=order.nulls_first))
 
         return StoreOrder(orders)
 
@@ -50,9 +46,7 @@ class _FilterParams(BaseModel):
         filters = []
 
         if self.service_name:
-            filters.append(
-                StoreFilter(key="service_name", value=self.service_name, op="=")
-            )
+            filters.append(StoreFilter(key="service_name", value=self.service_name, op="="))
 
         if self.status:
             filters.append(StoreFilter(key="status", value=self.status, op="="))
@@ -79,11 +73,7 @@ class _FilterParams(BaseModel):
 
         for filt in self.filters:
             if filt.is_label:
-                filters.append(
-                    StoreFilter(
-                        key=f"labels['{filt.key}']", value=filt.value, op=filt.op
-                    )
-                )
+                filters.append(StoreFilter(key=f"labels['{filt.key}']", value=filt.value, op=filt.op))
             else:
                 filters.append(StoreFilter(key=filt.key, value=filt.value, op=filt.op))
 
@@ -91,7 +81,7 @@ class _FilterParams(BaseModel):
 
 
 class Flows:
-    __uc = usecases.Flows
+    __uc: usecases.Flows
 
     ep = APIRouter(prefix="/flows", tags=["flows"])
 
@@ -116,8 +106,8 @@ class Flows:
             to_date_ts = datetime.fromisoformat(to_date) if to_date else None
 
             flows = Flows.__uc.list_flows(
-                ctx,  # pyright: ignore[reportArgumentType]
-                filters.from_date or from_date_ts,  #  pyright: ignore[reportArgumentType]
+                ctx,
+                filters.from_date or from_date_ts,  
                 filters.to_date or to_date_ts,
                 order_by=filters.get_orders(),
                 filters=filters.get_filters(),

@@ -3,9 +3,9 @@ Comprehensive test cases for core.stringcase module.
 Tests each function with multiple input scenarios using pytest.mark.parametrize.
 """
 
-import pytest
-
 from src.core import stringcase
+
+import pytest
 
 
 class TestCamelCase:

@@ -144,7 +144,7 @@ class Labels:
             series = self.__prom.all_metrics({"match[]": f'{{{name}=~".+"}}'})
             res[name] = {
                 "values": self.__prom.get_label_values(name),
-                "used_in": list(set([parse_prom_name(res)[0] for res in set(series) if parse_prom_name(res)])),
+                "used_in": list({parsed[0] for res in set(series) if (parsed := parse_prom_name(res))}),
             }
 
         return res

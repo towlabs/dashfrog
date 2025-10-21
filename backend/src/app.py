@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import logging
 
 import clickhouse_connect
-from clickhouse_connect.driver import Client as ClickhouseClient
+from clickhouse_connect.driver.client import Client as ClickhouseClient
 import orjson
 from prometheus_api_client import PrometheusConnect
 from pydantic import BaseModel
@@ -81,19 +81,13 @@ class Application(BaseApplication[Config]):
         flow_store = FlowsStore(self.clickhouse_client)
         step_store = StepsStore(self.clickhouse_client)
         label_store = LabelsStore(self.clickhouse_client, self.prom_client, self.logger)
-        metrics_store = MetricsStore(
-            self.clickhouse_client, self.prom_client, self.logger
-        )
+        metrics_store = MetricsStore(self.clickhouse_client, self.prom_client, self.logger)
 
         self.usecases = {
             "flows": Flows(flow_store, self.logger),
             "steps": Steps(step_store, self.logger),
-            "labels": Labels(
-                label_store, metrics_store, self.sessionmaker, self.logger
-            ),
-            "metrics": Metrics(
-                metrics_store, self.sessionmaker, self.prom_client, self.logger
-            ),
+            "labels": Labels(label_store, metrics_store, self.sessionmaker, self.logger),
+            "metrics": Metrics(metrics_store, self.sessionmaker, self.prom_client, self.logger),
         }
 
     def log(self, name: str, **kwargs) -> BoundLogger:

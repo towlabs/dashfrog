@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql.sqltypes import ARRAY, Enum
 
@@ -26,9 +26,11 @@ class LabelValue(Base):
 class LabelUsage(Base):
     __tablename__ = "label_usage"
 
-    label_id = Column(Integer, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
-    _used_in = Column(String, name="used_in", primary_key=True)
-    kind = Column(Enum(entities.LabelSrcKind, name="label_src_kind"), nullable=False)
+    label_id: Mapped[int] = mapped_column(Integer, ForeignKey("labels.id", ondelete="CASCADE"), primary_key=True)
+    _used_in: Mapped[str] = mapped_column("used_in", String, primary_key=True)
+    kind: Mapped[entities.LabelSrcKind] = mapped_column(
+        Enum(entities.LabelSrcKind, name="label_src_kind"), nullable=False
+    )
 
     @property
     def used_in(self) -> str | int:
@@ -47,12 +49,12 @@ class LabelUsage(Base):
 class Label(Base):
     __tablename__ = "labels"
 
-    id = Column(Integer, primary_key=True)
-    label = Column(String, nullable=False, unique=True)
-    description = Column(String, nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    label: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
 
-    values = relationship("LabelValue", cascade="all, delete-orphan", lazy="selectin")
-    used_in = relationship("LabelUsage", cascade="all, delete-orphan", lazy="selectin")
+    values: Mapped[list["LabelValue"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
+    used_in: Mapped[list["LabelUsage"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
 
     def to_entity(self) -> entities.Label:
         return entities.Label(
@@ -67,14 +69,14 @@ class Label(Base):
 class Metric(Base):
     __tablename__ = "metrics"
 
-    id = Column(Integer, primary_key=True)
-    key = Column(String, nullable=False, unique=True)
-    kind = Column(Enum(entities.MetricKind, name="metric_kind"), nullable=False)
-    scope = Column(String, nullable=False)
-    display_as = Column(String, unique=True)
-    description = Column(String)
-    unit = Column(String)
-    associated_identifiers = Column(ARRAY(String))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    kind: Mapped[entities.MetricKind] = mapped_column(Enum(entities.MetricKind, name="metric_kind"), nullable=False)
+    scope: Mapped[str] = mapped_column(String, nullable=False)
+    display_as: Mapped[str | None] = mapped_column(String, unique=True)
+    description: Mapped[str | None] = mapped_column(String)
+    unit: Mapped[str | None] = mapped_column(String)
+    associated_identifiers: Mapped[list[str] | None] = mapped_column(ARRAY(String))
 
     def to_entity(self) -> entities.Metric:
         return entities.Metric(
@@ -82,15 +84,15 @@ class Metric(Base):
             key=self.key,
             kind=self.kind,
             scope=self.scope,
-            unit=self.unit,
-            display_as=self.display_as,
-            description=self.description,
-            associated_identifiers=self.associated_identifiers,
+            unit=self.unit or "",
+            display_as=self.display_as or "",
+            description=self.description or "",
+            associated_identifiers=self.associated_identifiers or [],
         )
 
 
 class LabelsScrapped(Base):
     __tablename__ = "labels_scrapped"
 
-    id = Column(Integer, primary_key=True)
-    ran_at = Column(DateTime, nullable=False, unique=True, default=lambda: datetime.now(UTC))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ran_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, unique=True, default=lambda: datetime.now(UTC))

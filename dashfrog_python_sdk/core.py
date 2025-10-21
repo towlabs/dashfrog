@@ -82,7 +82,7 @@ class Config(BaseSettings):
         tasks_value: str  # celery
 
     class Database(BaseModel):
-        host: str = "0.0.0.0"
+        host: str = "localhost"
         user: str = "dev"
         database: str = "dashfrog"
         port: int | None = None
@@ -94,7 +94,7 @@ class Config(BaseSettings):
     auto_steps_instrumented: list[SupportedInstrumentation] = []
     debug: bool = False
 
-    clickhouse: Database = Database(password="dev-pwd*")
+    clickhouse: Database = Database(password="dev-pwd*")  # nosec (unsafe unused pwd)
     infra: Infra = Infra()
     auto_steps: AutoFlow | None = None
 
@@ -105,14 +105,8 @@ class Config(BaseSettings):
         env_parse_enums=True,
         extra="ignore",
         env_file="dashfrog.env",
-        json_file=(
-            get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog")
-            + ".json"
-        ),
-        yaml_file=(
-            get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog")
-            + ".yaml"
-        ),
+        json_file=(get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog") + ".json"),
+        yaml_file=(get_file_name(environ.get("DASHFROG_CONFIG_FILE_NAME") or "dashfrog") + ".yaml"),
     )
 
     @classmethod

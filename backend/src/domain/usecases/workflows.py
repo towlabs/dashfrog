@@ -75,7 +75,7 @@ class Flows:
         flow_name: str,
         limit: int,
         offset: int,
-        filters: list[StoreFilter] = None,
+        filters: list[StoreFilter] = None,  # type: ignore[reportArgumentType]
         orders: StoreOrder = None,  # type: ignore[reportArgumentType]
     ) -> tuple[list[Flow], int]:
         log = self.__log.bind(action="get_single_history", flow_name=flow_name)
@@ -97,15 +97,6 @@ class Flows:
         log.debug("Success !")
 
         return flow
-
-    def get_labels(self, ctx: Context) -> dict[str, list[str]]:
-        log = self.__log.bind(action="get_labels")
-
-        labels = self.__flows.get_labels(ctx)
-
-        log.debug("Success !")
-
-        return labels
 
 
 class Steps:
