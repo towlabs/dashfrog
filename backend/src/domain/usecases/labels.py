@@ -68,25 +68,29 @@ class Labels:
             }
 
             existing_metrics = {metric.key: metric.id for metric in (await self.__metrics.list())}
+            new_labels = {}
 
             await self.__process_labels(
                 existing_labels,
                 self.__labels.list_workflow_labels(),
+                new_labels,
                 LabelSrcKind.workflow,
             )
             await self.__process_labels(
                 existing_labels,
                 self.__labels.list_metrics_labels(),
+                new_labels,
                 LabelSrcKind.metrics,
                 existing_metrics=existing_metrics,
             )
-
+            await self.__insert_labels(new_labels, existing_labels)
         log.debug("Success !")
 
     async def __process_labels(
         self,
         existing_labels,
         labels,
+        new_labels: dict,
         kind: LabelSrcKind,
         existing_metrics: None | dict[str, int] = None,
     ):
@@ -100,7 +104,6 @@ class Labels:
                 for value in label_data["values"]
                 if value not in existing_labels.get(label_key, {}).get("values", [])
             ]
-
             if kind == LabelSrcKind.metrics:
                 detected_used_ins = [
                     Label.Usage(
@@ -115,18 +118,22 @@ class Labels:
                 detected_used_ins = [
                     Label.Usage(used_in=titlecase(used_in), kind=kind)
                     for used_in in label_data["used_in"]
-                    if used_in not in existing_labels.get(label_key, {}).get("used_by", [])
+                    if titlecase(used_in) not in existing_labels.get(label_key, {}).get("used_by", [])
                 ]
 
+            new_labels[label_key] = {"detected_used_ins": detected_used_ins, "detected_values": detected_values}
+
+    async def __insert_labels(self, new_labels: dict, existing_labels: dict):
+        for label_key, data in new_labels.items():
             if not (label := existing_labels.get(label_key)):
                 await self.__labels.insert(
                     Label(
                         id=-1,
                         label=label_key,
-                        values=detected_values,
-                        used_in=detected_used_ins,
+                        values=data["detected_values"],
+                        used_in=data["detected_used_ins"],
                     )
                 )
             else:
-                await self.__labels.insert_values(label["id"], detected_values)
-                await self.__labels.insert_usage(label["id"], detected_used_ins)
+                await self.__labels.insert_values(label["id"], data["detected_values"])
+                await self.__labels.insert_usage(label["id"], data["detected_used_ins"])

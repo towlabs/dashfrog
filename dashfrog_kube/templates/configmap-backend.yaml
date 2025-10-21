@@ -14,6 +14,7 @@ data:
       database: {{ .Values.clickhouse.config.database }}
       host: {{ include "dashfrog_kube.fullname" . }}-clickhouse
       user: {{ .Values.clickhouse.config.user }}
+      port: {{ .Values.clickhouse.config.httpPort }}
       # Password will be provided via secret
     psql:
       database: {{ .Values.postgresql.config.database }}

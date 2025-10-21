@@ -2,7 +2,7 @@ CREATE TYPE LABEL_SRC_KIND AS ENUM (
     'workflow', 'metrics'
 );
 CREATE TYPE METRIC_KIND AS ENUM (
-    'counter', 'measure', 'stats', 'over'
+    'counter', 'measure', 'stats', 'other'
 );
 CREATE TABLE labels (
  id SERIAL PRIMARY KEY,
