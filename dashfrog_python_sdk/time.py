@@ -3,6 +3,8 @@ from zoneinfo import ZoneInfo
 
 
 class Converts:
+    """Converters methods"""
+
     @staticmethod
     def to_utc(val: datetime) -> datetime:
         """Converts any datetime to utc"""

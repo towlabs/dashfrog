@@ -50,8 +50,7 @@ class Application(BaseApplication[Config]):
 
         self.clickhouse_client = clickhouse_connect.get_client(
             host=self.configuration.click_house.host,
-
-            port=self.configuration.click_house.port,
+            port=self.configuration.click_house.port or 8123,
             user=self.configuration.click_house.user,
             password=self.configuration.click_house.password,
             database=self.configuration.click_house.database,

@@ -26,6 +26,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-suffix: "backend"
       - name: Install the project
         run:  |
           cd backend
@@ -43,6 +44,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-suffix: "backend"
       - name: Lint
         run: |
           cd backend
@@ -61,6 +63,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          cache-suffix: "backend"
       - name: Lint
         run: |
           cd backend
