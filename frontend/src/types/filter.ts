@@ -1,4 +1,8 @@
-export type FilterOperator = "=" | "!=" | "contains" | "regex";
+export type FilterOperator =
+	| "equals"
+	| "not_equals"
+	| "contains"
+	| "not_contains";
 
 export type Filter = {
 	label: string;

@@ -5,12 +5,8 @@ import { useNotebooks } from "@/src/contexts/notebooks";
 
 export default function NotebookById() {
 	const { id } = useParams<{ id: string }>();
-	const {
-		getNotebook,
-		refreshNotebooks,
-		setCurrentNotebookId,
-		isLoading,
-	} = useNotebooks();
+	const { getNotebook, refreshNotebooks, setCurrentNotebookId, isLoading } =
+		useNotebooks();
 
 	const notebook = id ? getNotebook(id) : null;
 

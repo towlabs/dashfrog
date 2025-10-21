@@ -1,11 +1,6 @@
 import { createReactBlockSpec } from "@blocknote/react";
 import * as React from "react";
-import {
-	type Filter,
-	MetricQueryBuilder,
-} from "@/components/MetricQueryBuilder";
-import type { Metric, Operation } from "@/components/MetricTypes";
-import { useTimeWindow } from "@/components/TimeWindowContext";
+import { MetricConfiguration } from "@/components/MetricConfiguration";
 import {
 	type ExclusionType,
 	TimeWindowExclusionSelect,
@@ -17,7 +12,15 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { type Aggregation, AggregationSettings } from "./ChartSettingsItem";
+import { useTimeWindow } from "@/src/contexts/time-window";
+import { generatePromQuery } from "@/src/services/promql-builder";
+import type { Filter } from "@/src/types/filter";
+import type {
+	Aggregation,
+	AggregationForKind,
+	Metric,
+	MetricKind,
+} from "@/src/types/metric";
 
 export const createNumberBlock = createReactBlockSpec(
 	{
@@ -28,7 +31,7 @@ export const createNumberBlock = createReactBlockSpec(
 			selectedMetric: { default: "" }, // JSON string of Metric object
 			filters: { default: "" }, // JSON string of Filter[]
 			operation: { default: "" }, // JSON string of Operation object
-			aggregation: { default: "average" },
+			aggregation: { default: "" },
 			conditionTarget: { default: "" },
 			conditionOp: { default: "" },
 			conditionValue: { default: "" },
@@ -49,52 +52,32 @@ export const createNumberBlock = createReactBlockSpec(
 				if (propsOpen) {
 					setOpen(true);
 				}
-			}, [block.props]);
+			}, [block.props.open]);
 
 			const label = block.props.label || "Metric";
-			const aggregation = (block.props.aggregation as Aggregation) || "average";
-			const conditionTarget = block.props.conditionTarget || "";
-			const conditionOp = block.props.conditionOp || "";
-			const conditionValue = block.props.conditionValue || "";
-			const conditionValue2 = block.props.conditionValue2 || "";
+			const aggregation = (block.props.aggregation as Aggregation) || "";
 			const exclude = block.props.exclude || "none";
 
-			// Parse selectedMetric from JSON string
-			const parseSelectedMetric = () => {
+			// Memoize parsed values to prevent unnecessary re-parsing
+			const selectedMetricValue = React.useMemo(() => {
 				try {
 					const m = block.props.selectedMetric;
 					if (m && typeof m === "string") {
-						return JSON.parse(m);
+						return JSON.parse(m) as Metric<MetricKind>;
 					}
 				} catch {}
 				return null;
-			};
+			}, [block.props.selectedMetric]);
 
-			// Parse filters from JSON string
-			const parseFilters = () => {
+			const filtersValue = React.useMemo(() => {
 				try {
 					const f = block.props.filters;
 					if (f && typeof f === "string") {
-						return JSON.parse(f);
+						return JSON.parse(f) as Filter[];
 					}
 				} catch {}
 				return [];
-			};
-
-			// Parse operation from JSON string
-			const parseOperation = (): Operation | null => {
-				try {
-					const op = block.props.operation;
-					if (op && typeof op === "string") {
-						return JSON.parse(op) as Operation;
-					}
-				} catch {}
-				return null;
-			};
-
-			const selectedMetricValue = parseSelectedMetric();
-			const filtersValue = parseFilters();
-			const selectedOperationValue = parseOperation();
+			}, [block.props.filters]);
 
 			// Access the time window from context
 			const timeWindow = useTimeWindow();
@@ -103,19 +86,40 @@ export const createNumberBlock = createReactBlockSpec(
 			const [numberValue, setNumberValue] = React.useState<string>("-");
 			const [_, setIsLoading] = React.useState(false);
 
+			// biome-ignore lint/correctness/useExhaustiveDependencies: use only json strings
+			const promQuery = React.useMemo(() => {
+				if (!selectedMetricValue || !aggregation) return null;
+				return generatePromQuery(
+					selectedMetricValue,
+					filtersValue,
+					timeWindow.start,
+					timeWindow.end,
+					aggregation,
+					true,
+					[],
+				);
+			}, [
+				block.props.aggregation,
+				block.props.filters,
+				block.props.selectedMetric,
+				timeWindow.start,
+				timeWindow.end,
+			]);
+
 			// Mock API call - will be replaced with real API later
 			const fetchNumberData = React.useCallback(
 				async (
 					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
-					metric: Metric,
+					metric: Metric<MetricKind>,
 					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 					filters: Filter[],
 					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
-					aggregation: string,
+					aggregation: AggregationForKind<MetricKind>,
 					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 					timeWindow: { start: Date; end: Date },
 				) => {
 					setIsLoading(true);
+					console.log("fetchChartData", promQuery);
 
 					// Simulate API call
 					await new Promise((resolve) => setTimeout(resolve, 300));
@@ -134,7 +138,7 @@ export const createNumberBlock = createReactBlockSpec(
 					setNumberValue(mockValue.toString());
 					setIsLoading(false);
 				},
-				[],
+				[promQuery],
 			);
 
 			// Fetch data whenever dependencies change
@@ -152,11 +156,14 @@ export const createNumberBlock = createReactBlockSpec(
 				block.props.selectedMetric, // Use the JSON string directly
 				block.props.filters, // Use the JSON string directly
 				block.props.operation, // Use the JSON string directly
-				timeWindow,
+				timeWindow.start.getTime(),
+				timeWindow.end.getTime(),
 				fetchNumberData,
 			]);
 
 			// Memoize updateProps to prevent creating new function on every render
+			// Use block.id instead of block to avoid recreating on every BlockNote render
+			// biome-ignore lint/correctness/useExhaustiveDependencies: block is captured but we only want to recreate when block.id changes
 			const updateProps = React.useCallback(
 				(
 					next: Partial<{
@@ -176,19 +183,18 @@ export const createNumberBlock = createReactBlockSpec(
 						editor.updateBlock(block, { props: next });
 					});
 				},
-				[editor, block],
+				[editor, block.id],
 			);
-
-			// Get available labels from the selected metric
-			const getAvailableLabels = (): string[] => {
-				if (!selectedMetricValue) return [];
-				return selectedMetricValue.labels || [];
-			};
 
 			// Memoize callbacks to prevent infinite loops
 			const handleMetricChange = React.useCallback(
-				(metric: Metric | null) => {
-					updateProps({ selectedMetric: metric ? JSON.stringify(metric) : "" });
+				(metric: Metric<MetricKind> | null) => {
+					updateProps({
+						selectedMetric: metric ? JSON.stringify(metric) : "",
+						// Reset aggregation when metric changes since different kinds have different allowed aggregations
+						aggregation: "",
+						filters: "",
+					});
 				},
 				[updateProps],
 			);
@@ -200,21 +206,16 @@ export const createNumberBlock = createReactBlockSpec(
 				[updateProps],
 			);
 
-			const handleOperationChange = React.useCallback(
-				(operation: Operation | null) => {
-					updateProps({
-						operation: operation ? JSON.stringify(operation) : "",
-					});
+			const handleAggregationChange = React.useCallback(
+				(agg: Aggregation) => {
+					updateProps({ aggregation: agg });
 				},
 				[updateProps],
 			);
 
 			return (
 				<div className="w-full max-w-full relative">
-					<div
-						className="flex flex-col justify-center gap-1 px-6 py-4 rounded-md border text-left cursor-pointer hover:bg-accent/50 transition-colors"
-						onClick={() => setOpen(true)}
-					>
+					<div className="flex flex-col justify-center gap-1 px-6 py-4 rounded-md border text-left hover:bg-accent/50 transition-colors">
 						<span className="text-muted-foreground text-xs">{label}</span>
 						<span className="text-lg leading-none font-bold sm:text-3xl">
 							{parseFloat(numberValue).toLocaleString()}
@@ -239,52 +240,30 @@ export const createNumberBlock = createReactBlockSpec(
 							</div>
 							<div className="flex-1 overflow-y-auto p-6 space-y-3">
 								{/* Data Section */}
-								<div className="space-y-3">
-									<h3 className="text-sm font-medium text-muted-foreground">
-										Data
-									</h3>
-									<div className="space-y-1">
-										<label className="text-xs text-muted-foreground font-medium">
-											Label
-										</label>
-										<Input
-											value={label}
-											onChange={(e) => updateProps({ label: e.target.value })}
-											placeholder="e.g. Total Requests"
-										/>
-									</div>
-									<MetricQueryBuilder
-										selectedMetric={selectedMetricValue}
-										onMetricChange={handleMetricChange}
-										selectedOperation={selectedOperationValue}
-										onOperationChange={handleOperationChange}
-										filters={filtersValue}
-										onFiltersChange={handleFiltersChange}
-										enableOperationSelector={false}
+								<h3 className="text-sm font-medium text-muted-foreground">
+									Data
+								</h3>
+								<div className="space-y-1">
+									<label className="text-xs text-muted-foreground font-medium">
+										Label
+									</label>
+									<Input
+										value={label}
+										onChange={(e) => updateProps({ label: e.target.value })}
+										placeholder="e.g. Total Requests"
 									/>
 								</div>
-
-								{/* Aggregation Section */}
-								<AggregationSettings
-									value={aggregation}
-									onChange={(value) => updateProps({ aggregation: value })}
-									conditionTarget={conditionTarget}
-									onConditionTargetChange={(value) =>
-										updateProps({ conditionTarget: value })
-									}
-									availableLabelTargets={getAvailableLabels()}
-									conditionOp={conditionOp}
-									onConditionOpChange={(value) =>
-										updateProps({ conditionOp: value })
-									}
-									conditionValue={conditionValue}
-									onConditionValueChange={(value) =>
-										updateProps({ conditionValue: value })
-									}
-									conditionValue2={conditionValue2}
-									onConditionValue2Change={(value) =>
-										updateProps({ conditionValue2: value })
-									}
+								<MetricConfiguration
+									selectedMetric={selectedMetricValue}
+									onMetricChange={handleMetricChange}
+									filters={filtersValue}
+									onFiltersChange={handleFiltersChange}
+									aggregation={aggregation}
+									onAggregationChange={handleAggregationChange}
+									groupBy={[]}
+									onGroupByChange={() => {}}
+									showGroupBy={false}
+									showAggregationWhen="distribution"
 								/>
 
 								{/* Time Window Section */}

@@ -69,7 +69,7 @@ export function FilterBadgesEditor({
 	}, [filters, editingFilterIndex, onFiltersChange]);
 
 	const addFilter = (label: string) => {
-		setDraftFilter({ label, operator: "=", value: "" });
+		setDraftFilter({ label, operator: "equals", value: "" });
 		setFilterOpen(false);
 		setEditingFilterIndex(filters.length);
 	};
@@ -161,10 +161,12 @@ export function FilterBadgesEditor({
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="=">=</SelectItem>
-											<SelectItem value="!=">!=</SelectItem>
+											<SelectItem value="equals">is</SelectItem>
+											<SelectItem value="not_equals">is not</SelectItem>
 											<SelectItem value="contains">contains</SelectItem>
-											<SelectItem value="regex">regex</SelectItem>
+											<SelectItem value="not_contains">
+												does not contain
+											</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>
@@ -231,10 +233,12 @@ export function FilterBadgesEditor({
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="=">=</SelectItem>
-											<SelectItem value="!=">!=</SelectItem>
+											<SelectItem value="equals">is</SelectItem>
+											<SelectItem value="not_equals">is not</SelectItem>
 											<SelectItem value="contains">contains</SelectItem>
-											<SelectItem value="regex">regex</SelectItem>
+											<SelectItem value="not_contains">
+												does not contain
+											</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>

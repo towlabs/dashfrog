@@ -1,12 +1,8 @@
 import { createReactBlockSpec } from "@blocknote/react";
+import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import {
-	type Filter,
-	MetricQueryBuilder,
-} from "@/components/MetricQueryBuilder";
-import type { Metric, Operation } from "@/components/MetricTypes";
-import { useTimeWindow } from "@/components/TimeWindowContext";
+import { MetricConfiguration } from "@/components/MetricConfiguration";
 import {
 	type ExclusionType,
 	TimeWindowExclusionSelect,
@@ -18,7 +14,6 @@ import {
 } from "@/components/ui/chart";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { MultiSelect } from "@/components/ui/multi-select";
 import {
 	Select,
 	SelectContent,
@@ -32,8 +27,11 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { useTimeWindow } from "@/src/contexts/time-window";
+import { generatePromQuery } from "@/src/services/promql-builder";
+import type { Filter } from "@/src/types/filter";
+import type { Aggregation, Metric, MetricKind } from "@/src/types/metric";
 import { Separator } from "../ui/separator";
-import { type Aggregation, AggregationSettings } from "./ChartSettingsItem";
 
 type BarChartDataPoint = {
 	name: string;
@@ -83,50 +81,30 @@ export const createBarChartBlock = createReactBlockSpec(
 			const showTitle = block.props.showTitle !== false;
 			const color = block.props.color || "var(--color-chart-1)";
 
-			// Parse selectedMetric from JSON string
-			const parseSelectedMetric = (): Metric | null => {
+			// Memoize parsed values to prevent unnecessary re-parsing
+			const selectedMetricValue = React.useMemo(() => {
 				try {
 					const m = block.props.selectedMetric;
 					if (m && typeof m === "string") {
-						return JSON.parse(m) as Metric;
+						return JSON.parse(m) as Metric<MetricKind>;
 					}
 				} catch {}
 				return null;
-			};
+			}, [block.props.selectedMetric]);
 
-			// Parse filters from JSON string
-			const parseFilters = () => {
+			const filtersValue = React.useMemo(() => {
 				try {
 					const f = block.props.filters;
 					if (f && typeof f === "string") {
-						return JSON.parse(f);
+						return JSON.parse(f) as Filter[];
 					}
 				} catch {}
 				return [];
-			};
+			}, [block.props.filters]);
 
-			// Parse operation from JSON string
-			const parseOperation = (): Operation | null => {
-				try {
-					const op = block.props.operation;
-					if (op && typeof op === "string") {
-						return JSON.parse(op) as Operation;
-					}
-				} catch {}
-				return null;
-			};
+			const aggregation = (block.props.aggregation as Aggregation) || "";
 
-			const selectedMetricValue = parseSelectedMetric();
-			const filtersValue = parseFilters();
-			const selectedOperationValue = parseOperation();
-
-			const aggregation = block.props.aggregation as Aggregation | null;
-			const conditionTarget = block.props.conditionTarget || "value";
-			const conditionOp = block.props.conditionOp || "eq";
-			const conditionValue = block.props.conditionValue || "";
-			const conditionValue2 = block.props.conditionValue2 || "";
-
-			const parseGroupBy = (): string[] => {
+			const groupBy = React.useMemo(() => {
 				try {
 					const g = block.props.groupBy;
 					if (g && typeof g === "string") {
@@ -135,9 +113,7 @@ export const createBarChartBlock = createReactBlockSpec(
 					}
 				} catch {}
 				return [];
-			};
-
-			const groupBy = parseGroupBy();
+			}, [block.props.groupBy]);
 			const exclude = block.props.exclude || "none";
 
 			// Access the time window from context
@@ -147,11 +123,32 @@ export const createBarChartBlock = createReactBlockSpec(
 			const [chartData, setChartData] = useState<BarChartDataPoint[]>([]);
 			const [_, setIsLoading] = useState(false);
 
+			// biome-ignore lint/correctness/useExhaustiveDependencies: use only json strings
+			const promQuery = React.useMemo(() => {
+				if (!selectedMetricValue || !aggregation) return null;
+				return generatePromQuery(
+					selectedMetricValue,
+					filtersValue,
+					timeWindow.start,
+					timeWindow.end,
+					aggregation,
+					true,
+					groupBy.length > 0 ? groupBy : selectedMetricValue.labels,
+				);
+			}, [
+				block.props.groupBy,
+				block.props.aggregation,
+				block.props.filters,
+				block.props.selectedMetric,
+				timeWindow.start,
+				timeWindow.end,
+			]);
+
 			// Mock API call - will be replaced with real API later
 			const fetchChartData = useCallback(
 				async (
 					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
-					metric: Metric,
+					metric: Metric<MetricKind>,
 					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
 					filters: Filter[],
 					// biome-ignore lint/correctness/noUnusedFunctionParameters: implement later
@@ -160,6 +157,7 @@ export const createBarChartBlock = createReactBlockSpec(
 					timeWindow: { start: Date; end: Date },
 				) => {
 					setIsLoading(true);
+					console.log("fetchChartData", promQuery);
 
 					// Simulate API call
 					await new Promise((resolve) => setTimeout(resolve, 300));
@@ -188,7 +186,7 @@ export const createBarChartBlock = createReactBlockSpec(
 					setChartData(mockData);
 					setIsLoading(false);
 				},
-				[],
+				[promQuery],
 			);
 
 			// Fetch data whenever dependencies change
@@ -221,9 +219,11 @@ export const createBarChartBlock = createReactBlockSpec(
 				if (propsOpen) {
 					setOpen(true);
 				}
-			}, [block.props]);
+			}, [block.props.open]);
 
 			// Memoize updateProps to prevent creating new function on every render
+			// Use block.id instead of block to avoid recreating on every BlockNote render
+			// biome-ignore lint/correctness/useExhaustiveDependencies: block is captured but we only want to recreate when block.id changes
 			const updateProps = useCallback(
 				(
 					next: Partial<{
@@ -250,20 +250,19 @@ export const createBarChartBlock = createReactBlockSpec(
 						editor.updateBlock(block, { props: next });
 					});
 				},
-				[editor, block],
+				[editor, block.id],
 			);
-
-			const updateGroupBy = (labels: string[]) => {
-				updateProps({ groupBy: JSON.stringify(labels) });
-			};
-
-			// Get available labels from the selected metric
-			const availableLabels = selectedMetricValue?.labels || [];
 
 			// Memoize callbacks to prevent infinite loops
 			const handleMetricChange = useCallback(
-				(metric: Metric | null) => {
-					updateProps({ selectedMetric: metric ? JSON.stringify(metric) : "" });
+				(metric: Metric<MetricKind> | null) => {
+					updateProps({
+						selectedMetric: metric ? JSON.stringify(metric) : "",
+						// Reset aggregation when metric changes since different kinds have different allowed aggregations
+						aggregation: "",
+						groupBy: "",
+						filters: "",
+					});
 				},
 				[updateProps],
 			);
@@ -275,11 +274,16 @@ export const createBarChartBlock = createReactBlockSpec(
 				[updateProps],
 			);
 
-			const handleOperationChange = useCallback(
-				(operation: Operation | null) => {
-					updateProps({
-						operation: operation ? JSON.stringify(operation) : "",
-					});
+			const handleAggregationChange = useCallback(
+				(agg: Aggregation) => {
+					updateProps({ aggregation: agg });
+				},
+				[updateProps],
+			);
+
+			const handleGroupByChange = useCallback(
+				(labels: string[]) => {
+					updateProps({ groupBy: JSON.stringify(labels) });
 				},
 				[updateProps],
 			);
@@ -423,51 +427,17 @@ export const createBarChartBlock = createReactBlockSpec(
 									<h3 className="text-sm font-medium text-muted-foreground">
 										Data
 									</h3>
-									<MetricQueryBuilder
+									<MetricConfiguration
 										selectedMetric={selectedMetricValue}
 										onMetricChange={handleMetricChange}
-										selectedOperation={selectedOperationValue}
-										onOperationChange={handleOperationChange}
 										filters={filtersValue}
 										onFiltersChange={handleFiltersChange}
-										enableOperationSelector={false}
-									/>
-
-									<AggregationSettings
-										value={aggregation}
-										onChange={(value) => updateProps({ aggregation: value })}
-										conditionTarget={conditionTarget}
-										onConditionTargetChange={(v) =>
-											updateProps({ conditionTarget: v })
-										}
-										availableLabelTargets={availableLabels}
-										conditionOp={conditionOp}
-										onConditionOpChange={(v) => updateProps({ conditionOp: v })}
-										conditionValue={conditionValue}
-										onConditionValueChange={(v) =>
-											updateProps({ conditionValue: v })
-										}
-										conditionValue2={conditionValue2}
-										onConditionValue2Change={(v) =>
-											updateProps({ conditionValue2: v })
-										}
-									/>
-								</div>
-
-								{/* Group Section */}
-								<div className="space-y-3">
-									<label className="text-xs text-muted-foreground font-medium">
-										Split by
-									</label>
-									<MultiSelect
-										options={availableLabels.map((label: string) => ({
-											value: label,
-											label,
-										}))}
-										value={groupBy}
-										onChange={updateGroupBy}
-										placeholder="Select labels to group by..."
-										searchPlaceholder="Search labels..."
+										aggregation={aggregation}
+										onAggregationChange={handleAggregationChange}
+										groupBy={groupBy}
+										onGroupByChange={handleGroupByChange}
+										showGroupBy={true}
+										showAggregationWhen="distribution-or-grouped"
 									/>
 								</div>
 

@@ -26,7 +26,14 @@ export type { Flow } from "./flow";
 export type { Label, LabelsStore, LabelUsage } from "./label";
 
 // Metric Types
-export type { Metric, MetricKind, MetricScope, MetricsStore, MetricUnits } from "./metric";
+export type {
+	Aggregation,
+	Metric,
+	MetricKind,
+	MetricScope,
+	MetricsStore,
+	MetricUnits,
+} from "./metric";
 
 // Notebook Types
 export type {

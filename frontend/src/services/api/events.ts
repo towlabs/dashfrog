@@ -1,6 +1,11 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
+import type {
+	Event,
+	EventCreateInput,
+	EventKind,
+	EventsStore,
+} from "@/src/types/event";
 import type { ApiFilter } from "@/src/types/filter";
-import type { Event, EventCreateInput, EventKind, EventsStore } from "@/src/types/event";
 
 const EventsAPI = NewRestAPI(`api`);
 

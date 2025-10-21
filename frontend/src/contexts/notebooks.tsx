@@ -1,3 +1,4 @@
+import type { Block } from "@blocknote/core";
 import {
 	createContext,
 	type ReactNode,
@@ -6,11 +7,10 @@ import {
 	useEffect,
 	useState,
 } from "react";
-import type { Block } from "@blocknote/core";
 import { Notebooks, toNotebook } from "@/src/services/api/notebooks";
 import type {
-	NotebookData,
 	NotebookCreateInput,
+	NotebookData,
 	NotebookUpdateInput,
 } from "@/src/types/notebook";
 

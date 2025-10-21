@@ -3,11 +3,16 @@ import type {
 	Metric,
 	MetricKind,
 	MetricScope,
-	MetricUnits,
 	MetricsStore,
+	MetricUnits,
 } from "@/src/types/metric";
 
 const MetricsAPI = NewRestAPI(`api`);
+
+/**
+ * Backend metric kinds (before conversion)
+ */
+type BackendMetricKind = "counter" | "gauge" | "stats" | "other" | string;
 
 /**
  * Raw metric response from backend API (snake_case)
@@ -16,7 +21,7 @@ const MetricsAPI = NewRestAPI(`api`);
 interface MetricApiResponse {
 	id: number;
 	key: string;
-	kind: MetricKind;
+	kind: BackendMetricKind;
 	scope: MetricScope;
 	unit: MetricUnits;
 	display_as: string;
@@ -28,6 +33,23 @@ interface MetricApiResponse {
 type MetricsApiResponse = MetricApiResponse[];
 
 /**
+ * Convert backend kind to frontend MetricKind
+ */
+function convertKind(backendKind: BackendMetricKind): MetricKind {
+	if (backendKind === "other" || backendKind === "stats") {
+		return "distribution";
+	}
+	if (backendKind === "counter") {
+		return "events";
+	}
+	if (backendKind === "gauge") {
+		return "values";
+	}
+	// Default fallback
+	return "values";
+}
+
+/**
  * Convert backend API response to frontend Metric type
  * Transforms snake_case to camelCase
  */
@@ -35,13 +57,16 @@ function toMetric(apiMetric: MetricApiResponse): Metric {
 	return {
 		id: apiMetric.id,
 		key: apiMetric.key,
-		kind: apiMetric.kind,
+		kind: convertKind(apiMetric.kind),
 		scope: apiMetric.scope,
 		unit: apiMetric.unit,
 		displayAs: apiMetric.display_as,
 		description: apiMetric.description,
-		associatedIdentifiers: apiMetric.associated_identifiers,
-		labels: apiMetric.labels,
+		prometheusName: apiMetric.key,
+		prometheusMetricName:
+			apiMetric.associated_identifiers?.[0] || apiMetric.key,
+		// Labels will be converted to label names in MetricQueryBuilder
+		labels: apiMetric.labels.map(String),
 	};
 }
 

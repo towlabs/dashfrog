@@ -63,7 +63,8 @@ const NewRestAPI = (basePath: string) => {
 					url: `${API_URL}/${basePath}/${path}`,
 					method: methodName,
 					// Set default timeout if not provided
-					timeout: options.timeout !== undefined ? options.timeout : DEFAULT_TIMEOUT,
+					timeout:
+						options.timeout !== undefined ? options.timeout : DEFAULT_TIMEOUT,
 					headers: {
 						// Authorization: `Bearer ${token}`,
 						...options.headers,
@@ -73,7 +74,9 @@ const NewRestAPI = (basePath: string) => {
 				const axiosError = error as AxiosError<APIError>;
 
 				// Check if error is a timeout
-				const isTimeout = axiosError.code === "ECONNABORTED" || axiosError.code === "ERR_NETWORK";
+				const isTimeout =
+					axiosError.code === "ECONNABORTED" ||
+					axiosError.code === "ERR_NETWORK";
 
 				// Show error toast if not skipped
 				if (!skipErrorToast && meta?.action && meta?.resource) {

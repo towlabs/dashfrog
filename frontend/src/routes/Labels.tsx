@@ -183,7 +183,13 @@ export default function LabelsPage() {
 				label.type === "all";
 			return matchesSearch && matchesType;
 		});
-	}, [labelsWithType, searchTerm, filterType, getUsedInDisplayValue, getLabelDisplayName]);
+	}, [
+		labelsWithType,
+		searchTerm,
+		filterType,
+		getUsedInDisplayValue,
+		getLabelDisplayName,
+	]);
 
 	const filteredRenamedValues = useMemo(() => {
 		return renamedValues.filter(
@@ -494,7 +500,7 @@ export default function LabelsPage() {
 											{/* Main Row */}
 											<TableRow
 												key={label.name}
-												className={`hover:bg-muted/50 ${label.hide ? 'opacity-50 bg-muted/30' : ''}`}
+												className={`hover:bg-muted/50 ${label.hide ? "opacity-50 bg-muted/30" : ""}`}
 											>
 												<TableCell>
 													<button
@@ -514,7 +520,9 @@ export default function LabelsPage() {
 														<div className="flex items-center gap-2">
 															<Input
 																value={displayAsDraft}
-																onChange={(e) => setDisplayAsDraft(e.target.value)}
+																onChange={(e) =>
+																	setDisplayAsDraft(e.target.value)
+																}
 																className="h-8 text-sm"
 																placeholder={label.name}
 																autoFocus
@@ -543,7 +551,9 @@ export default function LabelsPage() {
 															<span className={getTypeColor(label.type)}>
 																{getTypeIcon(label.type)}
 															</span>
-															<span className="truncate">{getLabelDisplayName(label)}</span>
+															<span className="truncate">
+																{getLabelDisplayName(label)}
+															</span>
 															<Button
 																size="sm"
 																variant="ghost"
@@ -561,7 +571,9 @@ export default function LabelsPage() {
 																disabled={saving}
 																className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
 																title={
-																	label.hide ? "Show this label" : "Hide this label"
+																	label.hide
+																		? "Show this label"
+																		: "Hide this label"
 																}
 															>
 																{label.hide ? (
@@ -689,7 +701,10 @@ export default function LabelsPage() {
 																			</h3>
 																			{label.displayAs && (
 																				<p className="text-sm text-muted-foreground">
-																					Internal name: <code className="px-1 py-0.5 bg-muted rounded text-xs">{label.name}</code>
+																					Internal name:{" "}
+																					<code className="px-1 py-0.5 bg-muted rounded text-xs">
+																						{label.name}
+																					</code>
 																				</p>
 																			)}
 																		</div>
