@@ -112,6 +112,11 @@ export function WorkflowsCatalog({
 	const [loadingMoreHistory, setLoadingMoreHistory] = useState(false);
 	const loadMoreTriggerRef = React.useRef<HTMLDivElement>(null);
 
+	// Helper to get display name for a label key (uses displayAs if available)
+	const getLabelDisplayName = (labelKey: string): string => {
+		return labelsStore[labelKey]?.displayAs || labelKey;
+	};
+
 	// Helper to get display value for a label (uses proxy if available)
 	const getDisplayValue = (labelKey: string, value: string): string => {
 		return labelsStore[labelKey]?.valueMappings.get(value) || value;
@@ -192,10 +197,17 @@ export function WorkflowsCatalog({
 				const response = await Flows.latest(
 					apiFilters.length > 0 ? apiFilters : undefined,
 				);
-				setFlows(response.data);
+				// Ensure response.data is an array
+				if (Array.isArray(response.data)) {
+					setFlows(response.data);
+				} else {
+					console.error("Expected array from Flows.latest but got:", response.data);
+					setFlows([]);
+				}
 			} catch (err) {
 				console.error("Failed to fetch flows:", err);
 				setError("Failed to load flows");
+				setFlows([]); // Ensure flows is always an array
 			} finally {
 				setLoading(false);
 			}
@@ -489,7 +501,7 @@ export function WorkflowsCatalog({
 													onClick={(e) => handleLabelClick(e, key, value)}
 													title={`${key}: ${value}`}
 												>
-													{key}: {getDisplayValue(key, value)}
+													{getLabelDisplayName(key)}: {getDisplayValue(key, value)}
 												</span>
 											))}
 										</div>
@@ -551,7 +563,7 @@ export function WorkflowsCatalog({
 													className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 cursor-pointer hover:bg-gray-200 transition-colors"
 													onClick={(e) => handleLabelClick(e, key, value)}
 												>
-													{key}: {value}
+													{getLabelDisplayName(key)}: {getDisplayValue(key, value)}
 												</span>
 											),
 										)}

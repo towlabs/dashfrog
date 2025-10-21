@@ -13,7 +13,7 @@ interface LabelsContextType {
 	labels: LabelsStore;
 	loading: boolean;
 	error: string | null;
-	refreshLabels: () => Promise<void>;
+	refreshLabels: (withHidden?: boolean) => Promise<void>;
 }
 
 const LabelsContext = createContext<LabelsContextType | undefined>(undefined);
@@ -23,11 +23,11 @@ export function LabelsProvider({ children }: { children: React.ReactNode }) {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	const fetchLabels = useCallback(async () => {
+	const fetchLabels = useCallback(async (withHidden = false) => {
 		try {
 			setLoading(true);
 			setError(null);
-			const response = await Labels.getAll();
+			const response = await Labels.getAll(withHidden);
 			const processedLabels = processLabels(response.data);
 			setLabels(processedLabels);
 		} catch (err) {

@@ -26,7 +26,9 @@ interface LabelUsageApiResponse {
 interface LabelApiResponse {
 	id: number;
 	label: string;
+	display_as: string | null;
 	description: string | null;
+	hide: boolean;
 	values: LabelValueApiResponse[];
 	used_in: LabelUsageApiResponse[];
 }
@@ -55,7 +57,9 @@ function toLabel(apiLabel: LabelApiResponse): Label {
 	return {
 		id: apiLabel.id,
 		name: apiLabel.label,
+		displayAs: apiLabel.display_as,
 		description: apiLabel.description,
+		hide: apiLabel.hide,
 		values: actualValues.sort(),
 		valueMappings,
 		usedIn: apiLabel.used_in.map((usage) => ({
@@ -81,13 +85,31 @@ function processLabels(apiLabels: LabelApiResponse[]): LabelsStore {
 }
 
 const Labels = {
-	getAll: () => {
-		return LabelsAPI.get<LabelsApiResponse>("labels");
+	getAll: (withHidden = false) => {
+		const params = new URLSearchParams();
+		if (withHidden) {
+			params.append("with_hidden", "true");
+		}
+		const queryString = params.toString();
+		const path = queryString ? `labels?${queryString}` : "labels";
+		return LabelsAPI.get<LabelsApiResponse>(path);
 	},
 
 	updateDescription: (labelId: number, description: string) => {
 		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
 			data: { description },
+		});
+	},
+
+	updateDisplayAs: (labelId: number, displayAs: string) => {
+		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
+			data: { display_as: displayAs },
+		});
+	},
+
+	updateHide: (labelId: number, hide: boolean) => {
+		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
+			data: { hide },
 		});
 	},
 

@@ -6,6 +6,7 @@ import {
 	Download,
 	Edit2,
 	Eye,
+	EyeOff,
 	Globe,
 	RefreshCcw,
 	Search,
@@ -70,13 +71,24 @@ export default function LabelsPage() {
 	const [editingDescription, setEditingDescription] = useState<number | null>(
 		null,
 	);
+	const [editingDisplayAs, setEditingDisplayAs] = useState<number | null>(null);
 	const [editingValue, setEditingValue] = useState<{
 		labelId: number;
 		value: string;
 	} | null>(null);
 	const [descriptionDraft, setDescriptionDraft] = useState("");
+	const [displayAsDraft, setDisplayAsDraft] = useState("");
 	const [valueDraft, setValueDraft] = useState("");
 	const [saving, setSaving] = useState(false);
+	const [showHidden, setShowHidden] = useState(false);
+
+	/**
+	 * Helper to get display name for a label
+	 * Returns displayAs if set, otherwise returns name
+	 */
+	const getLabelDisplayName = useCallback((label: Label): string => {
+		return label.displayAs || label.name;
+	}, []);
 
 	/**
 	 * Helper to get display value for used_in field
@@ -157,8 +169,10 @@ export default function LabelsPage() {
 
 	const filteredLabels = useMemo(() => {
 		return labelsWithType.filter((label) => {
+			const displayName = getLabelDisplayName(label);
 			const matchesSearch =
 				label.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+				displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
 				label.usedIn.some((usage) => {
 					const displayValue = getUsedInDisplayValue(usage.usedIn, usage.kind);
 					return displayValue.toLowerCase().includes(searchTerm.toLowerCase());
@@ -169,7 +183,7 @@ export default function LabelsPage() {
 				label.type === "all";
 			return matchesSearch && matchesType;
 		});
-	}, [labelsWithType, searchTerm, filterType, getUsedInDisplayValue]);
+	}, [labelsWithType, searchTerm, filterType, getUsedInDisplayValue, getLabelDisplayName]);
 
 	const filteredRenamedValues = useMemo(() => {
 		return renamedValues.filter(
@@ -207,7 +221,7 @@ export default function LabelsPage() {
 	};
 
 	const handleRefresh = async () => {
-		await refreshLabels();
+		await refreshLabels(showHidden);
 	};
 
 	const handleExport = () => {
@@ -253,12 +267,59 @@ export default function LabelsPage() {
 		try {
 			setSaving(true);
 			await Labels.updateDescription(labelId, descriptionDraft);
-			await refreshLabels(); // Reload all labels to get updated data
+			await refreshLabels(showHidden); // Reload with current visibility setting
 			setEditingDescription(null);
 			setDescriptionDraft("");
 		} catch (err) {
 			console.error("Failed to update description:", err);
 			alert("Failed to update description. Please try again.");
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	// Display name editing handlers
+	const startEditDisplayAs = (
+		labelId: number,
+		currentDisplayAs: string | null,
+	) => {
+		setEditingDisplayAs(labelId);
+		setDisplayAsDraft(currentDisplayAs || "");
+	};
+
+	const cancelEditDisplayAs = () => {
+		setEditingDisplayAs(null);
+		setDisplayAsDraft("");
+	};
+
+	const saveDisplayAs = async (labelId: number) => {
+		if (saving) return;
+
+		try {
+			setSaving(true);
+			await Labels.updateDisplayAs(labelId, displayAsDraft);
+			await refreshLabels(showHidden); // Reload with current visibility setting
+			setEditingDisplayAs(null);
+			setDisplayAsDraft("");
+		} catch (err) {
+			console.error("Failed to update display name:", err);
+			alert("Failed to update display name. Please try again.");
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	// Hide/show toggle handler
+	const toggleHide = async (labelId: number, currentHide: boolean) => {
+		if (saving) return;
+
+		try {
+			setSaving(true);
+			await Labels.updateHide(labelId, !currentHide);
+			await refreshLabels(showHidden); // Reload with current visibility setting
+		} catch (err) {
+			console.error("Failed to toggle hide:", err);
+			alert("Failed to toggle label visibility. Please try again.");
 		} finally {
 			setSaving(false);
 		}
@@ -286,7 +347,7 @@ export default function LabelsPage() {
 			setSaving(true);
 			const proxyValue = valueDraft.trim() === "" ? null : valueDraft.trim();
 			await Labels.updateValueProxy(labelId, value, proxyValue);
-			await refreshLabels(); // Reload all labels to get updated data
+			await refreshLabels(showHidden); // Reload with current visibility setting
 			setEditingValue(null);
 			setValueDraft("");
 		} catch (err) {
@@ -396,6 +457,23 @@ export default function LabelsPage() {
 									<SelectItem value="metrics">Metrics Only</SelectItem>
 								</SelectContent>
 							</Select>
+							<Button
+								variant={showHidden ? "default" : "outline"}
+								size="default"
+								onClick={async () => {
+									const newShowHidden = !showHidden;
+									setShowHidden(newShowHidden);
+									await refreshLabels(newShowHidden);
+								}}
+								className="flex items-center gap-2"
+							>
+								{showHidden ? (
+									<Eye className="h-4 w-4" />
+								) : (
+									<EyeOff className="h-4 w-4" />
+								)}
+								{showHidden ? "Hide Hidden" : "Show Hidden"}
+							</Button>
 						</div>
 
 						<Table>
@@ -414,7 +492,10 @@ export default function LabelsPage() {
 									return (
 										<>
 											{/* Main Row */}
-											<TableRow key={label.name} className="hover:bg-muted/50">
+											<TableRow
+												key={label.name}
+												className={`hover:bg-muted/50 ${label.hide ? 'opacity-50 bg-muted/30' : ''}`}
+											>
 												<TableCell>
 													<button
 														type="button"
@@ -429,12 +510,68 @@ export default function LabelsPage() {
 													</button>
 												</TableCell>
 												<TableCell className="font-medium">
-													<div className="flex items-center gap-2">
-														<span className={getTypeColor(label.type)}>
-															{getTypeIcon(label.type)}
-														</span>
-														{label.name}
-													</div>
+													{editingDisplayAs === label.id ? (
+														<div className="flex items-center gap-2">
+															<Input
+																value={displayAsDraft}
+																onChange={(e) => setDisplayAsDraft(e.target.value)}
+																className="h-8 text-sm"
+																placeholder={label.name}
+																autoFocus
+															/>
+															<Button
+																size="sm"
+																variant="ghost"
+																onClick={() => saveDisplayAs(label.id)}
+																disabled={saving}
+																className="h-8 w-8 p-0"
+															>
+																<Check className="h-4 w-4 text-green-600" />
+															</Button>
+															<Button
+																size="sm"
+																variant="ghost"
+																onClick={cancelEditDisplayAs}
+																disabled={saving}
+																className="h-8 w-8 p-0"
+															>
+																<X className="h-4 w-4 text-red-600" />
+															</Button>
+														</div>
+													) : (
+														<div className="flex items-center gap-2">
+															<span className={getTypeColor(label.type)}>
+																{getTypeIcon(label.type)}
+															</span>
+															<span className="truncate">{getLabelDisplayName(label)}</span>
+															<Button
+																size="sm"
+																variant="ghost"
+																onClick={() =>
+																	startEditDisplayAs(label.id, label.displayAs)
+																}
+																className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
+															>
+																<Edit2 className="h-3 w-3" />
+															</Button>
+															<Button
+																size="sm"
+																variant="ghost"
+																onClick={() => toggleHide(label.id, label.hide)}
+																disabled={saving}
+																className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
+																title={
+																	label.hide ? "Show this label" : "Hide this label"
+																}
+															>
+																{label.hide ? (
+																	<EyeOff className="h-3 w-3" />
+																) : (
+																	<Eye className="h-3 w-3" />
+																)}
+															</Button>
+														</div>
+													)}
 												</TableCell>
 												<TableCell className="text-sm text-muted-foreground max-w-xs">
 													{editingDescription === label.id ? (
@@ -540,6 +677,25 @@ export default function LabelsPage() {
 													<TableCell colSpan={5} className="p-0 bg-muted/20">
 														<Card className="m-4 shadow-sm">
 															<CardContent className="p-6">
+																{/* Label Info Header */}
+																<div className="mb-6 pb-4 border-b">
+																	<div className="flex items-center gap-3">
+																		<span className={getTypeColor(label.type)}>
+																			{getTypeIcon(label.type)}
+																		</span>
+																		<div>
+																			<h3 className="text-lg font-semibold">
+																				{getLabelDisplayName(label)}
+																			</h3>
+																			{label.displayAs && (
+																				<p className="text-sm text-muted-foreground">
+																					Internal name: <code className="px-1 py-0.5 bg-muted rounded text-xs">{label.name}</code>
+																				</p>
+																			)}
+																		</div>
+																	</div>
+																</div>
+
 																<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 																	{/* Left Panel - Value Mappings */}
 																	<div>
