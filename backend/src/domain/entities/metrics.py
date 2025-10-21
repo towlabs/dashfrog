@@ -19,3 +19,4 @@ class Metric(BaseModel):
     display_as: str
     description: str
     associated_identifiers: list[str] = []
+    labels: list[int] = []

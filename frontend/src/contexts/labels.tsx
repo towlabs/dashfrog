@@ -6,11 +6,8 @@ import {
 	useEffect,
 	useState,
 } from "react";
-import {
-	Labels,
-	type LabelsStore,
-	processLabels,
-} from "@/src/services/api/labels";
+import { Labels, processLabels } from "@/src/services/api/labels";
+import type { LabelsStore } from "@/src/types/label";
 
 interface LabelsContextType {
 	labels: LabelsStore;

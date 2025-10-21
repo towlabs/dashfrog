@@ -100,7 +100,6 @@ dependencies = [
     { name = "asyncpg" },
     { name = "axiom-py" },
     { name = "clickhouse-connect" },
-    { name = "dashfrog-python-sdk" },
     { name = "fastapi" },
     { name = "orjson" },
     { name = "prometheus-api-client" },
@@ -114,7 +113,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "bandit" },
-    { name = "dashfrog-python-sdk" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "ruff" },
@@ -125,7 +123,6 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "axiom-py", specifier = ">=0.9.1" },
     { name = "clickhouse-connect", specifier = ">=0.9.2" },
-    { name = "dashfrog-python-sdk", editable = "../dashfrog_python_sdk" },
     { name = "fastapi", specifier = ">=0.118.0" },
     { name = "orjson", specifier = ">=3.11.3" },
     { name = "prometheus-api-client", git = "https://github.com/titouanfreville/prometheus-api-client-python" },
@@ -139,7 +136,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "bandit", specifier = ">=1.8.6" },
-    { name = "dashfrog-python-sdk", editable = "../dashfrog_python_sdk" },
     { name = "pyright", specifier = ">=1.1.405" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "ruff", specifier = ">=0.13.2" },
@@ -393,23 +389,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/94/35/386550fd60316d1e37eccdda609b074113298f23cef5bddb2049823fe666/dacite-1.9.2-py3-none-any.whl", hash = "sha256:053f7c3f5128ca2e9aceb66892b1a3c8936d02c686e707bee96e19deef4bc4a0", size = 16600, upload-time = "2025-02-05T09:27:24.345Z" },
 ]
 
-[[package]]
-name = "dashfrog-python-sdk"
-version = "0.1.0"
-source = { editable = "../dashfrog_python_sdk" }
-dependencies = [
-    { name = "clickhouse-connect" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp" },
-    { name = "opentelemetry-instrumentation-requests" },
-    { name = "opentelemetry-sdk" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "pydantic" },
-    { name = "pydantic-settings", extra = ["yaml"] },
-    { name = "shortuuid" },
-    { name = "structlog" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "click", marker = "extra == 'console'", specifier = ">=8.0.0" },
@@ -449,7 +428,6 @@ dev = [
     { name = "bandit", specifier = ">=1.8.6" },
     { name = "celery", specifier = ">=5.5.3" },
     { name = "celery-types", specifier = ">=0.23.0" },
-    { name = "dashfrog-python-sdk" },
     { name = "isort", specifier = ">=6.0.1" },
     { name = "opentelemetry-exporter-jaeger", specifier = ">=1.11.1" },
     { name = "pdoc3", specifier = ">=0.11.6" },

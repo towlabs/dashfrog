@@ -5,21 +5,41 @@ import type { Step } from "@/src/types/step";
 
 const FlowsAPI = NewRestAPI(`api/flows`);
 
+/**
+ * Pagination parameters for API requests
+ */
 export interface PaginationParams {
+	/** Page number (1-indexed) */
 	page?: number;
+	/** Number of items per page */
 	nb_items?: number;
 }
 
+/**
+ * Date range parameters for filtering API requests
+ */
 export interface DateRangeParams {
-	from_date?: string; // ISO string
-	to_date?: string; // ISO string
+	/** Start date in ISO string format */
+	from_date?: string;
+	/** End date in ISO string format */
+	to_date?: string;
 }
 
+/**
+ * Generic paginated response structure from the API
+ *
+ * @template T - The type of items being paginated
+ */
 export interface PaginatedResponse<T> {
+	/** Array of items for the current page */
 	items: T[];
+	/** Total number of items across all pages */
 	total: number;
+	/** Total number of pages */
 	total_pages: number;
+	/** Current page number */
 	page: number;
+	/** Number of items per page */
 	nb_items: number;
 }
 

@@ -1,77 +1,80 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
+import type { Label, LabelsStore } from "@/src/types/label";
 
 const LabelsAPI = NewRestAPI(`api`);
 
-export interface LabelValue {
+/**
+ * Raw label value from backend API (snake_case)
+ */
+interface LabelValueApiResponse {
 	value: string;
 	mapped_to: string | null;
 }
 
-export interface LabelUsage {
-	used_in: string;
-	kind: string; // LabelSrcKind from backend
+/**
+ * Raw label usage from backend API (snake_case)
+ */
+interface LabelUsageApiResponse {
+	used_in: string | number;
+	kind: string;
 }
 
-export interface Label {
+/**
+ * Raw label response from backend API (snake_case)
+ * This is internal to the API service and converted to Label (camelCase)
+ */
+interface LabelApiResponse {
 	id: number;
 	label: string;
 	description: string | null;
-	values: LabelValue[];
-	used_in: LabelUsage[];
+	values: LabelValueApiResponse[];
+	used_in: LabelUsageApiResponse[];
 }
 
-export type LabelsResponse = Label[];
+type LabelsApiResponse = LabelApiResponse[];
 
 /**
- * Processed label structure for easy lookup
- * Maps label names to their values and mappings
+ * Convert backend API response to frontend Label type
+ * Transforms snake_case to camelCase and processes value mappings
  */
-export interface ProcessedLabel {
-	id: number;
-	name: string;
-	description: string | null;
-	values: string[]; // ONLY actual queryable values (NOT proxied/mapped_to values)
-	valueMappings: Map<string, string>; // Maps actual value -> display alias (mapped_to)
-	usedIn: LabelUsage[];
-}
+function toLabel(apiLabel: LabelApiResponse): Label {
+	const valueMappings = new Map<string, string>();
+	const actualValues: string[] = [];
 
-export interface LabelsStore {
-	[labelName: string]: ProcessedLabel;
+	// Process values and their mappings
+	apiLabel.values.forEach((val) => {
+		// Only include actual values that can be used in queries
+		actualValues.push(val.value);
+
+		// Store mapping for display purposes only
+		if (val.mapped_to) {
+			valueMappings.set(val.value, val.mapped_to);
+		}
+	});
+
+	return {
+		id: apiLabel.id,
+		name: apiLabel.label,
+		description: apiLabel.description,
+		values: actualValues.sort(),
+		valueMappings,
+		usedIn: apiLabel.used_in.map((usage) => ({
+			usedIn: String(usage.used_in),
+			kind: usage.kind,
+		})),
+	};
 }
 
 /**
- * Process raw labels from API into a more usable format
- *
- * IMPORTANT: Only actual label values are included in the values array.
- * Proxied/mapped values (mapped_to) are NOT included as they are display aliases only
- * and won't be returned from backend queries.
+ * Process labels from API into indexed store
+ * Converts API response format to JavaScript conventions
  */
-export function processLabels(labels: Label[]): LabelsStore {
+function processLabels(apiLabels: LabelApiResponse[]): LabelsStore {
 	const store: LabelsStore = {};
 
-	labels.forEach((label) => {
-		const valueMappings = new Map<string, string>();
-		const actualValues: string[] = [];
-
-		// Process values and their mappings
-		label.values.forEach((val) => {
-			// Only include actual values that can be used in queries
-			actualValues.push(val.value);
-
-			// Store mapping for display purposes only
-			if (val.mapped_to) {
-				valueMappings.set(val.value, val.mapped_to);
-			}
-		});
-
-		store[label.label] = {
-			id: label.id,
-			name: label.label,
-			description: label.description,
-			values: actualValues.sort(), // Only actual queryable values
-			valueMappings, // Maps actual values to display aliases
-			usedIn: label.used_in,
-		};
+	apiLabels.forEach((apiLabel) => {
+		const label = toLabel(apiLabel);
+		store[label.name] = label;
 	});
 
 	return store;
@@ -79,11 +82,11 @@ export function processLabels(labels: Label[]): LabelsStore {
 
 const Labels = {
 	getAll: () => {
-		return LabelsAPI.get<LabelsResponse>("labels");
+		return LabelsAPI.get<LabelsApiResponse>("labels");
 	},
 
 	updateDescription: (labelId: number, description: string) => {
-		return LabelsAPI.put<Label>(`labels/${labelId}`, {
+		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
 			data: { description },
 		});
 	},
@@ -93,10 +96,13 @@ const Labels = {
 		valueName: string,
 		proxy: string | null,
 	) => {
-		return LabelsAPI.put<LabelValue>(`labels/${labelId}/value/${valueName}`, {
-			data: { proxy },
-		});
+		return LabelsAPI.put<LabelValueApiResponse>(
+			`labels/${labelId}/value/${valueName}`,
+			{
+				data: { proxy },
+			},
+		);
 	},
 };
 
-export { LabelsAPI, Labels };
+export { LabelsAPI, Labels, processLabels };

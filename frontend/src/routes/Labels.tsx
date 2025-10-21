@@ -43,9 +43,9 @@ import {
 import { useLabels } from "@/src/contexts/labels";
 import { useMetrics } from "@/src/contexts/metrics";
 import { Labels } from "@/src/services/api";
-import type { ProcessedLabel } from "@/src/services/api/labels";
+import type { Label } from "@/src/types/label";
 
-interface LabelWithType extends ProcessedLabel {
+interface LabelWithType extends Label {
 	type: "all" | "workflows" | "metrics";
 }
 
@@ -160,7 +160,7 @@ export default function LabelsPage() {
 			const matchesSearch =
 				label.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
 				label.usedIn.some((usage) => {
-					const displayValue = getUsedInDisplayValue(usage.used_in, usage.kind);
+					const displayValue = getUsedInDisplayValue(usage.usedIn, usage.kind);
 					return displayValue.toLowerCase().includes(searchTerm.toLowerCase());
 				});
 			const matchesType =
@@ -360,356 +360,358 @@ export default function LabelsPage() {
 
 			{/* Labels Table */}
 			<div>
-					<Card>
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<Tags className="h-5 w-5" />
-								Labels Overview
-							</CardTitle>
-							<CardDescription>
-								View all labels and their associated values
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="flex items-center space-x-4 mb-4">
-								<div className="flex items-center space-x-2">
-									<Search className="h-4 w-4" />
-									<Input
-										placeholder="Search labels and usage..."
-										value={searchTerm}
-										onChange={(e) => setSearchTerm(e.target.value)}
-										className="w-64"
-									/>
-								</div>
-								<Select
-									value={filterType}
-									onValueChange={(value: "all" | "workflows" | "metrics") =>
-										setFilterType(value)
-									}
-								>
-									<SelectTrigger className="w-48">
-										<SelectValue placeholder="Filter by type" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="all">All Labels</SelectItem>
-										<SelectItem value="workflows">Workflows Only</SelectItem>
-										<SelectItem value="metrics">Metrics Only</SelectItem>
-									</SelectContent>
-								</Select>
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<Tags className="h-5 w-5" />
+							Labels Overview
+						</CardTitle>
+						<CardDescription>
+							View all labels and their associated values
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="flex items-center space-x-4 mb-4">
+							<div className="flex items-center space-x-2">
+								<Search className="h-4 w-4" />
+								<Input
+									placeholder="Search labels and usage..."
+									value={searchTerm}
+									onChange={(e) => setSearchTerm(e.target.value)}
+									className="w-64"
+								/>
 							</div>
+							<Select
+								value={filterType}
+								onValueChange={(value: "all" | "workflows" | "metrics") =>
+									setFilterType(value)
+								}
+							>
+								<SelectTrigger className="w-48">
+									<SelectValue placeholder="Filter by type" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Labels</SelectItem>
+									<SelectItem value="workflows">Workflows Only</SelectItem>
+									<SelectItem value="metrics">Metrics Only</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
 
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead className="w-12"></TableHead>
-										<TableHead>Label</TableHead>
-										<TableHead>Description</TableHead>
-										<TableHead>Values</TableHead>
-										<TableHead>Used In</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{filteredLabels.map((label) => {
-										const isExpanded = expandedRows.has(label.name);
-										return (
-											<>
-												{/* Main Row */}
-												<TableRow
-													key={label.name}
-													className="hover:bg-muted/50"
-												>
-													<TableCell>
-														<button
-															type="button"
-															onClick={(e) => toggleRowExpansion(label.name, e)}
-															className="p-1 hover:bg-muted rounded"
-														>
-															{isExpanded ? (
-																<ChevronDown className="h-4 w-4" />
-															) : (
-																<ChevronRight className="h-4 w-4" />
-															)}
-														</button>
-													</TableCell>
-													<TableCell className="font-medium">
-														<div className="flex items-center gap-2">
-															<span className={getTypeColor(label.type)}>
-																{getTypeIcon(label.type)}
-															</span>
-															{label.name}
-														</div>
-													</TableCell>
-													<TableCell className="text-sm text-muted-foreground max-w-xs">
-														{editingDescription === label.id ? (
-															<div className="flex items-center gap-2">
-																<Input
-																	value={descriptionDraft}
-																	onChange={(e) =>
-																		setDescriptionDraft(e.target.value)
-																	}
-																	className="h-8 text-sm"
-																	placeholder="Enter description..."
-																	autoFocus
-																/>
-																<Button
-																	size="sm"
-																	variant="ghost"
-																	onClick={() => saveDescription(label.id)}
-																	disabled={saving}
-																	className="h-8 w-8 p-0"
-																>
-																	<Check className="h-4 w-4 text-green-600" />
-																</Button>
-																<Button
-																	size="sm"
-																	variant="ghost"
-																	onClick={cancelEditDescription}
-																	disabled={saving}
-																	className="h-8 w-8 p-0"
-																>
-																	<X className="h-4 w-4 text-red-600" />
-																</Button>
-															</div>
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead className="w-12"></TableHead>
+									<TableHead>Label</TableHead>
+									<TableHead>Description</TableHead>
+									<TableHead>Values</TableHead>
+									<TableHead>Used In</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{filteredLabels.map((label) => {
+									const isExpanded = expandedRows.has(label.name);
+									return (
+										<>
+											{/* Main Row */}
+											<TableRow key={label.name} className="hover:bg-muted/50">
+												<TableCell>
+													<button
+														type="button"
+														onClick={(e) => toggleRowExpansion(label.name, e)}
+														className="p-1 hover:bg-muted rounded"
+													>
+														{isExpanded ? (
+															<ChevronDown className="h-4 w-4" />
 														) : (
-															<div className="flex items-center gap-2">
-																<span className="truncate">
-																	{label.description || "No description"}
-																</span>
-																<Button
-																	size="sm"
-																	variant="ghost"
-																	onClick={() =>
-																		startEditDescription(
-																			label.id,
-																			label.description,
-																		)
-																	}
-																	className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
-																>
-																	<Edit2 className="h-3 w-3" />
-																</Button>
-															</div>
+															<ChevronRight className="h-4 w-4" />
 														)}
-													</TableCell>
-													<TableCell>
-														<div className="flex flex-wrap gap-1">
-															{label.values.slice(0, 3).map((value) => (
-																<Badge
-																	key={value}
-																	variant="secondary"
-																	className="text-xs"
-																>
-																	{value}
-																</Badge>
-															))}
-															{label.values.length > 3 && (
-																<Badge variant="outline" className="text-xs">
-																	+{label.values.length - 3} more
-																</Badge>
-															)}
+													</button>
+												</TableCell>
+												<TableCell className="font-medium">
+													<div className="flex items-center gap-2">
+														<span className={getTypeColor(label.type)}>
+															{getTypeIcon(label.type)}
+														</span>
+														{label.name}
+													</div>
+												</TableCell>
+												<TableCell className="text-sm text-muted-foreground max-w-xs">
+													{editingDescription === label.id ? (
+														<div className="flex items-center gap-2">
+															<Input
+																value={descriptionDraft}
+																onChange={(e) =>
+																	setDescriptionDraft(e.target.value)
+																}
+																className="h-8 text-sm"
+																placeholder="Enter description..."
+																autoFocus
+															/>
+															<Button
+																size="sm"
+																variant="ghost"
+																onClick={() => saveDescription(label.id)}
+																disabled={saving}
+																className="h-8 w-8 p-0"
+															>
+																<Check className="h-4 w-4 text-green-600" />
+															</Button>
+															<Button
+																size="sm"
+																variant="ghost"
+																onClick={cancelEditDescription}
+																disabled={saving}
+																className="h-8 w-8 p-0"
+															>
+																<X className="h-4 w-4 text-red-600" />
+															</Button>
 														</div>
-													</TableCell>
-													<TableCell>
-														<div className="flex flex-wrap gap-1">
-															{label.usedIn.slice(0, 3).map((usage, idx) => (
-																<Badge
-																	key={`${usage.used_in}-${idx}`}
-																	variant={
-																		usage.kind === "flow" ||
-																		usage.kind === "workflow"
-																			? "secondary"
-																			: "outline"
-																	}
-																	className="text-xs"
-																>
-																	{getUsedInDisplayValue(usage.used_in, usage.kind)}
-																</Badge>
-															))}
-															{label.usedIn.length > 3 && (
-																<Badge variant="outline" className="text-xs">
-																	+{label.usedIn.length - 3} more
-																</Badge>
-															)}
+													) : (
+														<div className="flex items-center gap-2">
+															<span className="truncate">
+																{label.description || "No description"}
+															</span>
+															<Button
+																size="sm"
+																variant="ghost"
+																onClick={() =>
+																	startEditDescription(
+																		label.id,
+																		label.description,
+																	)
+																}
+																className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
+															>
+																<Edit2 className="h-3 w-3" />
+															</Button>
 														</div>
-													</TableCell>
-												</TableRow>
+													)}
+												</TableCell>
+												<TableCell>
+													<div className="flex flex-wrap gap-1">
+														{label.values.slice(0, 3).map((value) => (
+															<Badge
+																key={value}
+																variant="secondary"
+																className="text-xs"
+															>
+																{value}
+															</Badge>
+														))}
+														{label.values.length > 3 && (
+															<Badge variant="outline" className="text-xs">
+																+{label.values.length - 3} more
+															</Badge>
+														)}
+													</div>
+												</TableCell>
+												<TableCell>
+													<div className="flex flex-wrap gap-1">
+														{label.usedIn.slice(0, 3).map((usage, idx) => (
+															<Badge
+																key={`${usage.usedIn}-${idx}`}
+																variant={
+																	usage.kind === "flow" ||
+																	usage.kind === "workflow"
+																		? "secondary"
+																		: "outline"
+																}
+																className="text-xs"
+															>
+																{getUsedInDisplayValue(
+																	usage.usedIn,
+																	usage.kind,
+																)}
+															</Badge>
+														))}
+														{label.usedIn.length > 3 && (
+															<Badge variant="outline" className="text-xs">
+																+{label.usedIn.length - 3} more
+															</Badge>
+														)}
+													</div>
+												</TableCell>
+											</TableRow>
 
-												{/* Expanded Row */}
-												{isExpanded && (
-													<TableRow key={`${label.name}-expanded`}>
-														<TableCell colSpan={5} className="p-0 bg-muted/20">
-															<Card className="m-4 shadow-sm">
-																<CardContent className="p-6">
-																	<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-																		{/* Left Panel - Value Mappings */}
-																		<div>
-																			<h4 className="font-semibold mb-3 flex items-center gap-2">
-																				<Tags className="h-4 w-4" />
-																				Value Mappings
-																			</h4>
-																			<div className="space-y-2">
-																				{label.values.map((value) => {
-																					const mappedTo =
-																						label.valueMappings.get(value);
-																					const isEditing =
-																						editingValue?.labelId ===
-																							label.id &&
-																						editingValue?.value === value;
+											{/* Expanded Row */}
+											{isExpanded && (
+												<TableRow key={`${label.name}-expanded`}>
+													<TableCell colSpan={5} className="p-0 bg-muted/20">
+														<Card className="m-4 shadow-sm">
+															<CardContent className="p-6">
+																<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+																	{/* Left Panel - Value Mappings */}
+																	<div>
+																		<h4 className="font-semibold mb-3 flex items-center gap-2">
+																			<Tags className="h-4 w-4" />
+																			Value Mappings
+																		</h4>
+																		<div className="space-y-2">
+																			{label.values.map((value) => {
+																				const mappedTo =
+																					label.valueMappings.get(value);
+																				const isEditing =
+																					editingValue?.labelId === label.id &&
+																					editingValue?.value === value;
 
-																					return (
-																						<div
-																							key={value}
-																							className="flex items-center gap-2 p-3 border rounded bg-muted/20"
-																						>
-																							<Badge
-																								variant="outline"
-																								className="font-mono text-xs min-w-fit"
-																							>
-																								{value}
-																							</Badge>
-																							<span className="text-sm text-muted-foreground">
-																								→
-																							</span>
-
-																							{isEditing ? (
-																								<>
-																									<Input
-																										value={valueDraft}
-																										onChange={(e) =>
-																											setValueDraft(
-																												e.target.value,
-																											)
-																										}
-																										className="h-8 text-sm flex-1"
-																										placeholder={value}
-																										autoFocus
-																									/>
-																									<Button
-																										size="sm"
-																										variant="ghost"
-																										onClick={() =>
-																											saveValueProxy(
-																												label.id,
-																												value,
-																											)
-																										}
-																										disabled={saving}
-																										className="h-8 w-8 p-0"
-																									>
-																										<Check className="h-4 w-4 text-green-600" />
-																									</Button>
-																									<Button
-																										size="sm"
-																										variant="ghost"
-																										onClick={cancelEditValue}
-																										disabled={saving}
-																										className="h-8 w-8 p-0"
-																									>
-																										<X className="h-4 w-4 text-red-600" />
-																									</Button>
-																								</>
-																							) : (
-																								<>
-																									<div className="flex-1 flex items-center gap-2">
-																										{mappedTo ? (
-																											<Badge
-																												variant="secondary"
-																												className="text-xs"
-																											>
-																												{mappedTo}
-																											</Badge>
-																										) : (
-																											<span className="text-sm text-muted-foreground italic">
-																												{value} (no proxy)
-																											</span>
-																										)}
-																									</div>
-																									<Button
-																										size="sm"
-																										variant="ghost"
-																										onClick={() =>
-																											startEditValue(
-																												label.id,
-																												value,
-																												mappedTo,
-																											)
-																										}
-																										className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
-																									>
-																										<Edit2 className="h-3 w-3" />
-																									</Button>
-																								</>
-																							)}
-																						</div>
-																					);
-																				})}
-																			</div>
-																		</div>
-
-																		{/* Right Panel - Usage */}
-																		<div>
-																			<h4 className="font-semibold mb-3 flex items-center gap-2">
-																				<Eye className="h-4 w-4" />
-																				Used In ({label.usedIn.length})
-																			</h4>
-																			<div className="space-y-2">
-																				{label.usedIn.map((usage, idx) => (
+																				return (
 																					<div
-																						key={`${usage.used_in}-${idx}`}
-																						className="flex items-center gap-2 p-3 border rounded"
+																						key={value}
+																						className="flex items-center gap-2 p-3 border rounded bg-muted/20"
 																					>
-																						<div className="flex items-center gap-2">
-																							<span
-																								className={
-																									usage.kind === "flow" ||
-																									usage.kind === "workflow"
-																										? "text-orange-600"
-																										: "text-blue-600"
-																								}
-																							>
-																								{usage.kind === "flow" ||
-																								usage.kind === "workflow" ? (
-																									<Settings className="h-4 w-4" />
-																								) : (
-																									<BarChart3 className="h-4 w-4" />
-																								)}
-																							</span>
-																							<Badge
-																								variant={
-																									usage.kind === "flow" ||
-																									usage.kind === "workflow"
-																										? "secondary"
-																										: "outline"
-																								}
-																								className="text-xs"
-																							>
-																								{getUsedInDisplayValue(usage.used_in, usage.kind)}
-																							</Badge>
-																							<Badge
-																								variant="outline"
-																								className="text-xs capitalize"
-																							>
-																								{usage.kind}
-																							</Badge>
-																						</div>
+																						<Badge
+																							variant="outline"
+																							className="font-mono text-xs min-w-fit"
+																						>
+																							{value}
+																						</Badge>
+																						<span className="text-sm text-muted-foreground">
+																							→
+																						</span>
+
+																						{isEditing ? (
+																							<>
+																								<Input
+																									value={valueDraft}
+																									onChange={(e) =>
+																										setValueDraft(
+																											e.target.value,
+																										)
+																									}
+																									className="h-8 text-sm flex-1"
+																									placeholder={value}
+																									autoFocus
+																								/>
+																								<Button
+																									size="sm"
+																									variant="ghost"
+																									onClick={() =>
+																										saveValueProxy(
+																											label.id,
+																											value,
+																										)
+																									}
+																									disabled={saving}
+																									className="h-8 w-8 p-0"
+																								>
+																									<Check className="h-4 w-4 text-green-600" />
+																								</Button>
+																								<Button
+																									size="sm"
+																									variant="ghost"
+																									onClick={cancelEditValue}
+																									disabled={saving}
+																									className="h-8 w-8 p-0"
+																								>
+																									<X className="h-4 w-4 text-red-600" />
+																								</Button>
+																							</>
+																						) : (
+																							<>
+																								<div className="flex-1 flex items-center gap-2">
+																									{mappedTo ? (
+																										<Badge
+																											variant="secondary"
+																											className="text-xs"
+																										>
+																											{mappedTo}
+																										</Badge>
+																									) : (
+																										<span className="text-sm text-muted-foreground italic">
+																											{value} (no proxy)
+																										</span>
+																									)}
+																								</div>
+																								<Button
+																									size="sm"
+																									variant="ghost"
+																									onClick={() =>
+																										startEditValue(
+																											label.id,
+																											value,
+																											mappedTo,
+																										)
+																									}
+																									className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
+																								>
+																									<Edit2 className="h-3 w-3" />
+																								</Button>
+																							</>
+																						)}
 																					</div>
-																				))}
-																			</div>
+																				);
+																			})}
 																		</div>
 																	</div>
-																</CardContent>
-															</Card>
-														</TableCell>
-													</TableRow>
-												)}
-											</>
-										);
-									})}
-								</TableBody>
-							</Table>
-						</CardContent>
-					</Card>
-				</div>
+
+																	{/* Right Panel - Usage */}
+																	<div>
+																		<h4 className="font-semibold mb-3 flex items-center gap-2">
+																			<Eye className="h-4 w-4" />
+																			Used In ({label.usedIn.length})
+																		</h4>
+																		<div className="space-y-2">
+																			{label.usedIn.map((usage, idx) => (
+																				<div
+																					key={`${usage.usedIn}-${idx}`}
+																					className="flex items-center gap-2 p-3 border rounded"
+																				>
+																					<div className="flex items-center gap-2">
+																						<span
+																							className={
+																								usage.kind === "flow" ||
+																								usage.kind === "workflow"
+																									? "text-orange-600"
+																									: "text-blue-600"
+																							}
+																						>
+																							{usage.kind === "flow" ||
+																							usage.kind === "workflow" ? (
+																								<Settings className="h-4 w-4" />
+																							) : (
+																								<BarChart3 className="h-4 w-4" />
+																							)}
+																						</span>
+																						<Badge
+																							variant={
+																								usage.kind === "flow" ||
+																								usage.kind === "workflow"
+																									? "secondary"
+																									: "outline"
+																							}
+																							className="text-xs"
+																						>
+																							{getUsedInDisplayValue(
+																								usage.usedIn,
+																								usage.kind,
+																							)}
+																						</Badge>
+																						<Badge
+																							variant="outline"
+																							className="text-xs capitalize"
+																						>
+																							{usage.kind}
+																						</Badge>
+																					</div>
+																				</div>
+																			))}
+																		</div>
+																	</div>
+																</div>
+															</CardContent>
+														</Card>
+													</TableCell>
+												</TableRow>
+											)}
+										</>
+									);
+								})}
+							</TableBody>
+						</Table>
+					</CardContent>
+				</Card>
+			</div>
 
 			{/* Sliding Renamed Values Panel - Right side */}
 			<div

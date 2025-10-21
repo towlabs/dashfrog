@@ -39,7 +39,7 @@ class Metrics:
         log = self.__log.bind(action="list")
 
         async with self.__session_maker.begin():
-            labels = await self.__metrics.list()
+            labels = await self.__metrics.list(True)
 
         log.debug("Success !")
         return labels

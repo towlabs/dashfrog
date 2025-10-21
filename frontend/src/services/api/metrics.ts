@@ -1,68 +1,69 @@
-import {NewRestAPI} from "@/src/services/api/_helper";
+import { NewRestAPI } from "@/src/services/api/_helper";
+import type {
+	Metric,
+	MetricKind,
+	MetricScope,
+	MetricUnits,
+	MetricsStore,
+} from "@/src/types/metric";
 
 const MetricsAPI = NewRestAPI(`api`);
 
-export type Kind = 'counter' | 'gauge' | 'histogram' | 'summary' | 'untyped';
-
-export interface Metric {
-  id: number;
-  key: string;
-  kind: Kind;
-  scope: string;
-  unit: string;
-  display_as: string;
-  description: string;
-  associated_identifiers: string[];
+/**
+ * Raw metric response from backend API (snake_case)
+ * This is internal to the API service and converted to Metric (camelCase)
+ */
+interface MetricApiResponse {
+	id: number;
+	key: string;
+	kind: MetricKind;
+	scope: MetricScope;
+	unit: MetricUnits;
+	display_as: string;
+	description: string;
+	associated_identifiers: string[];
+	labels: number[];
 }
 
-export type MetricsResponse = Metric[];
+type MetricsApiResponse = MetricApiResponse[];
 
 /**
- * Processed metrics structure for easy lookup
- * Maps metric IDs to their display values
+ * Convert backend API response to frontend Metric type
+ * Transforms snake_case to camelCase
  */
-export interface ProcessedMetric {
-  id: number;
-  key: string;
-  kind: Kind;
-  scope: string;
-  unit: string;
-  displayAs: string;
-  description: string;
-  associatedIdentifiers: string[];
-}
-
-export interface MetricsStore {
-  [metricId: number]: ProcessedMetric;
+function toMetric(apiMetric: MetricApiResponse): Metric {
+	return {
+		id: apiMetric.id,
+		key: apiMetric.key,
+		kind: apiMetric.kind,
+		scope: apiMetric.scope,
+		unit: apiMetric.unit,
+		displayAs: apiMetric.display_as,
+		description: apiMetric.description,
+		associatedIdentifiers: apiMetric.associated_identifiers,
+		labels: apiMetric.labels,
+	};
 }
 
 /**
- * Process raw metrics from API into a more usable format
- * Creates an indexed store by metric ID for fast lookups
+ * Process metrics from API into indexed store
+ * Converts API response format to JavaScript conventions
  */
-export function processMetrics(metrics: Metric[]): MetricsStore {
-  const store: MetricsStore = {};
+function processMetrics(apiMetrics: MetricApiResponse[]): MetricsStore {
+	const store: MetricsStore = {};
 
-  metrics.forEach(metric => {
-    store[metric.id] = {
-      id: metric.id,
-      key: metric.key,
-      kind: metric.kind,
-      scope: metric.scope,
-      unit: metric.unit,
-      displayAs: metric.display_as,
-      description: metric.description,
-      associatedIdentifiers: metric.associated_identifiers
-    };
-  });
+	apiMetrics.forEach((apiMetric) => {
+		const metric = toMetric(apiMetric);
+		store[metric.id] = metric;
+	});
 
-  return store;
+	return store;
 }
 
 const Metrics = {
-  getAll: () => {
-    return MetricsAPI.get<MetricsResponse>('metrics');
-  }
+	getAll: () => {
+		return MetricsAPI.get<MetricsApiResponse>("metrics");
+	},
 };
 
-export { MetricsAPI, Metrics };
+export { MetricsAPI, Metrics, processMetrics };

@@ -59,3 +59,23 @@ services:
       - "13133:13133"
     volumes:
       - ./collector-config.yaml:/otelcol/collector-config.yaml
+
+  backend:
+    image: ghcr.io/towlabs/dashfrog/backend:latest
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    depends_on:
+      - postgresql
+      - clickhouse
+      - redis
+    ports:
+      - "8080:8080"
+
+  frontend:
+    image: ghcr.io/towlabs/dashfrog/frontend:latest
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - backend

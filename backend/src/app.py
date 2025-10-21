@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 import logging
 
-from axiom_py.client import Client as AxiomClient
 import clickhouse_connect
 from clickhouse_connect.driver import Client as ClickhouseClient
 import orjson
@@ -40,7 +39,6 @@ class Application(BaseApplication[Config]):
     configuration_path_env_var: str | None = None
 
     clickhouse_client: ClickhouseClient = field(init=False)
-    axiom_client: AxiomClient = field(init=False)
     prom_client: PrometheusConnect = field(init=False)
     logger: BoundLogger = field(init=False)
 
@@ -71,15 +69,9 @@ class Application(BaseApplication[Config]):
 
         self.sessionmaker = AsyncSessionMaker(async_sessionmaker(self.engine))
 
-        self.axiom_client = (
-            AxiomClient() if self.configuration.logs.activate_axiom else None
-        )  # Need a support for logs as we do not provide one yet
-
         self.logger = setup_logging(
-            self.axiom_client,
             log_level=getattr(logging, self.configuration.logs.level),
             env=self.configuration.env,
-            with_axiom=self.configuration.logs.activate_axiom,
         )
 
         if not self.configuration.logs.log_libs:
@@ -89,13 +81,19 @@ class Application(BaseApplication[Config]):
         flow_store = FlowsStore(self.clickhouse_client)
         step_store = StepsStore(self.clickhouse_client)
         label_store = LabelsStore(self.clickhouse_client, self.prom_client, self.logger)
-        metrics_store = MetricsStore(self.clickhouse_client, self.prom_client, self.logger)
+        metrics_store = MetricsStore(
+            self.clickhouse_client, self.prom_client, self.logger
+        )
 
         self.usecases = {
             "flows": Flows(flow_store, self.logger),
             "steps": Steps(step_store, self.logger),
-            "labels": Labels(label_store, metrics_store, self.sessionmaker, self.logger),
-            "metrics": Metrics(metrics_store, self.sessionmaker, self.prom_client, self.logger),
+            "labels": Labels(
+                label_store, metrics_store, self.sessionmaker, self.logger
+            ),
+            "metrics": Metrics(
+                metrics_store, self.sessionmaker, self.prom_client, self.logger
+            ),
         }
 
     def log(self, name: str, **kwargs) -> BoundLogger:
