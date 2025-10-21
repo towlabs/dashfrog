@@ -61,8 +61,12 @@ class Labels:
         self.__log = logger.bind(name="stores.Labels")
 
     @staticmethod
-    async def list() -> list[entities.Label]:
-        labels = await _get_session().execute(select(LabelModel).order_by(LabelModel.label))
+    async def list(with_hidden: bool) -> list[entities.Label]:
+        query = select(LabelModel)
+        if not with_hidden:
+            query = query.where(LabelModel.hide.is_(False))
+
+        labels = await _get_session().execute(query.order_by(LabelModel.label))
 
         return [label.to_entity() for label in labels.scalars()]
 
@@ -103,6 +107,8 @@ class Labels:
         db.add(
             LabelModel(
                 label=label.label,
+                hide=label.hide,
+                display_as=label.display_as,
                 values=[LabelValue(value=value.value) for value in label.values],
                 used_in=[LabelUsage(_used_in=str(used_in.used_in), kind=used_in.kind) for used_in in label.used_in],
             )

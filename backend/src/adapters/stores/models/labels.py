@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.sql.sqltypes import ARRAY, Enum
+from sqlalchemy.sql.sqltypes import ARRAY, Boolean, Enum
 
 from src.domain import entities
 
@@ -52,7 +52,8 @@ class Label(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     label: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
-
+    display_as: Mapped[str | None] = mapped_column(String, unique=True)
+    hide: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     values: Mapped[list["LabelValue"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
     used_in: Mapped[list["LabelUsage"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
 
@@ -63,6 +64,8 @@ class Label(Base):
             description=self.description,
             values=[value.to_entity() for value in self.values],
             used_in=[usage.to_entity() for usage in self.used_in],
+            display_as=self.display_as,
+            hide=self.hide,
         )
 
 

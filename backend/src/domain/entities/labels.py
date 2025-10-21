@@ -21,6 +21,8 @@ class Label(BaseModel):
     id: int = Field(..., frozen=True)
     label: str
     description: str | None = None
+    display_as: str | None = None
+    hide: bool = False
 
     values: list[Value] = []
     used_in: list[Usage] = []

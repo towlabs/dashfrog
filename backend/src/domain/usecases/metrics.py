@@ -102,27 +102,27 @@ class Metrics:
             nice_seconds = int(max(5, round(step_seconds / 5) * 5))
             return f"{nice_seconds}s"
 
-    def query(self, _ctx, query: str, from_date: datetime, to_date: datetime):
+    def query(self, _ctx, query: str, from_date: datetime, to_date: datetime, steps: str | None = None):
         time_range = int((to_date - from_date).total_seconds())
 
-        last_born = None
-        precision = 180
-        for born, next_precision in self.TIME_RANGE_PRECISION.items():
-            if not last_born:
+        if not steps:
+            last_born = None
+            precision = 180
+            for born, next_precision in self.TIME_RANGE_PRECISION.items():
+                if not last_born:
+                    last_born = born
+                    precision = next_precision
+                    continue
+
+                if last_born < time_range <= born:
+                    break
+
                 last_born = born
                 precision = next_precision
-                continue
 
-            if last_born < time_range <= born:
-                break
+            steps = self._calculate_nice_step(time_range // precision)
 
-            last_born = born
-            precision = next_precision
-
-        steps = time_range // precision
-        nice_step = self._calculate_nice_step(steps)
-
-        metrics_data = self.__prom.custom_query_range(query, from_date, to_date, nice_step)
+        metrics_data = self.__prom.custom_query_range(query, from_date, to_date, steps)
         res = []
         for data in metrics_data:
             labels = data["metric"]

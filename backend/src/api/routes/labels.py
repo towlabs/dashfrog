@@ -6,7 +6,9 @@ from src.domain import usecases
 
 
 class _LabelUpdate(BaseModel):
-    description: str
+    description: str | None = None
+    hide: bool | None = None
+    display_as: str | None = None
 
 
 class _LabelValueUpdate(BaseModel):
@@ -23,9 +25,9 @@ class Labels:
 
     @staticmethod
     @ep.get("/")
-    async def get_labels(request: Request):
+    async def get_labels(request: Request, with_hidden: bool = False):
         with context(request) as ctx:
-            labels = await Labels.__uc.list(ctx)
+            labels = await Labels.__uc.list(ctx, with_hidden)
 
             return labels
 
@@ -39,7 +41,7 @@ class Labels:
     @ep.put("/{label_id}")
     async def update_label(request: Request, label_id: int, body: _LabelUpdate):
         with context(request) as ctx:
-            updated = await Labels.__uc.update(ctx, label_id, body.description)
+            updated = await Labels.__uc.update(ctx, label_id, body.description, body.hide, body.display_as)
 
             return updated
 

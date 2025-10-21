@@ -18,7 +18,7 @@ from src.adapters.stores import (
 )
 from src.api.routes import API, flows, health, labels, metrics, steps
 from src.core import AsyncSessionMaker, Config
-from src.core.context import ENV, RELEASE
+from src.core.context import BLACKLISTED_LABELS, ENV, RELEASE
 from src.domain.usecases import Flows, Labels, Metrics, Steps
 
 
@@ -45,6 +45,7 @@ class Application(BaseApplication[Config]):
     def __post_init__(self):
         super().__post_init__()
 
+        BLACKLISTED_LABELS.set(self.configuration.default_blacklist_labels)
         ENV.set(self.configuration.env)
         RELEASE.set(self.configuration.release)
 

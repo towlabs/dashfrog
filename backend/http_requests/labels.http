@@ -1,6 +1,7 @@
 ### GET labels
 GET 0.0.0.0:8080/api/labels
-
+### GET labels with hidden
+GET 0.0.0.0:8080/api/labels?with_hidden=true
 ### Scrape labels
 GET 0.0.0.0:8080/api/labels/scrape
 

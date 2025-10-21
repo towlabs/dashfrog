@@ -4,11 +4,15 @@ CREATE TYPE LABEL_SRC_KIND AS ENUM (
 CREATE TYPE METRIC_KIND AS ENUM (
     'counter', 'measure', 'stats', 'other'
 );
+
 CREATE TABLE labels (
  id SERIAL PRIMARY KEY,
  label VARCHAR NOT NULL UNIQUE,
- description VARCHAR
+ display_as VARCHAR unique,
+ description VARCHAR,
+ hide BOOLEAN DEFAULT FALSE
 );
+
 
 CREATE TABLE metrics (
     id SERIAL PRIMARY KEY,

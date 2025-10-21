@@ -11,6 +11,7 @@ class _Query(BaseModel):
     query: str
     from_date: datetime
     to_date: datetime
+    steps: str | None = None
 
 
 class Metrics:
@@ -37,4 +38,6 @@ class Metrics:
     @ep.post("/query")
     def query_metric(request: Request, body: _Query):
         with context(request) as ctx:
-            Metrics.__uc.query(ctx, body.query, body.from_date, body.to_date)
+            Metrics.__uc.query(
+                ctx, body.query, body.from_date, body.to_date, body.steps
+            )

@@ -29,6 +29,17 @@ class Config(BaseSettings):
     env: str = "dev"
     release: str = "0.0.0"
 
+    default_blacklist_labels: list[str] = [
+        "http_flavor",
+        "http_scheme",
+        "le",
+        "net_host_port",
+        "otel.*",
+        "service_provider",
+        "telemetry.*",
+        "job",
+    ]
+
     click_house: Database = Database(password="dev-pwd*")  # nosec default to local click password
     psql: Database = Database(password="dev-pwd*")  # nosec default to local click password
     logs: Logs = Logs()
