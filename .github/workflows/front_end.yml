@@ -13,6 +13,7 @@ on:
       - 'frontend/package*.json'
       - 'frontend/nginx.conf'
       - 'frontend/*.html'
+      - 'frontend/Dockerfile'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
