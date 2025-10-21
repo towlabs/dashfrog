@@ -7,7 +7,7 @@ class Kind(str, Enum):
     counter = "counter"
     measure = "measure"
     stats = "stats"
-    over = "over"
+    other = "other"
 
 
 class Metric(BaseModel):

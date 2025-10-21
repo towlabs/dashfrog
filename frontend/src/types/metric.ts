@@ -10,8 +10,9 @@
 
 /**
  * Metric types (matches backend Kind enum)
+ * other comes from OTEL direct metrics not managed by SDK
  */
-export type MetricKind = "counter" | "measure" | "stats" | "over";
+export type MetricKind = "counter" | "measure" | "stats" | "other";
 
 /**
  * custom is used to indicate that metrics comes for user.

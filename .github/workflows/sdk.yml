@@ -27,9 +27,9 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          working-directory: dashfrog_python_sdk
       - name: Install the project
         run: |
-          cd dashfrog_python_sdk
           uv sync --locked --all-groups \
             --extra aws \
             --extra celery \
@@ -54,9 +54,9 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+          working-directory: dashfrog_python_sdk
       - name: Lint
         run: |
-          cd dashfrog_python_sdk
           uv run pyright
           uv run ruff check
 
