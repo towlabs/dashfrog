@@ -6,6 +6,8 @@ import {
 	subMinutes,
 } from "date-fns";
 
+import type { Filter } from "./filter";
+
 export type RelativeTimeValue =
 	| "15m"
 	| "1h"
@@ -26,6 +28,7 @@ export interface NotebookData {
 	description: string;
 	locked: boolean;
 	timeWindow: TimeWindowConfig;
+	filters?: Filter[];
 	blockNoteId: string;
 	createdAt: Date;
 	updatedAt: Date;

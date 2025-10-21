@@ -13,6 +13,23 @@ import {
     type NotebookUpdateInput,
     resolveTimeWindow,
     type TimeWindowConfig,
+import { Lock, Unlock } from "lucide-react";
+
+import ClientBlockNote from "@/components/ClientBlockNote";
+import { EditorErrorBoundary } from "@/components/EditorErrorBoundary";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
+import {
+	type TimeWindow,
+	TimeWindowSelector,
+} from "@/components/TimeWindowSelector";
+import { Button } from "@/components/ui/button";
+import { notebookStorage } from "@/src/services/api/notebook";
+import type { Filter } from "@/src/types/filter";
+import {
+	type NotebookData,
+	type NotebookUpdateInput,
+	resolveTimeWindow,
+	type TimeWindowConfig,
 } from "@/src/types/notebook";
 import {ShareNotebook} from "./ShareNotebook";
 

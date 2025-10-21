@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { Check, FileDown, Link, Share2 } from "lucide-react";
+import { Check, FileDown, Link, MoreVertical } from "lucide-react";
 import { domToPng } from "modern-screenshot";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -107,8 +107,7 @@ export function ShareNotebook({ notebookId }: ShareNotebookProps) {
 					size="sm"
 					className="text-sm text-muted-foreground flex items-center gap-2"
 				>
-					<Share2 className="h-4 w-4" />
-					Share
+					<MoreVertical className="h-4 w-4" />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="w-48">
