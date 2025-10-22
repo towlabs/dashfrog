@@ -6,7 +6,6 @@ import {
 	Plus,
 	TrendingUp,
 } from "lucide-react";
-import type React from "react";
 import { useState } from "react";
 import {
 	CartesianGrid,
@@ -173,12 +172,12 @@ export function MetricsCatalog({
 	const metricsArray: MetricWithRules[] = Object.values(metricsStore);
 
 	// Helper to get display name for a label key (uses displayAs if available)
-	const getLabelDisplayName = (labelKey: string): string => {
+	const _getLabelDisplayName = (labelKey: string): string => {
 		return labelsStore[labelKey]?.displayAs || labelKey;
 	};
 
 	// Helper to get display value for a label (uses proxy if available)
-	const getDisplayValue = (labelKey: string, value: string): string => {
+	const _getDisplayValue = (labelKey: string, value: string): string => {
 		return labelsStore[labelKey]?.valueMappings.get(value) || value;
 	};
 	const [isMetricSheetOpen, setIsMetricSheetOpen] = useState(false);
@@ -215,7 +214,7 @@ export function MetricsCatalog({
 				(it) =>
 					it.key.toLowerCase().includes(q) ||
 					it.displayAs.toLowerCase().includes(q) ||
-					(it.description && it.description.toLowerCase().includes(q)),
+					it.description?.toLowerCase().includes(q),
 			);
 		}
 		// Note: Real metrics don't have a "labels" field as Record<string, string>
@@ -223,7 +222,7 @@ export function MetricsCatalog({
 		// Filtering by label would require looking up label names from labelsStore
 		// For now, we keep the filter logic structure but it won't match anything
 		if (filters.length > 0) {
-			result = result.filter((it) => {
+			result = result.filter((_it) => {
 				return filters.every((f) => {
 					// This won't work correctly without proper label mapping
 					// TODO: Implement proper label filtering using label IDs

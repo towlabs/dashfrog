@@ -4,6 +4,7 @@ on:
     types:
       - opened
       - edited
+      - reopened
     paths:
       - 'frontend/**.js'
       - 'frontend/**.ts'

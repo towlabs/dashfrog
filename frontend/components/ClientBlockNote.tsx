@@ -3,6 +3,7 @@ import { useCreateBlockNote, useEditorChange } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import "@blocknote/shadcn/style.css";
 import {
+	type Block,
 	type BlockNoteEditor,
 	BlockNoteSchema,
 	combineByGroup,
@@ -50,6 +51,17 @@ interface ClientBlockNoteProps {
 	blockNoteId: string;
 	readonly?: boolean;
 	onEditorReady?: (editor: BlockNoteEditor) => void;
+	/**
+	 * Optional callback for block changes
+	 * When provided, blocks will be persisted via this callback instead of localStorage
+	 * Used for notebooks with backend persistence
+	 */
+	onBlocksChange?: (blocks: Block[]) => void;
+	/**
+	 * Initial blocks to load (for notebooks from backend)
+	 * If not provided, will try to load from localStorage
+	 */
+	initialBlocks?: Block[];
 }
 
 export default function ClientBlockNote({
@@ -57,8 +69,11 @@ export default function ClientBlockNote({
 	blockNoteId,
 	readonly = false,
 	onEditorReady,
+	onBlocksChange,
+	initialBlocks,
 }: ClientBlockNoteProps) {
 	const loadedContentRef = useRef(false);
+	const useBackendPersistence = !!onBlocksChange;
 
 	const editor = useCreateBlockNote({
 		schema: withMultiColumn(
@@ -89,24 +104,40 @@ export default function ClientBlockNote({
 		}
 	}, [editor, onEditorReady]);
 
-	// Load content from storage after editor is created or when notebookId changes
+	// Load content from storage or initialBlocks after editor is created
 	useEffect(() => {
 		if (!editor) return;
 
-		// Reset loaded flag when notebookId changes
+		// Reset loaded flag when blockNoteId changes
 		loadedContentRef.current = false;
 
 		// Use setTimeout to ensure editor is fully ready
 		const timer = setTimeout(() => {
-			const savedContent = blockNoteStorage.load(blockNoteId);
-			if (savedContent && savedContent.length > 0) {
+			let contentToLoad: Block[] | null = null;
+
+			// For backend persistence, use initialBlocks if provided
+			if (useBackendPersistence && initialBlocks) {
+				contentToLoad = initialBlocks;
 				console.log(
-					"Loading saved content for notebook:",
+					"Loading blocks from backend for notebook:",
 					blockNoteId,
-					savedContent,
+					initialBlocks,
 				);
+			} else {
+				// For localStorage persistence (events), load from storage
+				contentToLoad = blockNoteStorage.load(blockNoteId);
+				if (contentToLoad) {
+					console.log(
+						"Loading saved content from localStorage:",
+						blockNoteId,
+						contentToLoad,
+					);
+				}
+			}
+
+			if (contentToLoad && contentToLoad.length > 0) {
 				// Replace all blocks with saved content
-				editor.replaceBlocks(editor.document, savedContent);
+				editor.replaceBlocks(editor.document, contentToLoad);
 			} else {
 				console.log("No saved content, using empty document");
 				// Clear to a single empty paragraph if no saved content
@@ -118,12 +149,18 @@ export default function ClientBlockNote({
 		return () => {
 			clearTimeout(timer);
 		};
-	}, [editor, blockNoteId]);
+	}, [editor, blockNoteId, initialBlocks, useBackendPersistence]);
 
-	// Save to storage whenever editor content changes (but not during initial load)
+	// Save changes whenever editor content changes (but not during initial load)
 	useEditorChange(() => {
 		if (editor && loadedContentRef.current) {
-			blockNoteStorage.save(blockNoteId, editor.document);
+			if (useBackendPersistence && onBlocksChange) {
+				// For notebooks: use backend persistence via callback
+				onBlocksChange(editor.document);
+			} else {
+				// For events: use localStorage persistence
+				blockNoteStorage.save(blockNoteId, editor.document);
+			}
 		}
 	}, editor);
 

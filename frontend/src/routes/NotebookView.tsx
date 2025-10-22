@@ -1,30 +1,14 @@
-import { useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import Notebook from "@/components/Notebook";
-import { notebookStorage } from "@/src/services/api/notebook";
-import type { NotebookData } from "@/src/types/notebook";
+import { useNotebooks } from "@/src/contexts/notebooks";
 
 export default function NotebookView() {
 	const { viewId } = useParams<{ viewId: string }>();
-	const [notebook, setNotebook] = useState<NotebookData | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
+	const { getNotebook, isLoading } = useNotebooks();
 
-	useEffect(() => {
-		if (!viewId) return;
-
-		const loadNotebook = async () => {
-			setIsLoading(true);
-			try {
-				// Load notebook using loadView method
-				const loaded = notebookStorage.loadView(viewId);
-				setNotebook(loaded);
-			} finally {
-				setIsLoading(false);
-			}
-		};
-
-		loadNotebook();
-	}, [viewId]);
+	// For now, viewId is the same as notebook ID
+	// In the future, this could be a separate public view endpoint
+	const notebook = viewId ? getNotebook(viewId) : null;
 
 	if (!viewId) {
 		return <Navigate to="/" />;

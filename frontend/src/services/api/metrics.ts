@@ -62,7 +62,9 @@ function processMetrics(apiMetrics: MetricApiResponse[]): MetricsStore {
 
 const Metrics = {
 	getAll: () => {
-		return MetricsAPI.get<MetricsApiResponse>("metrics");
+		return MetricsAPI.get<MetricsApiResponse>("metrics", {
+			meta: { action: "fetch", resource: "metrics" },
+		});
 	},
 };
 

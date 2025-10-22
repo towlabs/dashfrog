@@ -6,14 +6,29 @@ import {
 	useEffect,
 	useState,
 } from "react";
-import { notebookStorage } from "@/src/services/api/notebook";
-import type { NotebookData } from "@/src/types/notebook";
+import type { Block } from "@blocknote/core";
+import { Notebooks, toNotebook } from "@/src/services/api/notebooks";
+import type {
+	NotebookData,
+	NotebookCreateInput,
+	NotebookUpdateInput,
+} from "@/src/types/notebook";
 
 interface NotebooksContextValue {
 	notebooks: NotebookData[];
 	isLoading: boolean;
+	error: string | null;
 	refreshNotebooks: () => Promise<void>;
 	getNotebook: (id: string) => NotebookData | null;
+	createNotebook: (
+		input: NotebookCreateInput,
+		blocks?: Block[],
+	) => Promise<NotebookData>;
+	updateNotebook: (
+		id: string,
+		input: NotebookUpdateInput,
+	) => Promise<NotebookData>;
+	deleteNotebook: (id: string) => Promise<void>;
 	currentNotebookId: string | undefined;
 	setCurrentNotebookId: (id: string | undefined) => void;
 }
@@ -25,16 +40,22 @@ const NotebooksContext = createContext<NotebooksContextValue | undefined>(
 export function NotebooksProvider({ children }: { children: ReactNode }) {
 	const [notebooks, setNotebooks] = useState<NotebookData[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [currentNotebookId, setCurrentNotebookId] = useState<
 		string | undefined
 	>(undefined);
 
 	const refreshNotebooks = useCallback(async () => {
 		setIsLoading(true);
+		setError(null);
 		try {
-			// Currently sync, but ready for async DB call
-			const loaded = notebookStorage.list();
-			setNotebooks(loaded);
+			const response = await Notebooks.getAll();
+			const notebooksData = response.data.map(toNotebook);
+			setNotebooks(notebooksData);
+		} catch (err) {
+			console.error("Failed to fetch notebooks:", err);
+			setError("Failed to load notebooks");
+			setNotebooks([]);
 		} finally {
 			setIsLoading(false);
 		}
@@ -42,11 +63,7 @@ export function NotebooksProvider({ children }: { children: ReactNode }) {
 
 	// Load notebooks on mount
 	useEffect(() => {
-		refreshNotebooks();
-
-		// Reload notebooks when window gains focus (in case another tab modified them)
-		window.addEventListener("focus", refreshNotebooks);
-		return () => window.removeEventListener("focus", refreshNotebooks);
+		void refreshNotebooks();
 	}, [refreshNotebooks]);
 
 	const getNotebook = useCallback(
@@ -56,13 +73,87 @@ export function NotebooksProvider({ children }: { children: ReactNode }) {
 		[notebooks],
 	);
 
+	/**
+	 * Create a new notebook and update local state
+	 */
+	const createNotebook = async (
+		input: NotebookCreateInput,
+		blocks?: Block[],
+	): Promise<NotebookData> => {
+		try {
+			setError(null);
+			const response = await Notebooks.create(input, blocks);
+			const newNotebook = toNotebook(response.data);
+
+			// Update local state immediately
+			setNotebooks((prev) => [newNotebook, ...prev]);
+
+			return newNotebook;
+		} catch (err) {
+			console.error("Failed to create notebook:", err);
+			setError("Failed to create notebook");
+			throw err;
+		}
+	};
+
+	/**
+	 * Update an existing notebook and update local state
+	 */
+	const updateNotebook = async (
+		id: string,
+		input: NotebookUpdateInput,
+	): Promise<NotebookData> => {
+		try {
+			setError(null);
+			const response = await Notebooks.update(id, input);
+			const updatedNotebook = toNotebook(response.data);
+
+			// Update local state immediately
+			setNotebooks((prev) =>
+				prev.map((nb) => (nb.id === id ? updatedNotebook : nb)),
+			);
+
+			return updatedNotebook;
+		} catch (err) {
+			console.error("Failed to update notebook:", err);
+			setError("Failed to update notebook");
+			throw err;
+		}
+	};
+
+	/**
+	 * Delete a notebook and update local state
+	 */
+	const deleteNotebook = async (id: string): Promise<void> => {
+		try {
+			setError(null);
+			await Notebooks.delete(id);
+
+			// Update local state immediately
+			setNotebooks((prev) => prev.filter((nb) => nb.id !== id));
+
+			// Clear current notebook if it was deleted
+			if (currentNotebookId === id) {
+				setCurrentNotebookId(undefined);
+			}
+		} catch (err) {
+			console.error("Failed to delete notebook:", err);
+			setError("Failed to delete notebook");
+			throw err;
+		}
+	};
+
 	return (
 		<NotebooksContext.Provider
 			value={{
 				notebooks,
 				isLoading,
+				error,
 				refreshNotebooks,
 				getNotebook,
+				createNotebook,
+				updateNotebook,
+				deleteNotebook,
 				currentNotebookId,
 				setCurrentNotebookId,
 			}}

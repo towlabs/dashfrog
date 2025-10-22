@@ -17,7 +17,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { notebookStorage } from "@/src/services/api/notebook";
 import { useNotebooks } from "../src/contexts/notebooks";
 import SearchDialog from "./SearchDialog";
 
@@ -48,21 +47,24 @@ export default function SideMenu({
 	const [internalCollapsed, setInternalCollapsed] = useState(false);
 	const navigate = useNavigate();
 	const [searchOpen, setSearchOpen] = useState(false);
-	const { notebooks, refreshNotebooks } = useNotebooks();
+	const { notebooks, createNotebook } = useNotebooks();
 
-	const handleCreateNotebook = () => {
-		const newNotebook = notebookStorage.create({
-			title: "Untitled Notebook",
-			description: "",
-			locked: false,
-			timeWindow: {
-				type: "relative",
-				metadata: { value: "24h" },
-			},
-			blockNoteId: uuidv4(),
-		});
-		refreshNotebooks();
-		navigate(`/notebook/${newNotebook.id}`);
+	const handleCreateNotebook = async () => {
+		try {
+			const newNotebook = await createNotebook({
+				title: "Untitled Notebook",
+				description: "",
+				locked: false,
+				timeWindow: {
+					type: "relative",
+					metadata: { value: "24h" },
+				},
+				blockNoteId: uuidv4(),
+			});
+			navigate(`/notebook/${newNotebook.id}`);
+		} catch (err) {
+			console.error("Failed to create notebook:", err);
+		}
 	};
 
 	// Use controlled state if provided, otherwise use internal state

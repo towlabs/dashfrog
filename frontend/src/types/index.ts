@@ -13,6 +13,9 @@
  * import { Label, Metric } from '@/src/types'
  */
 
+// Event Types
+export type { Event, EventCreateInput, EventKind, EventsStore } from "./event";
+
 // Filter Types
 export type { ApiFilter, Filter, FilterOperator } from "./filter";
 

@@ -4,6 +4,7 @@ on:
     types:
       - opened
       - edited
+      - reopened
     paths:
       - 'dashfrog_python_sdk/*.py'
       - 'dashfrog_python_sdk/tests'

@@ -44,3 +44,14 @@ CREATE TABLE labels_scrapped (
     id SERIAL PRIMARY KEY,
     ran_at TIMESTAMPTZ default NOW() UNIQUE
 );
+
+CREATE TABLE events (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL,
+    description TEXT,
+    kind VARCHAR NOT NULL,
+    labels JSON,
+    created_at TIMESTAMPTZ,
+    started_at TIMESTAMPTZ,
+    ended_at TIMESTAMPTZ
+);

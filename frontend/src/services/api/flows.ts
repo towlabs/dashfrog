@@ -59,9 +59,12 @@ const Flows = {
 		if (filters && filters.length > 0) {
 			return FlowsAPI.post<Flow[]>(path, {
 				data: { filters },
+				meta: { action: "fetch", resource: "flows" },
 			});
 		}
-		return FlowsAPI.get<Flow[]>(path);
+		return FlowsAPI.get<Flow[]>(path, {
+			meta: { action: "fetch", resource: "flows" },
+		});
 	},
 	history: (
 		name: string,
@@ -87,12 +90,17 @@ const Flows = {
 					from_date: dateRange?.from_date,
 					to_date: dateRange?.to_date,
 				},
+				meta: { action: "fetch", resource: "flow history" },
 			});
 		}
-		return FlowsAPI.get<PaginatedResponse<Flow>>(path);
+		return FlowsAPI.get<PaginatedResponse<Flow>>(path, {
+			meta: { action: "fetch", resource: "flow history" },
+		});
 	},
 	getSteps: (name: string, traceId: string) => {
-		return FlowsAPI.get<Step[]>(`${name}/${traceId}/steps`);
+		return FlowsAPI.get<Step[]>(`${name}/${traceId}/steps`, {
+			meta: { action: "fetch", resource: "flow steps" },
+		});
 	},
 };
 

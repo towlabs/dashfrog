@@ -77,7 +77,6 @@ async def log_requests(request: Request, call_next):
         raise
 
 
-api.include_router(router, prefix="/api")
 api.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -85,6 +84,8 @@ api.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+api.include_router(router, prefix="/api")
 
 # For development only
 if __name__ == "__main__":

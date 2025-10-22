@@ -4,6 +4,7 @@ on:
     types:
       - opened
       - edited
+      - reopened
     paths:
       - 'backend/**.py'
       - 'backend/uv.lock'

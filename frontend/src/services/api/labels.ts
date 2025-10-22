@@ -92,24 +92,29 @@ const Labels = {
 		}
 		const queryString = params.toString();
 		const path = queryString ? `labels?${queryString}` : "labels";
-		return LabelsAPI.get<LabelsApiResponse>(path);
+		return LabelsAPI.get<LabelsApiResponse>(path, {
+			meta: { action: "fetch", resource: "labels" },
+		});
 	},
 
 	updateDescription: (labelId: number, description: string) => {
 		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
 			data: { description },
+			meta: { action: "update", resource: "label" },
 		});
 	},
 
 	updateDisplayAs: (labelId: number, displayAs: string) => {
 		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
 			data: { display_as: displayAs },
+			meta: { action: "update", resource: "label" },
 		});
 	},
 
 	updateHide: (labelId: number, hide: boolean) => {
 		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
 			data: { hide },
+			meta: { action: "update", resource: "label" },
 		});
 	},
 
@@ -122,6 +127,7 @@ const Labels = {
 			`labels/${labelId}/value/${valueName}`,
 			{
 				data: { proxy },
+				meta: { action: "update", resource: "label value" },
 			},
 		);
 	},

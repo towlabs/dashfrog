@@ -11,15 +11,18 @@ from structlog._generic import BoundLogger
 
 from src._inits import setup_logging
 from src.adapters.stores import (
+    Blocks as BlocksStore,
+    Events as EventsStore,
     Flows as FlowsStore,
     Labels as LabelsStore,
     Metrics as MetricsStore,
+    Notes as NotesStore,
     Steps as StepsStore,
 )
-from src.api.routes import API, flows, health, labels, metrics, steps
+from src.api.routes import API, events, flows, health, labels, metrics, notes, steps
 from src.core import AsyncSessionMaker, Config
 from src.core.context import BLACKLISTED_LABELS, ENV, RELEASE
-from src.domain.usecases import Flows, Labels, Metrics, Steps
+from src.domain.usecases import Events, Flows, Labels, Metrics, Notes, Steps
 
 
 @dataclass
@@ -90,12 +93,17 @@ class Application(BaseApplication[Config]):
         step_store = StepsStore(self.clickhouse_client)
         label_store = LabelsStore(self.clickhouse_client, self.prom_client, self.logger)
         metrics_store = MetricsStore(self.clickhouse_client, self.prom_client, self.logger)
+        events_store = EventsStore()
+        notes_store = NotesStore()
+        blocks_store = BlocksStore()
 
         self.usecases = {
             "flows": Flows(flow_store, self.logger),
             "steps": Steps(step_store, self.logger),
             "labels": Labels(label_store, metrics_store, self.sessionmaker, self.logger),
             "metrics": Metrics(metrics_store, self.sessionmaker, self.prom_client, self.logger),
+            "events": Events(events_store, self.sessionmaker, self.logger),
+            "notes": Notes(notes_store, blocks_store, self.sessionmaker, self.logger),
         }
 
     def log(self, name: str, **kwargs) -> BoundLogger:
@@ -107,5 +115,7 @@ class Application(BaseApplication[Config]):
             steps.Steps(self.usecases["steps"]),
             labels.Labels(self.usecases["labels"]),
             metrics.Metrics(self.usecases["metrics"]),
+            events.Events(self.usecases["events"]),
+            notes.Notes(self.usecases["notes"]),
             health,
         )

@@ -1,18 +1,22 @@
 import { addDays, format } from "date-fns";
 import {
+	AlertCircle,
+	AlertTriangle,
 	CalendarIcon,
-	Check,
 	ChevronDownIcon,
 	ChevronLeft,
 	ChevronRight,
 	ClockArrowDown,
 	ClockArrowUp,
+	Info,
+	Loader2,
 	Plus,
 	Shapes,
 	TagIcon,
 	X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { BlockNoteEditor } from "@blocknote/core";
 
 import ClientBlockNote from "@/components/ClientBlockNote";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
@@ -20,14 +24,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
 import {
 	Dialog,
 	DialogContent,
@@ -47,8 +43,11 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
-import type { Filter } from "@/src/types/filter";
+import { blockNoteStorage } from "@/src/services/api/blocknote";
+import { useEvents } from "@/src/contexts/events";
+import { useLabels } from "@/src/contexts/labels";
+import type { ApiFilter, Filter } from "@/src/types/filter";
+import type { Event, EventKind } from "@/src/types/event";
 
 interface StatusData {
 	date: Date;
@@ -57,18 +56,12 @@ interface StatusData {
 	hour: number;
 	minute: number;
 	isFuture: boolean;
-	events: {
-		title: string;
-		description: string;
-		severity: string;
-		workflow: string;
-		tenant: string;
-	}[];
+	events: Event[];
 }
 
-// Generate status data for 7 days with 10-minute intervals
-const generateStatusData = (startOfWeek: Date) => {
-	const data = [];
+// Map real events to calendar grid with 10-minute intervals
+const generateStatusData = (startOfWeek: Date, realEvents: Event[]) => {
+	const data: StatusData[] = [];
 	const now = new Date();
 
 	for (let day = 0; day < 7; day++) {
@@ -80,87 +73,37 @@ const generateStatusData = (startOfWeek: Date) => {
 						hour * 60 * 60 * 1000 +
 						minute * 60 * 1000,
 				);
-				let status = "operational";
-				const hourOfDay = date.getHours();
 
-				// Always check if this is a future time compared to current moment
 				const isFuture = date > now;
 
-				if (isFuture) {
-					// Add planned maintenance for future times
-					const dayOfWeek = date.getDay();
-					if (
-						(dayOfWeek === 6 || dayOfWeek === 0) &&
-						hourOfDay >= 3 &&
-						hourOfDay <= 5
-					) {
-						// Weekend maintenance windows
-						status = "maintenance";
-					} else {
-						status = "future";
-					}
-				} else {
-					// Add some realistic incident patterns for past times only using a seed for consistency
-					const dayOfWeek = date.getDay();
-					const timeKey = `${day}-${hour}-${minute}`; // Create consistent seed
-					const seedValue = timeKey.split("").reduce((a, b) => {
-						return a + b.charCodeAt(0);
-					}, 0);
-					const random = ((seedValue * 9301 + 49297) % 233280) / 233280; // Simple deterministic random
+				// Find events that overlap this time slot
+				const overlappingEvents = realEvents.filter((event) => {
+					const eventStart = new Date(event.startedAt);
+					const eventEnd = new Date(event.endedAt);
+					return date >= eventStart && date < eventEnd;
+				});
 
-					// More incidents in the past
-					if (random < 0.01) {
-						// Higher chance for incidents
-						status = "incident";
-					} else if (
-						(dayOfWeek === 1 || dayOfWeek === 3) &&
-						hourOfDay >= 14 &&
-						hourOfDay <= 16 &&
-						random < 0.3
-					) {
-						status = "incident"; // Monday/Wednesday afternoon incidents
-					} else if (
-						dayOfWeek === 2 &&
-						hourOfDay >= 9 &&
-						hourOfDay <= 11 &&
-						random < 0.4
-					) {
-						status = "incident"; // Tuesday morning incident
-					} else if (
-						(dayOfWeek === 0 || dayOfWeek === 6) &&
-						hourOfDay >= 2 &&
-						hourOfDay <= 4 &&
-						random < 0.15
-					) {
-						status = "maintenance"; // Past weekend maintenance
-					}
+				// Determine status based on events
+				let status = "operational";
+				if (overlappingEvents.length > 0) {
+					// If there are multiple events, prioritize incidents over maintenance
+					const hasIncident = overlappingEvents.some((e) => e.kind === "incident");
+					status = hasIncident ? "incident" : "maintenance";
+				} else if (isFuture) {
+					// No events and it's in the future
+					status = "future";
 				}
+				// Past dates with no events remain "operational" (Ok status)
+				// Future maintenance events will show as "maintenance" (blue) instead of "future" (gray)
 
 				data.push({
 					date,
 					status,
 					dayOfWeek: date.getDay(),
-					hour: hourOfDay,
+					hour,
 					minute,
 					isFuture,
-					events:
-						status !== "operational" && status !== "future"
-							? [
-									{
-										title:
-											status === "incident"
-												? "Service Incident"
-												: "Scheduled Maintenance",
-										description:
-											status === "incident"
-												? "Service disruption or outage"
-												: "Planned system maintenance and updates",
-										severity: status === "incident" ? "major" : "maintenance",
-										workflow: "Platform Services",
-										tenant: "all",
-									},
-								]
-							: [],
+					events: overlappingEvents,
 				});
 			}
 		}
@@ -190,75 +133,245 @@ const getWeekStart = (date: Date) => {
 };
 
 export default function EventsPage() {
+	const { events: eventsStore, loading, error, refreshEvents, createEvent, updateEvent } = useEvents();
+	const { labels: labelsStore } = useLabels();
 	const [weekStart, setWeekStart] = useState<Date>(getWeekStart(new Date()));
-	const statusData = useMemo(() => generateStatusData(weekStart), [weekStart]);
+	const [filters, setFilters] = useState<Filter[]>([]);
+
+	// Convert events store to array
+	const eventsArray = useMemo(() => Object.values(eventsStore), [eventsStore]);
+
+	const statusData = useMemo(() => generateStatusData(weekStart, eventsArray), [weekStart, eventsArray]);
 	const [selectedDay, setSelectedDay] = useState<StatusData | null>(null);
 	const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 	const [isSheetOpen, setIsSheetOpen] = useState(false);
+	const [editingEventId, setEditingEventId] = useState<number | null>(null);
 	const [eventTitle, setEventTitle] = useState("");
 	const [eventStartDate, setEventStartDate] = useState<Date | undefined>();
 	const [eventEndDate, setEventEndDate] = useState<Date | undefined>();
 	const [eventStartTime, setEventStartTime] = useState("10:00");
 	const [eventEndTime, setEventEndTime] = useState("11:00");
-	const [eventType, setEventType] = useState<"incident" | "maintenance">(
-		"incident",
-	);
+	const [eventType, setEventType] = useState<EventKind>("incident");
 	const [eventLabels, setEventLabels] = useState<
 		{ id: string; key: string; value: string }[]
 	>([]);
 	const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
-	const [filters, setFilters] = useState<Filter[]>([]);
+	const [editingLabelKey, setEditingLabelKey] = useState<string | null>(null);
+	const [saving, setSaving] = useState(false);
+	const editorRef = useRef<BlockNoteEditor | null>(null);
 
-	const getLabelOptions = (key: string): string[] => {
-		switch (key) {
-			case "environment":
-				return ["production", "staging", "development", "test"];
-			case "severity":
-				return ["critical", "high", "medium", "low"];
-			case "team":
-				return ["backend", "frontend", "devops", "data", "mobile"];
-			case "service":
-				return ["api", "web", "database", "cache", "queue"];
-			case "region":
-				return ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"];
-			default:
-				return [];
-		}
+	// Alert dialog state
+	const [alertDialog, setAlertDialog] = useState<{
+		open: boolean;
+		title: string;
+		message: string;
+		variant?: "error" | "warning" | "info";
+	}>({
+		open: false,
+		title: "",
+		message: "",
+		variant: "error",
+	});
+
+	const showAlert = (
+		title: string,
+		message: string,
+		variant: "error" | "warning" | "info" = "error",
+	) => {
+		setAlertDialog({ open: true, title, message, variant });
+	};
+
+	// Refresh events when filters change
+	useEffect(() => {
+		const apiFilters: ApiFilter[] = filters.map((f) => ({
+			key: f.label,
+			value: f.value,
+			operator: f.operator,
+			is_label: true, // Event filters are label-based
+		}));
+		void refreshEvents(apiFilters);
+	}, [filters, refreshEvents]);
+
+	const updateLabelKey = (labelId: string, newKey: string) => {
+		// Update the key in state (validation happens on save)
+		setEventLabels(
+			eventLabels.map((l) => (l.id === labelId ? { ...l, key: newKey } : l)),
+		);
 	};
 
 	const updateLabelValue = (labelId: string, newValue: string) => {
-		if (!newValue.trim()) {
-			// Remove label if no value is set
-			setEventLabels(eventLabels.filter((l) => l.id !== labelId));
-		} else {
-			setEventLabels(
-				eventLabels.map((l) =>
-					l.id === labelId ? { ...l, value: newValue } : l,
-				),
+		// Update the value in state (validation happens on save)
+		setEventLabels(
+			eventLabels.map((l) =>
+				l.id === labelId ? { ...l, value: newValue } : l,
+			),
+		);
+	};
+
+	const removeLabel = (labelId: string) => {
+		setEventLabels(eventLabels.filter((l) => l.id !== labelId));
+	};
+
+	const addNewLabel = () => {
+		const newLabel = {
+			id: `label-${Date.now()}`,
+			key: "",
+			value: "",
+		};
+		setEventLabels([...eventLabels, newLabel]);
+		setEditingLabelKey(newLabel.id);
+	};
+
+	const handleSaveEvent = async () => {
+		if (!eventTitle || !eventStartDate || !eventEndDate) {
+			showAlert(
+				"Missing Required Fields",
+				"Please fill in all required fields (title, start date, and end date).",
+				"warning",
 			);
+			return;
 		}
-		setEditingLabelId(null);
+
+		try {
+			setSaving(true);
+
+			// Combine date and time
+			const [startHour, startMin] = eventStartTime.split(":").map(Number);
+			const [endHour, endMin] = eventEndTime.split(":").map(Number);
+
+			const startDateTime = new Date(eventStartDate);
+			startDateTime.setHours(startHour, startMin, 0, 0);
+
+			const endDateTime = new Date(eventEndDate);
+			endDateTime.setHours(endHour, endMin, 0, 0);
+
+			// Validate: Incidents cannot be created for future times
+			const now = new Date();
+			if (eventType === "incident" && startDateTime > now) {
+				showAlert(
+					"Cannot Create Future Incident",
+					"Incidents cannot be scheduled in the future. Please use 'Maintenance' type for planned events.",
+					"error",
+				);
+				setSaving(false);
+				return;
+			}
+
+			// Convert label array to Record (only include labels with both key and value)
+			const labelsRecord: Record<string, string> = {};
+			eventLabels.forEach((label) => {
+				if (label.key.trim() && label.value.trim()) {
+					labelsRecord[label.key.trim()] = label.value.trim();
+				}
+			});
+
+			// Extract BlockNote content and convert to JSON string
+			let descriptionJson: string | null = null;
+			if (editorRef.current) {
+				const editorContent = editorRef.current.document;
+				// Only send description if there's actual content (not just empty paragraph)
+				const hasContent = editorContent.length > 1 ||
+					(editorContent.length === 1 &&
+					 editorContent[0].type !== "paragraph" ||
+					 (editorContent[0].content && editorContent[0].content.length > 0));
+
+				if (hasContent) {
+					descriptionJson = JSON.stringify(editorContent);
+				}
+			}
+
+			const eventData = {
+				title: eventTitle,
+				description: descriptionJson,
+				kind: eventType,
+				labels: labelsRecord,
+				startedAt: startDateTime.toISOString(),
+				endedAt: endDateTime.toISOString(),
+			};
+
+			// Branch between update and create based on editing mode
+			if (editingEventId !== null) {
+				await updateEvent(editingEventId, eventData);
+			} else {
+				await createEvent(eventData);
+			}
+
+			// Clear BlockNote storage for this event
+			const storageKey = editingEventId
+				? `event-${editingEventId}`
+				: `event-new-${selectedDay?.date.toISOString() || "new"}`;
+			blockNoteStorage.clear(storageKey);
+
+			// Close sheet and reset form
+			setIsSheetOpen(false);
+			setEventTitle("");
+			setEventLabels([]);
+			setEditingEventId(null);
+		} catch (err) {
+			const action = editingEventId !== null ? "update" : "create";
+			console.error(`Failed to ${action} event:`, err);
+			showAlert(
+				`Failed to ${action === "update" ? "Update" : "Create"} Event`,
+				`An error occurred while ${action === "update" ? "updating" : "creating"} the event. Please try again.`,
+				"error",
+			);
+		} finally {
+			setSaving(false);
+		}
 	};
 
 	const handleDayClick = (day: StatusData) => {
 		if (day.status === "incident" || day.status === "maintenance") {
 			setSelectedDay(day);
-			setEventTitle(day.events[0]?.title || "");
-			setEventStartDate(new Date(day.date));
-			setEventEndDate(new Date(day.date.getTime() + 60 * 60 * 1000)); // 1 hour later
-			setEventStartTime(day.date.toTimeString().slice(0, 5)); // HH:MM format
-			setEventEndTime(
-				new Date(day.date.getTime() + 60 * 60 * 1000)
-					.toTimeString()
-					.slice(0, 5),
-			);
-			setEventType(day.status === "maintenance" ? "maintenance" : "incident");
-			setEventLabels([]);
+			const firstEvent = day.events[0];
+
+			// Set editing mode with event ID
+			setEditingEventId(firstEvent?.id || null);
+			setEventTitle(firstEvent?.title || "");
+
+			// Parse start/end times from the event
+			const eventStart = firstEvent ? new Date(firstEvent.startedAt) : new Date(day.date);
+			const eventEnd = firstEvent ? new Date(firstEvent.endedAt) : new Date(day.date.getTime() + 60 * 60 * 1000);
+
+			setEventStartDate(eventStart);
+			setEventEndDate(eventEnd);
+			setEventStartTime(eventStart.toTimeString().slice(0, 5));
+			setEventEndTime(eventEnd.toTimeString().slice(0, 5));
+			setEventType(firstEvent?.kind || (day.status === "maintenance" ? "maintenance" : "incident"));
+
+			// Convert event labels to local format
+			const labelsList = firstEvent?.labels
+				? Object.entries(firstEvent.labels).map(([key, value]) => ({
+						id: `label-${key}`,
+						key,
+						value,
+					}))
+				: [];
+			setEventLabels(labelsList);
 			setEditingLabelId(null);
+			setEditingLabelKey(null);
+
+			// Load event description into BlockNote storage
+			if (firstEvent?.id) {
+				if (firstEvent.description) {
+					try {
+						const descriptionContent = JSON.parse(firstEvent.description);
+						blockNoteStorage.save(`event-${firstEvent.id}`, descriptionContent);
+					} catch (e) {
+						console.error("Failed to parse event description:", e);
+						blockNoteStorage.clear(`event-${firstEvent.id}`);
+					}
+				} else {
+					// Clear storage for events without description
+					blockNoteStorage.clear(`event-${firstEvent.id}`);
+				}
+			}
+
 			setIsSheetOpen(true);
 		} else if (day.status === "operational" || day.status === "future") {
 			// Open empty sheet for creating new event
 			setSelectedDay(day);
+			setEditingEventId(null);
 			setEventTitle("");
 			setEventStartDate(new Date(day.date));
 			setEventEndDate(new Date(day.date.getTime() + 60 * 60 * 1000)); // 1 hour later
@@ -271,6 +384,7 @@ export default function EventsPage() {
 			setEventType("incident");
 			setEventLabels([]);
 			setEditingLabelId(null);
+			setEditingLabelKey(null);
 			setIsSheetOpen(true);
 		} else {
 			setSelectedDay(day);
@@ -335,6 +449,7 @@ export default function EventsPage() {
 							onClick={() => {
 								const now = new Date();
 								const endTime = new Date(now.getTime() + 60 * 60 * 1000);
+								setEditingEventId(null);
 								setEventTitle("");
 								setEventStartDate(now);
 								setEventEndDate(endTime);
@@ -343,6 +458,7 @@ export default function EventsPage() {
 								setEventType("incident");
 								setEventLabels([]);
 								setEditingLabelId(null);
+								setEditingLabelKey(null);
 								setIsSheetOpen(true);
 							}}
 							size="sm"
@@ -355,13 +471,35 @@ export default function EventsPage() {
 				<div className="space-y-4">
 					{/* Filters */}
 					<FilterBadgesEditor
-						availableLabels={["type", "status", "title"]}
+						availableLabels={Object.keys(labelsStore).sort()}
 						filters={filters}
 						onFiltersChange={setFilters}
 					/>
 
 					{/* Events Timeline */}
-
+					{loading ? (
+						<Card>
+							<CardContent className="pt-6">
+								<div className="flex items-center justify-center py-12">
+									<div className="flex items-center gap-2 text-muted-foreground">
+										<Loader2 className="h-5 w-5 animate-spin" />
+										<span>Loading events...</span>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					) : error ? (
+						<Card>
+							<CardContent className="pt-6">
+								<div className="flex items-center justify-center py-12">
+									<div className="text-center">
+										<p className="text-red-500 mb-4">{error}</p>
+										<Button onClick={() => refreshEvents()}>Try Again</Button>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					) : (
 					<Card>
 						<CardContent className="pt-6">
 							<div className="space-y-3">
@@ -450,6 +588,7 @@ export default function EventsPage() {
 							</div>
 						</CardContent>
 					</Card>
+					)}
 				</div>
 			</div>
 
@@ -512,13 +651,22 @@ export default function EventsPage() {
 											>
 												<div className="flex justify-between items-start">
 													<h5 className="font-medium text-sm">{event.title}</h5>
-													<Badge variant="outline" className="text-xs">
-														{event.severity}
+													<Badge variant="outline" className="text-xs capitalize">
+														{event.kind}
 													</Badge>
 												</div>
 												<p className="text-sm text-muted-foreground">
-													{event.description}
+													{event.description || "No description"}
 												</p>
+												{Object.keys(event.labels).length > 0 && (
+													<div className="flex gap-1 flex-wrap mt-2">
+														{Object.entries(event.labels).map(([key, value]) => (
+															<Badge key={key} variant="secondary" className="text-xs">
+																{key}: {value}
+															</Badge>
+														))}
+													</div>
+												)}
 											</div>
 										))}
 									</div>
@@ -760,153 +908,59 @@ export default function EventsPage() {
 											Labels
 										</div>
 										<div className="flex-1">
-											<div className="flex gap-2 flex-wrap items-center">
+											<div className="space-y-2">
 												{eventLabels.map((label) => (
 													<div
 														key={label.id}
-														className="inline-flex items-center"
+														className="flex items-center gap-2"
 													>
-														{editingLabelId === label.id ? (
-															<Popover
-																open={true}
-																onOpenChange={(open) =>
-																	!open &&
-																	updateLabelValue(label.id, label.value)
+														{/* Key Input */}
+														<Input
+															value={label.key}
+															onChange={(e) => updateLabelKey(label.id, e.target.value)}
+															onBlur={(e) => {
+																if (!e.target.value.trim()) {
+																	removeLabel(label.id);
 																}
-															>
-																<PopoverTrigger asChild>
-																	<div className="inline-flex items-center gap-0.5 bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs">
-																		<span className="text-muted-foreground">
-																			{label.key}
-																		</span>
-																		<span className="mx-0.5 text-foreground">
-																			:
-																		</span>
-																		<span className="font-medium text-foreground">
-																			{label.value}
-																		</span>
-																	</div>
-																</PopoverTrigger>
-																<PopoverContent
-																	className="w-48 p-0"
-																	align="start"
-																>
-																	<Command>
-																		<CommandInput
-																			placeholder={`Search ${label.key} values...`}
-																		/>
-																		<CommandList>
-																			<CommandEmpty>
-																				No options found.
-																			</CommandEmpty>
-																			<CommandGroup>
-																				{getLabelOptions(label.key).map(
-																					(option) => (
-																						<CommandItem
-																							key={option}
-																							value={option}
-																							onSelect={() =>
-																								updateLabelValue(
-																									label.id,
-																									option,
-																								)
-																							}
-																						>
-																							<Check
-																								className={cn(
-																									"mr-2 h-4 w-4",
-																									label.value === option
-																										? "opacity-100"
-																										: "opacity-0",
-																								)}
-																							/>
-																							{option}
-																						</CommandItem>
-																					),
-																				)}
-																			</CommandGroup>
-																		</CommandList>
-																	</Command>
-																</PopoverContent>
-															</Popover>
-														) : (
-															<div
-																className="inline-flex items-center gap-0.5 bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs cursor-pointer hover:bg-secondary/80"
-																onClick={() => setEditingLabelId(label.id)}
-															>
-																<span className="text-muted-foreground">
-																	{label.key}
-																</span>
-																<span className="mx-0.5 text-foreground">
-																	:
-																</span>
-																<span className="font-medium text-foreground">
-																	{label.value}
-																</span>
-																<Button
-																	variant="ghost"
-																	size="sm"
-																	onClick={(e) => {
-																		e.stopPropagation();
-																		setEventLabels(
-																			eventLabels.filter(
-																				(l) => l.id !== label.id,
-																			),
-																		);
-																	}}
-																	className="ml-0.5 h-3 w-3 p-0 hover:bg-muted/50 rounded-full"
-																>
-																	<X className="h-2 w-2" />
-																</Button>
-															</div>
-														)}
-													</div>
-												))}
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
+															}}
+															placeholder="key"
+															className="w-32 h-8 text-sm"
+															autoFocus={editingLabelKey === label.id}
+														/>
+														<span className="text-muted-foreground">:</span>
+														{/* Value Input */}
+														<Input
+															value={label.value}
+															onChange={(e) => updateLabelValue(label.id, e.target.value)}
+															onBlur={(e) => {
+																if (!e.target.value.trim() && !label.key.trim()) {
+																	removeLabel(label.id);
+																}
+															}}
+															placeholder="value"
+															className="flex-1 h-8 text-sm"
+															autoFocus={editingLabelId === label.id}
+														/>
+														{/* Remove Button */}
 														<Button
 															variant="ghost"
 															size="sm"
-															className="h-6 px-2 text-muted-foreground hover:text-foreground"
+															onClick={() => removeLabel(label.id)}
+															className="h-8 w-8 p-0"
 														>
-															<Plus className="h-3 w-3 mr-1" />
-															Add label
+															<X className="h-3 w-3" />
 														</Button>
-													</DropdownMenuTrigger>
-													<DropdownMenuContent align="start" className="w-48">
-														{[
-															"environment",
-															"severity",
-															"team",
-															"service",
-															"region",
-														].map((labelKey) => (
-															<DropdownMenuItem
-																key={labelKey}
-																onClick={() => {
-																	if (
-																		!eventLabels.find((l) => l.key === labelKey)
-																	) {
-																		const newLabel = {
-																			id: `label-${Date.now()}`,
-																			key: labelKey,
-																			value: "", // Start with empty value
-																		};
-																		setEventLabels([...eventLabels, newLabel]);
-																		// Auto-open combobox for new label
-																		setTimeout(
-																			() => setEditingLabelId(newLabel.id),
-																			100,
-																		);
-																	}
-																}}
-																className="text-sm capitalize"
-															>
-																{labelKey}
-															</DropdownMenuItem>
-														))}
-													</DropdownMenuContent>
-												</DropdownMenu>
+													</div>
+												))}
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={addNewLabel}
+													className="h-8 px-3 text-muted-foreground hover:text-foreground"
+												>
+													<Plus className="h-3 w-3 mr-1" />
+													Add label
+												</Button>
 											</div>
 										</div>
 									</div>
@@ -916,20 +970,90 @@ export default function EventsPage() {
 								<div className="my-6 border-t" />
 
 								{/* Rich Text Editor */}
-								<div className="min-h-[400px]">
+								<div className="min-h-[400px] mb-4">
+									<div className="text-sm text-muted-foreground mb-2">Description</div>
 									<ClientBlockNote
 										timeWindow={{
 											start: eventStartDate || new Date(),
 											end: eventEndDate || new Date(),
 										}}
-										blockNoteId="wip"
+										blockNoteId={editingEventId ? `event-${editingEventId}` : `event-new-${selectedDay?.date.toISOString() || "new"}`}
+										onEditorReady={(editor) => {
+											editorRef.current = editor;
+										}}
 									/>
+								</div>
+
+								{/* Save Button */}
+								<div className="flex justify-end gap-2 pt-4 border-t">
+									<Button
+										variant="outline"
+										onClick={() => setIsSheetOpen(false)}
+										disabled={saving}
+									>
+										Cancel
+									</Button>
+									<Button onClick={handleSaveEvent} disabled={saving}>
+										{saving ? (
+											<>
+												<Loader2 className="h-4 w-4 mr-2 animate-spin" />
+												{editingEventId ? "Updating..." : "Saving..."}
+											</>
+										) : (
+											editingEventId ? "Update Event" : "Save Event"
+										)}
+									</Button>
 								</div>
 							</div>
 						</div>
 					</div>
 				</SheetContent>
 			</Sheet>
+
+			{/* Alert Dialog */}
+			<Dialog
+				open={alertDialog.open}
+				onOpenChange={(open) =>
+					setAlertDialog({ ...alertDialog, open })
+				}
+			>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle className="flex items-center gap-3">
+							{alertDialog.variant === "error" && (
+								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+									<AlertCircle className="h-5 w-5 text-red-600" />
+								</div>
+							)}
+							{alertDialog.variant === "warning" && (
+								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100">
+									<AlertTriangle className="h-5 w-5 text-yellow-600" />
+								</div>
+							)}
+							{alertDialog.variant === "info" && (
+								<div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+									<Info className="h-5 w-5 text-blue-600" />
+								</div>
+							)}
+							<span>{alertDialog.title}</span>
+						</DialogTitle>
+					</DialogHeader>
+					<div className="py-4">
+						<p className="text-sm text-muted-foreground">
+							{alertDialog.message}
+						</p>
+					</div>
+					<div className="flex justify-end gap-2">
+						<Button
+							onClick={() =>
+								setAlertDialog({ ...alertDialog, open: false })
+							}
+						>
+							OK
+						</Button>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }
