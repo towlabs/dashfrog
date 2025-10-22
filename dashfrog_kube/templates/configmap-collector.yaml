@@ -12,22 +12,28 @@ data:
       otlp:
         protocols:
           grpc:
-            endpoint: 0.0.0.0:4317
+            endpoint: 0.0.0.0:{{ .Values.collector.config.otlpGrpcPort }}
           http:
-            endpoint: 0.0.0.0:4318
+            endpoint: 0.0.0.0:{{ .Values.collector.config.otlpHttpPort }}
 
     exporters:
       debug:
         verbosity: detailed
         sampling_initial: 5
         sampling_thereafter: 200
-      prometheus:
-        endpoint: "0.0.0.0:9090"
-        # namespace: dashfrog
-        enable_open_metrics: true
-        translation_strategy: "UnderscoreEscapingWithoutSuffixes"
-        resource_to_telemetry_conversion:
-          enabled: false
+      prometheusremotewrite:
+        endpoint: "http://{{ include "dashfrog_kube.fullname" . }}-prometheus:{{ .Values.prometheus.service.port }}/api/v1/write"
+        timeout: 10s
+        # You can configure retry / queue settings if needed
+        sending_queue:
+          enabled: true
+          num_consumers: 2
+          queue_size: 5000
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+          max_elapsed_time: 300s
     processors:
       batch:
         send_batch_size: 1000  # Tune the batch size for more efficient exporting
@@ -35,7 +41,7 @@ data:
 
     extensions:
       health_check:
-        endpoint: "0.0.0.0:13133"
+        endpoint: "0.0.0.0:{{ .Values.collector.config.healthCheckPort }}"
         path: "/ping"
         check_collector_pipeline:
           enabled: true
