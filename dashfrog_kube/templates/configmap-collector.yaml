@@ -25,7 +25,7 @@ data:
         endpoint: "http://{{ include "dashfrog_kube.fullname" . }}-prometheus:{{ .Values.prometheus.service.port }}/api/v1/write"
         timeout: 10s
         # You can configure retry / queue settings if needed
-        sending_queue:
+        remote_write_queue:
           enabled: true
           num_consumers: 2
           queue_size: 5000
@@ -58,5 +58,5 @@ data:
             - batch
           exporters:
             - debug
-            - prometheus
+            - prometheusremotewrite
 {{- end }}

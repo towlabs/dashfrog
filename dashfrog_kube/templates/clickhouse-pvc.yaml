@@ -1,4 +1,12 @@
-{{- if and .Values.clickhouse.enabled .Values.clickhouse.persistence.enabled }}
+{{/*
+DEPRECATED: This file is no longer used.
+ClickHouse now uses a StatefulSet with volumeClaimTemplates (see clickhouse-deployment.yaml).
+StatefulSets automatically manage PVCs, ensuring stable storage across pod recreations.
+
+This file is kept for reference but will not create any resources.
+To fully remove it, delete this file from the templates directory.
+*/}}
+{{- if false }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

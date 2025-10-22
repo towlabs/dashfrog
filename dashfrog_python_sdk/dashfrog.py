@@ -19,6 +19,7 @@ from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
     OTLPMetricExporter as HTTPMetricExporter,
 )
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.metrics import Histogram
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics._internal.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -62,6 +63,8 @@ except ImportError:
     AwsLambdaInstrumentor = None
     BotocoreInstrumentor = None
 
+from opentelemetry.sdk.metrics.view import ExponentialBucketHistogramAggregation, View
+
 if TYPE_CHECKING:  # Only import for type checking as it could lead to import errors when not using all extra features.
     from fastapi import FastAPI
     from flask import Flask
@@ -96,9 +99,7 @@ class DashFrog:
         metric_exporter = (
             HTTPMetricExporter(endpoint=f"{http_server}/metrics")
             if config.infra.disable_grpc
-            else OTLPMetricExporter(
-                endpoint=grpc_server, insecure=config.infra.grpc_insecure
-            )
+            else OTLPMetricExporter(endpoint=grpc_server, insecure=config.infra.grpc_insecure)
         )
 
         reader = PeriodicExportingMetricReader(
@@ -106,7 +107,16 @@ class DashFrog:
             export_interval_millis=3000,  # Export every 3 seconds
         )
 
-        self.meter_provider = MeterProvider(metric_readers=[reader], resource=resource)
+        self.meter_provider = MeterProvider(
+            metric_readers=[reader],
+            resource=resource,
+            views=[
+                View(
+                    instrument_type=Histogram,
+                    aggregation=ExponentialBucketHistogramAggregation(),
+                )
+            ],
+        )
 
         self.__meter = self.meter_provider.get_meter("dashfrog")
 
@@ -235,9 +245,7 @@ class DashFrog:
         auto_end: bool = True,
     ):
         """Start a new step inside the existing flow. Step does not nest with steps."""
-        with Step(
-            "", auto_end=auto_end, auto_start=auto_start, from_context=True
-        ) as step:
+        with Step("", auto_end=auto_end, auto_start=auto_start, from_context=True) as step:
             yield step
 
     def metrics(

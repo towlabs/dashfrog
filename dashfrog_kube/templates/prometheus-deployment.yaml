@@ -1,12 +1,13 @@
 {{- if .Values.prometheus.enabled }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "dashfrog_kube.fullname" . }}-prometheus
   labels:
     {{- include "dashfrog_kube.labels" . | nindent 4 }}
     component: prometheus
 spec:
+  serviceName: {{ include "dashfrog_kube.fullname" . }}-prometheus
   replicas: {{ .Values.prometheus.replicaCount }}
   selector:
     matchLabels:
@@ -34,6 +35,8 @@ spec:
             - "--web.console.templates=/etc/prometheus/consoles"
             - "--storage.tsdb.retention.time={{ .Values.prometheus.config.retention }}"
             - "--web.enable-lifecycle"
+            - "--web.enable-remote-write-receiver"
+            - "--enable-feature=native-histograms"
           ports:
             - name: prometheus
               containerPort: {{ .Values.prometheus.config.port }}
@@ -63,11 +66,6 @@ spec:
         - name: prometheus-config
           configMap:
             name: {{ include "dashfrog_kube.fullname" . }}-prometheus-config
-        {{- if .Values.prometheus.persistence.enabled }}
-        - name: prometheus-data
-          persistentVolumeClaim:
-            claimName: {{ include "dashfrog_kube.fullname" . }}-prometheus-pvc
-        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -80,4 +78,21 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+  {{- if .Values.prometheus.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: prometheus-data
+        labels:
+          {{- include "dashfrog_kube.labels" . | nindent 10 }}
+          component: prometheus
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.prometheus.persistence.size }}
+        {{- if .Values.prometheus.persistence.storageClass }}
+        storageClassName: {{ .Values.prometheus.persistence.storageClass }}
+        {{- end }}
+  {{- end }}
 {{- end }}

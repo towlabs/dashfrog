@@ -1,4 +1,12 @@
-{{- if and .Values.prometheus.enabled .Values.prometheus.persistence.enabled }}
+{{/*
+DEPRECATED: This file is no longer used.
+Prometheus now uses a StatefulSet with volumeClaimTemplates (see prometheus-deployment.yaml).
+StatefulSets automatically manage PVCs, ensuring stable storage across pod recreations.
+
+This file is kept for reference but will not create any resources.
+To fully remove it, delete this file from the templates directory.
+*/}}
+{{- if false }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

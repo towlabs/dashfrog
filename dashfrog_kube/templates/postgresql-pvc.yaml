@@ -1,4 +1,12 @@
-{{- if and .Values.postgresql.enabled .Values.postgresql.persistence.enabled }}
+{{/*
+DEPRECATED: This file is no longer used.
+PostgreSQL now uses a StatefulSet with volumeClaimTemplates (see postgresql-deployment.yaml).
+StatefulSets automatically manage PVCs, ensuring stable storage across pod recreations.
+
+This file is kept for reference but will not create any resources.
+To fully remove it, delete this file from the templates directory.
+*/}}
+{{- if false }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

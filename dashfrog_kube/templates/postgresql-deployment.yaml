@@ -1,12 +1,13 @@
 {{- if .Values.postgresql.enabled }}
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "dashfrog_kube.fullname" . }}-postgresql
   labels:
     {{- include "dashfrog_kube.labels" . | nindent 4 }}
     component: postgresql
 spec:
+  serviceName: {{ include "dashfrog_kube.fullname" . }}-postgresql
   replicas: {{ .Values.postgresql.replicaCount }}
   selector:
     matchLabels:
@@ -70,12 +71,6 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
-      volumes:
-        {{- if .Values.postgresql.persistence.enabled }}
-        - name: postgresql-data
-          persistentVolumeClaim:
-            claimName: {{ include "dashfrog_kube.fullname" . }}-postgresql-pvc
-        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -88,4 +83,21 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+  {{- if .Values.postgresql.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+        labels:
+          {{- include "dashfrog_kube.labels" . | nindent 10 }}
+          component: postgresql
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .Values.postgresql.persistence.size }}
+        {{- if .Values.postgresql.persistence.storageClass }}
+        storageClassName: {{ .Values.postgresql.persistence.storageClass }}
+        {{- end }}
+  {{- end }}
 {{- end }}
