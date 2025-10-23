@@ -8,15 +8,15 @@ dist:
 
 
 receivers:
-  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.137.0
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.138.0
 
 processors:
-  - gomod:  go.opentelemetry.io/collector/processor/batchprocessor v0.137.0
+  - gomod:  go.opentelemetry.io/collector/processor/batchprocessor v0.138.0
 
 exporters:
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.137.0
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.137.0
-  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.137.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusremotewriteexporter v0.138.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/prometheusexporter v0.138.0
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.138.0
 
 extensions:
-  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.137.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension v0.138.0

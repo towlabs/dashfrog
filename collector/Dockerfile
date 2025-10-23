@@ -18,6 +18,6 @@ COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifica
 COPY --chmod=755 --from=build-stage /build/otelcol-dashfrog /otelcol
 
 ENTRYPOINT ["/otelcol/otelcol-dashfrog"]
-CMD ["--config", "/otelcol/collector-config.yaml"]
+CMD ["--feature-gates=exporter.prometheusremotewritexporter.enableSendingRW2=true", "--config=/otelcol/collector-config.yaml"]
 
 EXPOSE 4317 4318 12001
