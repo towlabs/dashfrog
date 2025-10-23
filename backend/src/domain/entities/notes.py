@@ -12,4 +12,5 @@ class Note(BaseModel):
     id: int
     title: str
     description: str | None = None
+    locked: bool = False
     blocks: list[Block] = []

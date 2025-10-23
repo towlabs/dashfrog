@@ -87,6 +87,9 @@ typeCheckingMode = "standard"
 exclude_dirs =  ["tests", ".venv"]
 skips = ["B101"]
 
+[tool.uv.sources]
+prometheus-api-client = { git = "https://github.com/titouanfreville/prometheus-api-client-python" }
+
 [build-system]
 requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"

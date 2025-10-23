@@ -281,6 +281,24 @@ const Notebooks = {
 			meta: { action: "delete", resource: "notebook" },
 		});
 	},
+
+	/**
+	 * Lock a notebook (prevent edits)
+	 */
+	lock: (id: string) => {
+		return NotebooksAPI.post<NotebookApiResponse>(`notes/${id}/lock/`, {
+			meta: { action: "lock", resource: "notebook" },
+		});
+	},
+
+	/**
+	 * Unlock a notebook (allow edits)
+	 */
+	unlock: (id: string) => {
+		return NotebooksAPI.post<NotebookApiResponse>(`notes/${id}/unlock/`, {
+			meta: { action: "unlock", resource: "notebook" },
+		});
+	},
 };
 
 const Blocks = {

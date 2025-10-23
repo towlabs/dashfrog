@@ -106,7 +106,7 @@ requires-dist = [
     { name = "clickhouse-connect", specifier = ">=0.9.2" },
     { name = "fastapi", specifier = ">=0.118.0" },
     { name = "orjson", specifier = ">=3.11.3" },
-    { name = "prometheus-api-client", specifier = ">=0.6.0" },
+    { name = "prometheus-api-client", git = "https://github.com/titouanfreville/prometheus-api-client-python" },
     { name = "pydantic", specifier = ">=2.11.9" },
     { name = "pydantic-settings", extras = ["yaml"], specifier = ">=2.11.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.44" },
@@ -932,7 +932,7 @@ wheels = [
 [[package]]
 name = "prometheus-api-client"
 version = "0.6.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/titouanfreville/prometheus-api-client-python#0cdc932dad21258f4e1cc0569206d1f49c2c577d" }
 dependencies = [
     { name = "dateparser" },
     { name = "httmock" },
@@ -941,10 +941,6 @@ dependencies = [
     { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pandas" },
     { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/78/18/893d14d805164b6bd479aff7659a9cbf249628006dc4369058609029b9e1/prometheus_api_client-0.6.0.tar.gz", hash = "sha256:80822f1bb599febcab27c5ba2924b1c236d01f9b0df0308f91b5087937a6ad3e", size = 26004, upload-time = "2025-04-18T04:24:45.138Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fb/24/0c06c1d10aada3f9b44174c743e48d25e19f953ee9de5caf2c30099c342d/prometheus_api_client-0.6.0-py3-none-any.whl", hash = "sha256:137fa4576a76177547c4d7bb43e2a457df95f5bd81afe782896ba77ab87ebaf6", size = 30170, upload-time = "2025-04-18T04:24:43.639Z" },
 ]
 
 [[package]]

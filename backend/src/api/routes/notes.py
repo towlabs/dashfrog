@@ -1,9 +1,13 @@
+from http import HTTPStatus
+
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
+from starlette.responses import JSONResponse
 
 from src.core.context import context
 from src.domain import usecases
 from src.domain.entities import Block as BlockEntity
+from src.domain.usecases.notes import NoteLockedException
 
 
 class _BlockAPI(BaseModel):
@@ -40,6 +44,7 @@ class _NoteAPI(BaseModel):
     id: int
     title: str
     description: str | None = None
+    locked: bool = False
     blocks: list[_BlockAPI] = []
 
 
@@ -87,6 +92,14 @@ class Notes:
         Notes.__uc = uc
 
     @staticmethod
+    def _handle_locked_error(e: NoteLockedException):
+        """Helper method to handle NoteLockedException consistently."""
+        return JSONResponse(
+            status_code=HTTPStatus.LOCKED,
+            content={"detail": f"Note {e.note_id} is locked and cannot be modified"},
+        )
+
+    @staticmethod
     @ep.get("/")
     async def list_notes(request: Request) -> list[_NoteAPI]:
         with context(request) as ctx:
@@ -98,6 +111,7 @@ class Notes:
                     id=note.id,
                     title=note.title,
                     description=note.description,
+                    locked=note.locked,
                     blocks=[_BlockAPI.from_entity(block) for block in note.blocks],
                 )
                 for note in notes
@@ -113,6 +127,7 @@ class Notes:
                 id=note.id,
                 title=note.title,
                 description=note.description,
+                locked=note.locked,
                 blocks=[_BlockAPI.from_entity(block) for block in note.blocks],
             )
 
@@ -129,21 +144,26 @@ class Notes:
                 id=note.id,
                 title=note.title,
                 description=note.description,
+                locked=note.locked,
                 blocks=[_BlockAPI.from_entity(block) for block in note.blocks],
             )
 
     @staticmethod
     @ep.put("/{note_id}")
-    async def update_note(request: Request, note_id: int, body: _NoteUpdate) -> _NoteAPI:
-        with context(request) as ctx:
-            note = await Notes.__uc.update(ctx, note_id=note_id, title=body.title, description=body.description)
+    async def update_note(request: Request, note_id: int, body: _NoteUpdate):
+        try:
+            with context(request) as ctx:
+                note = await Notes.__uc.update(ctx, note_id=note_id, title=body.title, description=body.description)
 
-            return _NoteAPI(
-                id=note.id,
-                title=note.title,
-                description=note.description,
-                blocks=[_BlockAPI.from_entity(block) for block in note.blocks],
-            )
+                return _NoteAPI(
+                    id=note.id,
+                    title=note.title,
+                    description=note.description,
+                    locked=note.locked,
+                    blocks=[_BlockAPI.from_entity(block) for block in note.blocks],
+                )
+        except NoteLockedException as e:
+            return Notes._handle_locked_error(e)
 
     @staticmethod
     @ep.delete("/{note_id}")
@@ -152,6 +172,36 @@ class Notes:
             await Notes.__uc.delete(ctx, note_id)
 
             return {"status": "deleted"}
+
+    @staticmethod
+    @ep.post("/{note_id}/lock")
+    async def lock_note(request: Request, note_id: int) -> _NoteAPI:
+        """Lock a note to prevent modifications."""
+        with context(request) as ctx:
+            note = await Notes.__uc.lock(ctx, note_id)
+
+            return _NoteAPI(
+                id=note.id,
+                title=note.title,
+                description=note.description,
+                locked=note.locked,
+                blocks=[_BlockAPI.from_entity(block) for block in note.blocks],
+            )
+
+    @staticmethod
+    @ep.post("/{note_id}/unlock")
+    async def unlock_note(request: Request, note_id: int) -> _NoteAPI:
+        """Unlock a note to allow modifications."""
+        with context(request) as ctx:
+            note = await Notes.__uc.unlock(ctx, note_id)
+
+            return _NoteAPI(
+                id=note.id,
+                title=note.title,
+                description=note.description,
+                locked=note.locked,
+                blocks=[_BlockAPI.from_entity(block) for block in note.blocks],
+            )
 
     @staticmethod
     @ep.get("/{note_id}/blocks")
@@ -163,61 +213,73 @@ class Notes:
 
     @staticmethod
     @ep.put("/{note_id}/blocks/batch")
-    async def batch_upsert_blocks(request: Request, note_id: int, body: _BlockBatchUpdate) -> list[_BlockAPI]:
+    async def batch_upsert_blocks(request: Request, note_id: int, body: _BlockBatchUpdate):
         """Batch upsert blocks - updates existing blocks or creates new ones."""
-        with context(request) as ctx:
-            # Convert API blocks to update tuples (id, kind, content, position)
-            updates = [
-                (
-                    block.id,
-                    block.type,  # type -> kind conversion happens in usecase
-                    block.content,
-                    block.position,
-                )
-                for block in body.blocks
-            ]
+        try:
+            with context(request) as ctx:
+                # Convert API blocks to update tuples (id, kind, content, position)
+                updates = [
+                    (
+                        block.id,
+                        block.type,  # type -> kind conversion happens in usecase
+                        block.content,
+                        block.position,
+                    )
+                    for block in body.blocks
+                ]
 
-            upserted_blocks = await Notes.__uc.batch_upsert_blocks(ctx, note_id, updates)
+                upserted_blocks = await Notes.__uc.batch_upsert_blocks(ctx, note_id, updates)
 
-            return [_BlockAPI.from_entity(block) for block in upserted_blocks]
+                return [_BlockAPI.from_entity(block) for block in upserted_blocks]
+        except NoteLockedException as e:
+            return Notes._handle_locked_error(e)
 
     @staticmethod
     @ep.post("/{note_id}/blocks")
-    async def create_block(request: Request, note_id: int, body: _BlockCreate) -> _BlockAPI:
-        with context(request) as ctx:
-            # Convert API representation to entity (type -> kind)
-            block_entity = BlockEntity(
-                id=body.id,
-                kind=body.type,
-                content=body.content,
-                position=body.position,
-            )
+    async def create_block(request: Request, note_id: int, body: _BlockCreate):
+        try:
+            with context(request) as ctx:
+                # Convert API representation to entity (type -> kind)
+                block_entity = BlockEntity(
+                    id=body.id,
+                    kind=body.type,
+                    content=body.content,
+                    position=body.position,
+                )
 
-            block = await Notes.__uc.create_block(ctx, note_id=note_id, block=block_entity)
+                block = await Notes.__uc.create_block(ctx, note_id=note_id, block=block_entity)
 
-            return _BlockAPI.from_entity(block)
+                return _BlockAPI.from_entity(block)
+        except NoteLockedException as e:
+            return Notes._handle_locked_error(e)
 
     @staticmethod
     @ep.put("/{note_id}/blocks/{block_id}")
-    async def update_block(request: Request, note_id: int, block_id: str, body: _BlockUpdate) -> _BlockAPI:
-        with context(request) as ctx:
-            # Convert 'type' to 'kind' if provided
-            kind = body.type if body.type is not None else None
+    async def update_block(request: Request, note_id: int, block_id: str, body: _BlockUpdate):
+        try:
+            with context(request) as ctx:
+                # Convert 'type' to 'kind' if provided
+                kind = body.type if body.type is not None else None
 
-            block = await Notes.__uc.update_block(
-                ctx,
-                block_id=block_id,
-                kind=kind,
-                content=body.content,
-                position=body.position,
-            )
+                block = await Notes.__uc.update_block(
+                    ctx,
+                    block_id=block_id,
+                    kind=kind,
+                    content=body.content,
+                    position=body.position,
+                )
 
-            return _BlockAPI.from_entity(block)
+                return _BlockAPI.from_entity(block)
+        except NoteLockedException as e:
+            return Notes._handle_locked_error(e)
 
     @staticmethod
     @ep.delete("/{note_id}/blocks/{block_id}")
     async def delete_block(request: Request, note_id: int, block_id: str):
-        with context(request) as ctx:
-            await Notes.__uc.delete_block(ctx, block_id)
+        try:
+            with context(request) as ctx:
+                await Notes.__uc.delete_block(ctx, block_id)
 
-            return {"status": "deleted"}
+                return {"status": "deleted"}
+        except NoteLockedException as e:
+            return Notes._handle_locked_error(e)

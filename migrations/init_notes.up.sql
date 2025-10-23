@@ -2,6 +2,7 @@ CREATE TABLE notes (
     id SERIAL PRIMARY KEY,
     title VARCHAR NOT NULL,
     description VARCHAR,
+    locked bool NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL
 );
 

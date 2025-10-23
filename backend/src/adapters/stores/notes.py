@@ -80,6 +80,19 @@ class Notes:
 
 class Blocks:
     @staticmethod
+    async def is_locked(block_id: str) -> int | None:
+        """Check if the block's parent note is locked. Returns note_id if locked, None otherwise."""
+        db = _get_session()
+        # Query through the relationship to check if the note is locked
+        result = await db.execute(
+            select(NoteModel.id, NoteModel.locked)
+            .join(BlockModel, BlockModel.note_id == NoteModel.id)
+            .filter(BlockModel.id == block_id)
+        )
+        note_id, is_locked = result.one()
+        return note_id if is_locked else None
+
+    @staticmethod
     async def list(note_id: int) -> list[entities.Block]:
         query = select(BlockModel).filter_by(note_id=note_id).order_by(BlockModel.position)
         blocks = await _get_session().execute(query)
@@ -126,9 +139,7 @@ class Blocks:
         await db.execute(delete(BlockModel).where(BlockModel.id == block_id))
 
     @staticmethod
-    async def batch_upsert(
-        note_id: int, updates: List[tuple[str, dict]]
-    ) -> List[entities.Block]:
+    async def batch_upsert(note_id: int, updates: List[tuple[str, dict]]) -> List[entities.Block]:
         """
         Batch upsert blocks (update existing or create new).
 

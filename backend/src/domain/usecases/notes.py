@@ -12,6 +12,14 @@ from src.domain.entities import Block, Note
 List = list
 
 
+class NoteLockedException(Exception):
+    """Exception raised when attempting to modify a locked note."""
+
+    def __init__(self, note_id: int):
+        self.note_id = note_id
+        super().__init__(f"Note {note_id} is locked and cannot be modified")
+
+
 class Notes:
     def __init__(
         self,
@@ -68,6 +76,11 @@ class Notes:
         log = self.__log.bind(action="update", note_id=note_id)
 
         async with self.__session_maker.begin():
+            # Check if note is locked
+            note = await self.__notes.get(note_id)
+            if note.locked:
+                raise NoteLockedException(note_id)
+
             new_values = {}
             if title is not None:
                 new_values["title"] = title
@@ -87,6 +100,24 @@ class Notes:
 
         log.debug("Success !")
 
+    async def lock(self, _ctx: Context, note_id: int) -> Note:
+        log = self.__log.bind(action="lock", note_id=note_id)
+
+        async with self.__session_maker.begin():
+            note = await self.__notes.update(note_id, locked=True)
+
+        log.debug("Success !")
+        return note
+
+    async def unlock(self, _ctx: Context, note_id: int) -> Note:
+        log = self.__log.bind(action="unlock", note_id=note_id)
+
+        async with self.__session_maker.begin():
+            note = await self.__notes.update(note_id, locked=False)
+
+        log.debug("Success !")
+        return note
+
     async def list_blocks(self, _ctx: Context, note_id: int) -> List[Block]:
         log = self.__log.bind(action="list_blocks", note_id=note_id)
 
@@ -105,6 +136,11 @@ class Notes:
         log = self.__log.bind(action="create_block", note_id=note_id, block_id=block.id)
 
         async with self.__session_maker.begin():
+            # Check if note is locked
+            note = await self.__notes.get(note_id)
+            if note.locked:
+                raise NoteLockedException(note_id)
+
             created_block = await self.__blocks.create(note_id, block)
 
         log.debug("Success !")
@@ -121,6 +157,10 @@ class Notes:
         log = self.__log.bind(action="update_block", block_id=block_id)
 
         async with self.__session_maker.begin():
+            # Check if the block's parent note is locked
+            if (locked_note_id := await self.__blocks.is_locked(block_id)) is not None:
+                raise NoteLockedException(locked_note_id)
+
             new_values = {}
             if kind is not None:
                 new_values["kind"] = kind
@@ -138,6 +178,10 @@ class Notes:
         log = self.__log.bind(action="delete_block", block_id=block_id)
 
         async with self.__session_maker.begin():
+            # Check if the block's parent note is locked
+            if (locked_note_id := await self.__blocks.is_locked(block_id)) is not None:
+                raise NoteLockedException(locked_note_id)
+
             await self.__blocks.delete(block_id)
 
         log.debug("Success !")
@@ -160,6 +204,11 @@ class Notes:
         log = self.__log.bind(action="batch_upsert_blocks", note_id=note_id, count=len(updates))
 
         async with self.__session_maker.begin():
+            # Check if note is locked
+            note = await self.__notes.get(note_id)
+            if note.locked:
+                raise NoteLockedException(note_id)
+
             # Transform updates into (block_id, new_values) format
             store_updates = []
             for block_id, kind, content, position in updates:

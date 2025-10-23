@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain import entities
@@ -34,9 +34,11 @@ class Note(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
+    locked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
+
     blocks: Mapped[list["Block"]] = relationship(
         back_populates="note",
         cascade="all, delete-orphan",
@@ -49,5 +51,6 @@ class Note(Base):
             id=self.id,
             title=self.title,
             description=self.description,
+            locked=self.locked,
             blocks=[block.to_entity() for block in self.blocks],
         )
