@@ -9,12 +9,6 @@ metadata:
     purpose: migrations
 data:
   init_db.up.sql: |
-    DROP TABLE if exists dashfrog.flow_events;
-    DROP TABLE if exists dashfrog.step_events;
-    DROP TABLE if exists dashfrog.flows;
-    DROP VIEW if exists dashfrog.flows;
-    DROP VIEW if exists dashfrog.flows_mv;
-
     CREATE TABLE IF NOT EXISTS dashfrog.flow_events (
         name LowCardinality(String),
         service_name LowCardinality(Nullable(String)),
@@ -69,7 +63,7 @@ data:
     PRIMARY KEY (trace_id, name)
     ORDER BY (trace_id, name, created_at);
 
-    CREATE MATERIALIZED VIEW dashfrog.flows_mv
+    CREATE MATERIALIZED VIEW IF NOT EXISTS dashfrog.flows_mv
     REFRESH EVERY 1 MINUTES
     TO dashfrog.flows
     AS SELECT

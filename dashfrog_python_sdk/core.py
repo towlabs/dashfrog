@@ -88,6 +88,10 @@ class Config(BaseSettings):
         port: int | None = None
         password: str
 
+    class AttributesFilters(BaseModel):
+        instrument: str
+        accept: set[str]
+
     collector_server: str
     metric_exporter_delay: int = 3000
     auto_flow_instrumented: list[SupportedInstrumentation] = []  # use keys
@@ -96,6 +100,20 @@ class Config(BaseSettings):
 
     clickhouse: Database = Database(password="dev-pwd*")  # nosec (unsafe unused pwd)
     infra: Infra = Infra()
+    attributes_filters: list[AttributesFilters] = [
+        AttributesFilters(  # HTTPX/Request/FastAPI/Flask
+            instrument="http.*",
+            accept={"http.method", "http.route", "http.status_code", "http.url"},
+        ),
+        AttributesFilters(
+            instrument="celery.*",
+            accept={"celery.task_name", "messaging.system", "celery.retries"},
+        ),
+        AttributesFilters(
+            instrument="faas.*",
+            accept={"faas.name", "http.method", "http.route", "aws.lambda.resource_mapping.id"},
+        ),
+    ]
     auto_steps: AutoFlow | None = None
 
     model_config = SettingsConfigDict(

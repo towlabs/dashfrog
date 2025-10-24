@@ -37,6 +37,7 @@ spec:
             - "--web.enable-lifecycle"
             - "--web.enable-remote-write-receiver"
             - "--enable-feature=native-histograms"
+            - "--enable-feature=metadata-wal-records"
           ports:
             - name: prometheus
               containerPort: {{ .Values.prometheus.config.port }}
