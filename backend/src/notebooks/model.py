@@ -3,9 +3,12 @@ from datetime import UTC, datetime
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.domain import entities
+from core.stores import Base
 
-from . import Base
+from .entities import (
+    Block as BlockEntity,
+    Note as NoteEntity,
+)
 
 
 class Block(Base):
@@ -19,8 +22,8 @@ class Block(Base):
 
     note: Mapped["Note"] = relationship(back_populates="blocks")
 
-    def to_entity(self) -> entities.Block:
-        return entities.Block(
+    def to_entity(self) -> BlockEntity:
+        return BlockEntity(
             id=self.id,
             kind=self.kind,
             content=self.content,
@@ -46,8 +49,8 @@ class Note(Base):
         order_by="Block.position",
     )
 
-    def to_entity(self) -> entities.Note:
-        return entities.Note(
+    def to_entity(self) -> NoteEntity:
+        return NoteEntity(
             id=self.id,
             title=self.title,
             description=self.description,

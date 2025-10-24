@@ -3,7 +3,7 @@ Comprehensive test cases for core.stringcase module.
 Tests each function with multiple input scenarios using pytest.mark.parametrize.
 """
 
-from src.core import stringcase
+from core import stringcase
 
 import pytest
 

@@ -6,12 +6,12 @@ from fastapi import FastAPI, Request
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
-from src import router
-from src.app import Application
+from app import Application
 
 app = Application()
-app.init_web()
+
 api = FastAPI(name="Dashfrog backend", version=app.configuration.release)
+
 
 logger = app.logger
 
@@ -50,8 +50,6 @@ async def log_requests(request: Request, call_next):
         log.info("Incoming request")
     except Exception as e:
         print(e)
-        pass
-
     try:
         # Process request
         response = await call_next(request)
@@ -85,7 +83,8 @@ api.add_middleware(
     allow_headers=["*"],
 )
 
-api.include_router(router, prefix="/api")
+
+api.include_router(app.init_web(), prefix="/api")
 
 # For development only
 if __name__ == "__main__":

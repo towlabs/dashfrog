@@ -1,10 +1,9 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from pydantic.main import BaseModel
 
-from src.core.context import context
-from src.domain import usecases
+from facets import Facets
 
 
 class _Query(BaseModel):
@@ -14,30 +13,21 @@ class _Query(BaseModel):
     steps: str | None = None
 
 
-class Metrics:
-    __uc: usecases.Metrics
+ep = APIRouter(prefix="/metrics", tags=["metrics"])
 
-    ep = APIRouter(prefix="/metrics", tags=["metrics"])
 
-    def __init__(self, uc: usecases.Metrics):
-        Metrics.__uc = uc
+@ep.get("/")
+async def list():
+    return await Facets().list_metrics()
 
-    @staticmethod
-    @ep.get("/")
-    async def list(request: Request):
-        with context(request) as ctx:
-            return await Metrics.__uc.list(ctx)
 
-    @staticmethod
-    @ep.get("/scrape")
-    async def scrape(request: Request):
-        with context(request) as ctx:
-            await Metrics.__uc.scrape(ctx)
+@ep.get("/scrape")
+async def scrape():
+    await Facets().scrape_metrics()
 
-    @staticmethod
-    @ep.post("/query")
-    def query_metric(request: Request, body: _Query):
-        with context(request) as ctx:
-            Metrics.__uc.query(
-                ctx, body.query, body.from_date, body.to_date, body.steps
-            )
+
+@ep.post("/query")
+def query_metric(body: _Query):
+    return Facets().query_metrics(
+        body.query, body.from_date, body.to_date, body.steps
+    )

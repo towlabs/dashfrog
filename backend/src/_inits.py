@@ -49,7 +49,7 @@ def setup_logging(
         cache_logger_on_first_use=False,
     )
 
-    logger = logging.getLogger("tower")
+    logger = logging.getLogger("dashfrog")
     logger.setLevel(log_level)
     struct_logger = structlog.wrap_logger(logger)
 
