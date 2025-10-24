@@ -25,6 +25,11 @@ CREATE TABLE metrics (
     associated_identifiers VARCHAR[]
 );
 
+CREATE TABLE metrics_scrapped (
+    id SERIAL PRIMARY KEY,
+    ran_at TIMESTAMPTZ default NOW() UNIQUE
+);
+
 CREATE TABLE label_values (
     label_id SERIAL REFERENCES labels (id) ON DELETE CASCADE ,
     value VARCHAR NOT NULL,

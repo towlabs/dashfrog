@@ -98,4 +98,4 @@ class MetricsScrapped(Base):
     __tablename__ = "metrics_scrapped"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    ran_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, unique=True, default=lambda: datetime.now(UTC))
+    ran_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, unique=True)

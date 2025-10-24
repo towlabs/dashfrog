@@ -158,7 +158,9 @@ collector:
     otlpGrpcPort: 4317
     otlpHttpPort: 4318
     # Prometheus exporter port
-    prometheusPort: 9090
+    prometheusPort: 12001
+    # Prometheus metrics port (for /metrics endpoint)
+    prometheusMetricsPort: 9464
     # Health check port
     healthCheckPort: 13133
 
@@ -168,7 +170,8 @@ collector:
     ports:
       otlpGrpc: 4317
       otlpHttp: 4318
-      prometheus: 9090
+      prometheus: 12001
+      prometheusMetrics: 9464
       healthCheck: 13133
 
   # Resources
