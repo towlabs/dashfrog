@@ -3,26 +3,17 @@ import logging
 
 import clickhouse_connect
 from clickhouse_connect.driver.client import Client as ClickhouseClient
+from fastapi import APIRouter
 import orjson
 from prometheus_api_client import PrometheusConnect
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from structlog._generic import BoundLogger
 
-from src._inits import setup_logging
-from src.adapters.stores import (
-    Blocks as BlocksStore,
-    Events as EventsStore,
-    Flows as FlowsStore,
-    Labels as LabelsStore,
-    Metrics as MetricsStore,
-    Notes as NotesStore,
-    Steps as StepsStore,
-)
-from src.api.routes import API, events, flows, health, labels, metrics, notes, steps
-from src.core import AsyncSessionMaker, Config
-from src.core.context import BLACKLISTED_LABELS, ENV, RELEASE
-from src.domain.usecases import Events, Flows, Labels, Metrics, Notes, Steps
+from _inits import setup_logging
+from api.routes import events, flows, health, labels, metrics, notes
+from core import Config
+from core.context import is_app_initialized, set_app
 
 
 @dataclass
@@ -48,9 +39,11 @@ class Application(BaseApplication[Config]):
     def __post_init__(self):
         super().__post_init__()
 
-        BLACKLISTED_LABELS.set(self.configuration.default_blacklist_labels)
-        ENV.set(self.configuration.env)
-        RELEASE.set(self.configuration.release)
+        # Check if an app is already initialized and warn
+        if is_app_initialized():
+            logging.getLogger(__name__).warning(
+                "Application instance already exists. Multiple app instances may cause conflicts."
+            )
 
         self.clickhouse_client = clickhouse_connect.get_client(
             host=self.configuration.click_house.host,
@@ -78,7 +71,7 @@ class Application(BaseApplication[Config]):
             disable_ssl=self.configuration.prometheus.disable_ssl,
         )
 
-        self.sessionmaker = AsyncSessionMaker(async_sessionmaker(self.engine))
+        self.sessionmaker = async_sessionmaker(self.engine)
 
         self.logger = setup_logging(
             log_level=getattr(logging, self.configuration.logs.level),
@@ -88,34 +81,16 @@ class Application(BaseApplication[Config]):
         if not self.configuration.logs.log_libs:
             logging.getLogger("httpx").setLevel(logging.CRITICAL)
 
-        ## Deps
-        flow_store = FlowsStore(self.clickhouse_client)
-        step_store = StepsStore(self.clickhouse_client)
-        label_store = LabelsStore(self.clickhouse_client, self.prom_client, self.logger)
-        metrics_store = MetricsStore(self.clickhouse_client, self.prom_client, self.logger)
-        events_store = EventsStore()
-        notes_store = NotesStore()
-        blocks_store = BlocksStore()
-
-        self.usecases = {
-            "flows": Flows(flow_store, self.logger),
-            "steps": Steps(step_store, self.logger),
-            "labels": Labels(label_store, metrics_store, self.sessionmaker, self.logger),
-            "metrics": Metrics(metrics_store, self.sessionmaker, self.prom_client, self.logger),
-            "events": Events(events_store, self.sessionmaker, self.logger),
-            "notes": Notes(notes_store, blocks_store, self.sessionmaker, self.logger),
-        }
+        # Set app singleton for blocks to access
+        set_app(self)
 
     def log(self, name: str, **kwargs) -> BoundLogger:
         return self.logger.bind(name=name, **kwargs)
 
-    def init_web(self):
-        API(
-            flows.Flows(self.usecases["flows"]),
-            steps.Steps(self.usecases["steps"]),
-            labels.Labels(self.usecases["labels"]),
-            metrics.Metrics(self.usecases["metrics"]),
-            events.Events(self.usecases["events"]),
-            notes.Notes(self.usecases["notes"]),
-            health,
-        )
+    @staticmethod
+    def init_web() -> APIRouter:
+        router = APIRouter()
+        for route in [flows, labels, metrics, events, notes, health]:
+            router.include_router(route.ep)
+
+        return router

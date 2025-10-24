@@ -34,7 +34,7 @@ class Step(BaseModel):
     children: list["Step"] = []
 
 
-class Event(BaseModel):
+class WorkflowEvent(BaseModel):
     name: str
     description: str | None = None
     labels: dict[str, str]

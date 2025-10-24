@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 from pydantic import BaseModel
 
-from src.core.context import context
-from src.domain import usecases
+from facets import Facets
 
 
 class _LabelUpdate(BaseModel):
@@ -15,40 +14,24 @@ class _LabelValueUpdate(BaseModel):
     proxy: str
 
 
-class Labels:
-    __uc: usecases.Labels
+ep = APIRouter(prefix="/labels", tags=["flows", "labels", "metrics"])
 
-    ep = APIRouter(prefix="/labels", tags=["flows", "labels", "metrics"])
 
-    def __init__(self, uc: usecases.Labels):
-        Labels.__uc = uc
+@ep.get("/")
+async def get_labels(with_hidden: bool = False):
+    return await Facets().list_labels(with_hidden)
 
-    @staticmethod
-    @ep.get("/")
-    async def get_labels(request: Request, with_hidden: bool = False):
-        with context(request) as ctx:
-            labels = await Labels.__uc.list(ctx, with_hidden)
 
-            return labels
+@ep.get("/scrape")
+async def scrape_labels():
+    await Facets().scrape_labels()
 
-    @staticmethod
-    @ep.get("/scrape")
-    async def scrape_labels(request: Request):
-        with context(request) as ctx:
-            await Labels.__uc.scrape_labels(ctx)
 
-    @staticmethod
-    @ep.put("/{label_id}")
-    async def update_label(request: Request, label_id: int, body: _LabelUpdate):
-        with context(request) as ctx:
-            updated = await Labels.__uc.update(ctx, label_id, body.description, body.hide, body.display_as)
+@ep.put("/{label_id}")
+async def update_label(label_id: int, body: _LabelUpdate):
+    return await Facets().update_label(label_id, body.description, body.hide, body.display_as)
 
-            return updated
 
-    @staticmethod
-    @ep.put("/{label_id}/value/{value_name}")
-    async def update_label_value(request: Request, label_id: int, value_name: str, body: _LabelValueUpdate):
-        with context(request) as ctx:
-            updated = await Labels.__uc.update_value(ctx, label_id, value_name, body.proxy)
-
-            return updated
+@ep.put("/{label_id}/value/{value_name}")
+async def update_label_value(label_id: int, value_name: str, body: _LabelValueUpdate):
+    return await Facets().update_label_value(label_id, value_name, body.proxy)

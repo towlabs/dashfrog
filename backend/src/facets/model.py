@@ -4,9 +4,9 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql.sqltypes import ARRAY, Boolean, Enum
 
-from src.domain import entities
+from core.stores import Base
 
-from . import Base
+from . import entities
 
 
 class LabelValue(Base):
@@ -94,8 +94,8 @@ class Metric(Base):
         )
 
 
-class LabelsScrapped(Base):
-    __tablename__ = "labels_scrapped"
+class MetricsScrapped(Base):
+    __tablename__ = "metrics_scrapped"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ran_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, unique=True, default=lambda: datetime.now(UTC))
