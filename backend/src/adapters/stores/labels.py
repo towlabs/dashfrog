@@ -180,7 +180,8 @@ class Metrics:
                     res[metric.Metric.id] = metric.Metric.to_entity()
 
                 entity = res[metric.Metric.id]
-                entity.labels.append(metric.Label.id)
+                if metric.Label is not None:
+                    entity.labels.append(metric.Label.id)
             return list(res.values())
 
         return [metric.to_entity() for metric in metrics.scalars()]
