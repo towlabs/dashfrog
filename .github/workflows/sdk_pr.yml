@@ -5,6 +5,7 @@ on:
       - opened
       - edited
       - reopened
+      - synchronize
     paths:
       - 'dashfrog_python_sdk/*.py'
       - 'dashfrog_python_sdk/tests'

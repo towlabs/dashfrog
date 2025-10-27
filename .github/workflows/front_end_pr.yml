@@ -5,6 +5,7 @@ on:
       - opened
       - edited
       - reopened
+      - synchronize
     paths:
       - 'frontend/**.js'
       - 'frontend/**.ts'
