@@ -1,0 +1,7 @@
+metrics:
+  - key: "celery_task_runtime"
+    prom_identifier: "flower_task_runtime_seconds"
+    kind: "stats"
+    unit: "milliseconds"
+    display_as: "Celery task runtime"
+    scope: "tasks"

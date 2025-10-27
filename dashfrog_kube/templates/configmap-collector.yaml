@@ -27,13 +27,27 @@ data:
         # You can configure retry / queue settings if needed
         remote_write_queue:
           enabled: true
-          num_consumers: 2
+          num_consumers: 1
           queue_size: 5000
         retry_on_failure:
           enabled: true
           initial_interval: 5s
           max_interval: 30s
           max_elapsed_time: 300s
+        resource_to_telemetry_conversion:
+          enabled: true
+        send_metadata: true
+        protobuf_message: io.prometheus.write.v2.Request
+        export_created_metric: true
+        enable_native_histograms: true
+
+      # Metadata-only exporter for all metrics
+      prometheus:
+        endpoint: "0.0.0.0:{{ .Values.collector.config.prometheusPort }}"
+        enable_open_metrics: true
+        resource_to_telemetry_conversion:
+          enabled: true
+        namespace: "meta"  # Optional, keeps metadata visually separated
     processors:
       batch:
         send_batch_size: 1000  # Tune the batch size for more efficient exporting

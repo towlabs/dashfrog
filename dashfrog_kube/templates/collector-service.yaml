@@ -18,9 +18,13 @@ spec:
       protocol: TCP
       name: otlp-http
     - port: {{ .Values.collector.service.ports.prometheus }}
-      targetPort: prometheus
+      targetPort: prom-remote
       protocol: TCP
-      name: prometheus
+      name: prom-remote
+    - port: {{ .Values.collector.service.ports.prometheusMetrics }}
+      targetPort: prom-metrics
+      protocol: TCP
+      name: prom-metrics
     - port: {{ .Values.collector.service.ports.healthCheck }}
       targetPort: health-check
       protocol: TCP

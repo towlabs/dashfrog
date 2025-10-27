@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from re import compile, match
 from typing import List
 
@@ -9,11 +10,12 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload
 from sqlalchemy.sql.sqltypes import String
+import yaml
 
 from core.context import get_app
 from core.stringcase import titlecase
 
-from .entities import Label, LabelScrapping, LabelSrcKind, Metric, MetricKind
+from .entities import Catalog, Label, LabelScrapping, LabelSrcKind, Metric, MetricKind
 from .model import (
     Label as LabelModel,
     LabelUsage,
@@ -85,6 +87,57 @@ class Facets:
     def __init__(self):
         """Initialize the Facets block."""
         self.__log = get_app().log("facets")
+        self.__catalog = self.__load_catalogs()
+        # Build catalog lookup for efficient metric validation during scraping
+        self.__catalog_by_prom_id = {metric.prom_identifier: metric for metric in self.__catalog.metrics}
+
+    # =============================================================================
+    # PRIVATE CATALOG METHODS
+    # =============================================================================
+
+    def __load_catalogs(self) -> Catalog:
+        """
+        Load and merge all catalog files from the catalogs/ directory.
+
+        Returns:
+            Merged Catalog containing metrics from all catalog files
+        """
+        log = self.__log.bind(action="load_catalogs")
+
+        # Determine catalog directory path (relative to project root)
+        catalog_dir = Path(__file__).parents[2] / "catalogs"
+
+        if not catalog_dir.exists():
+            log.warning("Catalog directory not found", path=str(catalog_dir))
+            return Catalog(metrics=[])
+
+        # Collect all metrics from YAML files
+        all_metrics = []
+        yaml_files = list(catalog_dir.glob("*.yaml")) + list(catalog_dir.glob("*.yml"))
+
+        for yaml_file in yaml_files:
+            try:
+                log.debug("Loading catalog file", file=yaml_file.name)
+                with yaml_file.open() as f:
+                    data = yaml.safe_load(f)
+
+                if not data:
+                    log.warning("Empty catalog file", file=yaml_file.name)
+                    continue
+
+                # Validate and parse with Pydantic
+                catalog = Catalog.model_validate(data)
+                all_metrics.extend(catalog.metrics)
+                log.debug("Loaded catalog", file=yaml_file.name, metric_count=len(catalog.metrics))
+
+            except Exception as e:
+                log.error("Failed to load catalog file", file=yaml_file.name, error=str(e))
+                # Continue loading other catalogs even if one fails
+                continue
+
+        merged_catalog = Catalog(metrics=all_metrics)
+        log.info("Catalogs loaded successfully", total_metrics=len(all_metrics))
+        return merged_catalog
 
     # =============================================================================
     # PUBLIC METHODS
@@ -308,7 +361,7 @@ class Facets:
         return [metric.to_entity() for metric in metrics.scalars()]
 
     @staticmethod
-    async def __metrics_upserts( session: AsyncSession, metrics: List[Metric]):
+    async def __metrics_upserts(session: AsyncSession, metrics: list[Metric]):
         """Insert or update multiple metrics."""
         values = [metric.model_dump(exclude={"id", "labels"}) for metric in metrics]
         insert_stmt = insert(MetricModel).values(values)
@@ -319,10 +372,9 @@ class Facets:
             )
         )
 
-
-    async def __metrics_scrape(self, session: AsyncSession) -> tuple[datetime, List[Metric]]:
+    async def __metrics_scrape(self, session: AsyncSession) -> tuple[datetime, list[Metric]]:
         """
-        Scrape metrics from Prometheus using the series API.
+        Scrape metrics from Prometheus using the series API with inline catalog validation.
 
         Returns:
             Tuple of (scrape_timestamp, list of metric entities)
@@ -346,6 +398,9 @@ class Facets:
         # Build metric entities from unique names, deduplicating by key
         # (multiple prometheus names can map to the same key, e.g. foo_sum, foo_bucket -> "foo")
         metrics_by_key = {}
+        catalog_enriched_count = 0
+        metrics_dropped_count = 0
+
         for metric_name in unique_metric_names:
             if not (matches := parse_prom_name(metric_name)):
                 self.__log.error("Invalid metric", name=metric_name)
@@ -354,43 +409,93 @@ class Facets:
             name, kind, scope, unit = matches
             scope = scope or self.__otel_scope_to_scope(metric_name, "") or "UNKNOWN"
 
+            # Initialize defaults
+            description = ""
+            display_as = titlecase(name)
+
+            # If scope is UNKNOWN, this is a non-dashfrog metric - validate against catalog
+            if scope == "UNKNOWN":
+                # Check if metric exists in catalog
+                catalog_entry = self.__catalog_by_prom_id.get(metric_name)
+                if not catalog_entry:
+                    # Not in catalog, drop this metric
+                    metrics_dropped_count += 1
+                    self.__log.debug("Dropping non-dashfrog metric not in catalog", metric_name=metric_name)
+                    continue
+
+                # Use catalog data to enrich
+                name = catalog_entry.key
+                kind = catalog_entry.kind
+                unit = catalog_entry.unit or ""
+                scope = catalog_entry.scope
+                description = catalog_entry.description or ""
+                display_as = catalog_entry.display_as or titlecase(name)
+                catalog_enriched_count += 1
+
             # Skip if we already have this key (e.g., foo_sum and foo_count both parse to key "foo")
+            # When duplicate detected, keep only the metric with most recent sample
             if name in metrics_by_key:
-                # Add this metric_name to associated_identifiers if not already there
-                if metric_name not in metrics_by_key[name].associated_identifiers:
-                    metrics_by_key[name].associated_identifiers.append(metric_name)
-                continue
+                existing_identifier = metrics_by_key[name].associated_identifiers[0]
 
-            # Determine if histogram based on metric name suffixes
-            is_histogram = any(metric_name.endswith(suffix) for suffix in ["_sum", "_bucket", "_count"])
-            base_name = metric_name
-            for suffix in ["_sum", "_bucket", "_count"]:
-                if base_name.endswith(suffix):
-                    base_name = base_name[: -len(suffix)]
-                    break
+                # Query for last sample time of both metrics
+                new_sample_time = self.__get_last_sample_time(metric_name)
+                existing_sample_time = self.__get_last_sample_time(existing_identifier)
 
+                if new_sample_time and existing_sample_time:
+                    if new_sample_time > existing_sample_time:
+                        # New metric is more recent, replace the existing one
+                        self.__log.debug(
+                            "Replacing older metric variant with newer one",
+                            key=name,
+                            old_identifier=existing_identifier,
+                            new_identifier=metric_name,
+                            old_timestamp=existing_sample_time,
+                            new_timestamp=new_sample_time,
+                        )
+                        # Continue to create new entry (will overwrite old one)
+                    else:
+                        # Existing metric is more recent, keep it
+                        self.__log.debug(
+                            "Keeping existing metric variant, skipping older one",
+                            key=name,
+                            kept_identifier=existing_identifier,
+                            skipped_identifier=metric_name,
+                        )
+                        continue
+                else:
+                    # If we can't determine recency, keep existing
+                    self.__log.warning(
+                        "Cannot determine metric recency, keeping existing",
+                        key=name,
+                        existing_identifier=existing_identifier,
+                        new_identifier=metric_name,
+                    )
+                    continue
+
+            # For native histograms, use single identifier (the metric name itself)
             metric_entity = Metric(
                 id=-1,
                 key=name,
                 kind=kind,
                 scope=scope,
                 unit=unit or "",
-                description="",  # Series API doesn't provide description
-                display_as=titlecase(name),
-                associated_identifiers=[str(base_name)]
-                if not is_histogram
-                else [
-                    f"{base_name}_sum",
-                    f"{base_name}_bucket",
-                    f"{base_name}_count",
-                ],
+                description=description,
+                display_as=display_as,
+                associated_identifiers=[metric_name],
             )
             metrics_by_key[name] = metric_entity
+
+        self.__log.debug(
+            "Metrics scraping complete",
+            total_metrics=len(metrics_by_key),
+            catalog_enriched=catalog_enriched_count,
+            dropped=metrics_dropped_count,
+        )
 
         return scrape_start_time, list(metrics_by_key.values())
 
     @staticmethod
-    def __otel_scope_to_scope( metric_name: str, metric_kind: str) -> str:
+    def __otel_scope_to_scope(metric_name: str, metric_kind: str) -> str:
         """Convert OpenTelemetry scope to application scope."""
 
         def replace(scope: str) -> str:
@@ -412,6 +517,34 @@ class Facets:
             return "UNKNOWN"
 
         return val[0]
+
+    def __get_last_sample_time(self, metric_name: str) -> float | None:
+        """
+        Query Prometheus for the timestamp of the most recent sample for a given metric.
+
+        Args:
+            metric_name: The Prometheus metric identifier
+
+        Returns:
+            Unix timestamp (float) of the most recent sample, or None if metric not found or query fails
+        """
+        try:
+            # Use instant query to get the latest sample
+            # This queries the current value of the metric
+            result = get_app().prom_client.custom_query(query=metric_name)
+
+            if result and len(result) > 0:
+                # Result format: [{"metric": {...}, "value": [timestamp, value]}]
+                # Take the first result (arbitrary choice if multiple series)
+                first_result = result[0]
+                if "value" in first_result and len(first_result["value"]) >= 2:
+                    # timestamp is the first element
+                    return float(first_result["value"][0])
+
+            return None
+        except Exception as e:
+            self.__log.debug("Failed to query last sample time", metric_name=metric_name, error=str(e))
+            return None
 
     @staticmethod
     def __calculate_nice_step(step_seconds: float) -> str:
@@ -476,7 +609,7 @@ class Facets:
     # PRIVATE LABELS STORE METHODS
     # =============================================================================
     @staticmethod
-    async def __labels_list( session: AsyncSession, with_hidden: bool) -> List[Label]:
+    async def __labels_list(session: AsyncSession, with_hidden: bool) -> List[Label]:
         """List all labels, optionally including hidden ones."""
         query = select(LabelModel)
         if not with_hidden:
@@ -503,9 +636,7 @@ class Facets:
         return label.to_entity()
 
     @staticmethod
-    async def __labels_update_value(
-        session: AsyncSession, label_id: int, value_name, **new_values
-    ) -> Label.Value:
+    async def __labels_update_value(session: AsyncSession, label_id: int, value_name, **new_values) -> Label.Value:
         """Update a specific label value."""
         label = (await session.execute(select(LabelValue).filter_by(label_id=label_id, value=value_name))).scalar_one()
 
@@ -630,16 +761,16 @@ def parse_prom_name(metric_name: str):
         return None
 
     name = matches.group("name")
-    kind = MetricKind(matches.group("kind") or "other")
+    kind: MetricKind = MetricKind(matches.group("kind") or "other")
     df_scope = matches.group("scope")
     usr_scope = matches.group("custom")
     unit = matches.group("unit")
 
-    if (kind is None or kind == MetricKind.other) and unit not in KNOWN_PROM_UNITS:
+    if (kind == MetricKind.other) and unit not in KNOWN_PROM_UNITS:
         # If no kind and unit is not in Prometheus known units → not a real unit
         name = "_".join(filter(None, [name, unit]))
         unit = None
-    elif kind is not None and unit in {
+    elif unit in {
         "total",
         "sum",
         "count",

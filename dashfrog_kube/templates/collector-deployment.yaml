@@ -28,6 +28,7 @@ spec:
           image: "{{ .Values.collector.image.repository }}:{{ .Values.collector.image.tag }}"
           imagePullPolicy: {{ .Values.collector.image.pullPolicy }}
           args:
+            - "--feature-gates=+exporter.prometheusremotewritexporter.enableSendingRW2"
             - "--config"
             - "/otelcol/collector-config.yaml"
           ports:
@@ -37,8 +38,11 @@ spec:
             - name: otlp-http
               containerPort: {{ .Values.collector.config.otlpHttpPort }}
               protocol: TCP
-            - name: prometheus
+            - name: prom-remote
               containerPort: {{ .Values.collector.config.prometheusPort }}
+              protocol: TCP
+            - name: prom-metrics
+              containerPort: {{ .Values.collector.config.prometheusMetricsPort }}
               protocol: TCP
             - name: health-check
               containerPort: {{ .Values.collector.config.healthCheckPort }}

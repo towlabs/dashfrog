@@ -1,0 +1,12 @@
+metrics:
+  - key: "http_server_duration"
+    prom_identifier: "http_server_duration_milliseconds"
+    kind: "stats"
+    unit: "milliseconds"
+    display_as: "HTTP request duration"
+    scope: "api"
+  - key: "http_active_requests"
+    prom_identifier: "http_server_active_requests"
+    kind: "measure"
+    display_as: "Active HTTP requests"
+    scope: "api"

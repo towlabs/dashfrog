@@ -1,6 +1,7 @@
 from collections.abc import Generator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Self
+from uuid import uuid4
 
 import clickhouse_connect
 
@@ -19,10 +20,19 @@ from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
     OTLPMetricExporter as HTTPMetricExporter,
 )
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.metrics import Histogram
+from opentelemetry.metrics import (
+    Counter,
+    Histogram,
+    ObservableCounter,
+    ObservableGauge,
+    ObservableUpDownCounter,
+    UpDownCounter,
+)
 from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics._internal.aggregation import ExponentialBucketHistogramAggregation
 from opentelemetry.sdk.metrics._internal.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.metrics._internal.view import View
+from opentelemetry.sdk.resources import SERVICE_INSTANCE_ID, SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import (
     INVALID_SPAN,
@@ -63,7 +73,6 @@ except ImportError:
     AwsLambdaInstrumentor = None
     BotocoreInstrumentor = None
 
-from opentelemetry.sdk.metrics.view import ExponentialBucketHistogramAggregation, View
 
 if TYPE_CHECKING:  # Only import for type checking as it could lead to import errors when not using all extra features.
     from fastapi import FastAPI
@@ -87,9 +96,9 @@ class DashFrog:
         resource = Resource.create(
             attributes={
                 **labels,
-                "service.name": service_name,
+                SERVICE_INSTANCE_ID: uuid4().hex,
+                SERVICE_NAME: service_name,
                 "service.provider": "tower.dashfrog",
-                "dashfrog.version": "alpha",
             }
         )
 
@@ -97,7 +106,12 @@ class DashFrog:
         grpc_server = f"{config.collector_server}:{config.infra.grpc_collector_port}"
 
         metric_exporter = (
-            HTTPMetricExporter(endpoint=f"{http_server}/metrics")
+            HTTPMetricExporter(
+                endpoint=f"{http_server}/metrics",
+                preferred_aggregation={
+                    Histogram: ExponentialBucketHistogramAggregation(),
+                },
+            )
             if config.infra.disable_grpc
             else OTLPMetricExporter(endpoint=grpc_server, insecure=config.infra.grpc_insecure)
         )
@@ -107,15 +121,42 @@ class DashFrog:
             export_interval_millis=3000,  # Export every 3 seconds
         )
 
+        views = []
+        
+        # 1. View for internal dashfrog metrics (convert histograms to exponential)
+        views.append(
+            View(
+                instrument_name="dashfrog*",
+                instrument_type=Histogram,
+                aggregation=ExponentialBucketHistogramAggregation(),
+            )
+        )
+        
+        # 2. For each attribute filter, create views for different instrument types:
+        for attributes_filter in config.attributes_filters:
+            # View for histograms: filter attributes AND convert to exponential
+            views.append(
+                View(
+                    instrument_name=attributes_filter.instrument,
+                    instrument_type=Histogram,
+                    attribute_keys=attributes_filter.accept,
+                    aggregation=ExponentialBucketHistogramAggregation(),
+                )
+            )
+            # Views for non-histogram instruments: just filter attributes
+            for instrument_type in [Counter, UpDownCounter, ObservableCounter, ObservableUpDownCounter, ObservableGauge]:
+                views.append(
+                    View(
+                        instrument_name=attributes_filter.instrument,
+                        instrument_type=instrument_type,
+                        attribute_keys=attributes_filter.accept,
+                    )
+                )
+
         self.meter_provider = MeterProvider(
             metric_readers=[reader],
             resource=resource,
-            views=[
-                View(
-                    instrument_type=Histogram,
-                    aggregation=ExponentialBucketHistogramAggregation(),
-                )
-            ],
+            views=views,
         )
 
         self.__meter = self.meter_provider.get_meter("dashfrog")
