@@ -53,3 +53,16 @@ class LabelScrappingValue(TypedDict):
 
 
 LabelScrapping = dict[str, LabelScrappingValue]
+
+
+class Catalog(BaseModel):
+    class Metric(BaseModel):
+        key: str
+        prom_identifier: str
+        kind: MetricKind
+        scope: str
+        unit: str | None = None
+        description: str | None = None
+        display_as: str | None = None
+
+    metrics: list[Metric] = []
