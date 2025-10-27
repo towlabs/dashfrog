@@ -71,8 +71,8 @@ class Workflows:
         flow_name: str,
         limit: int,
         offset: int,
-        filters: list[StoreFilter] = None,
-        orders: StoreOrder = None,
+        filters: list[StoreFilter] | None = None,
+        orders: StoreOrder | None = None,
     ) -> tuple[list[Flow], int]:
         log = self.logger.bind(action="get_single_history", flow_name=flow_name)
 
