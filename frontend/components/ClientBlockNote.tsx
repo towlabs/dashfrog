@@ -4,7 +4,6 @@ import { BlockNoteView } from "@blocknote/shadcn";
 import "@blocknote/shadcn/style.css";
 import {
 	type Block,
-	type BlockNoteEditor,
 	BlockNoteSchema,
 	combineByGroup,
 	defaultBlockSpecs,
@@ -53,37 +52,20 @@ import {
 	type TimeWindow,
 	TimeWindowProvider,
 } from "@/src/contexts/time-window";
-import { blockNoteStorage } from "@/src/services/api/blocknote";
 
 interface ClientBlockNoteProps {
 	timeWindow: TimeWindow;
-	blockNoteId: string;
-	readonly?: boolean;
-	onEditorReady?: (editor: BlockNoteEditor) => void;
-	/**
-	 * Optional callback for block changes
-	 * When provided, blocks will be persisted via this callback instead of localStorage
-	 * Used for notebooks with backend persistence
-	 */
-	onBlocksChange?: (blocks: Block[]) => void;
-	/**
-	 * Initial blocks to load (for notebooks from backend)
-	 * If not provided, will try to load from localStorage
-	 */
-	initialBlocks?: Block[];
+	readonly: boolean;
+	onBlocksChange: (blocks: Block[]) => void;
+	initialBlocks: Block[];
 }
 
 export default function ClientBlockNote({
 	timeWindow,
-	blockNoteId,
-	readonly = false,
-	onEditorReady,
+	readonly,
 	onBlocksChange,
 	initialBlocks,
 }: ClientBlockNoteProps) {
-	const loadedContentRef = useRef(false);
-	const useBackendPersistence = !!onBlocksChange;
-
 	const editor = useCreateBlockNote({
 		schema: withMultiColumn(
 			BlockNoteSchema.create({
@@ -106,71 +88,21 @@ export default function ClientBlockNote({
 		// Don't set initialContent here - we'll load it after editor is ready
 	});
 
-	// Notify parent when editor is ready
+	// Load content from initialBlocks once after editor is created
+	const didInitRef = useRef(false);
 	useEffect(() => {
-		if (editor && onEditorReady) {
-			// @ts-expect-error - TODO: typing error in blocknote
-			onEditorReady(editor);
-		}
-	}, [editor, onEditorReady]);
-
-	// Load content from storage or initialBlocks after editor is created
-	useEffect(() => {
-		if (!editor) return;
-
-		// Reset loaded flag when blockNoteId changes
-		loadedContentRef.current = false;
-
-		// Use setTimeout to ensure editor is fully ready
-		const timer = setTimeout(() => {
-			let contentToLoad: Block[] | null = null;
-
-			// For backend persistence, use initialBlocks if provided
-			if (useBackendPersistence && initialBlocks) {
-				contentToLoad = initialBlocks;
-				console.log(
-					"Loading blocks from backend for notebook:",
-					blockNoteId,
-					initialBlocks,
-				);
-			} else {
-				// For localStorage persistence (events), load from storage
-				contentToLoad = blockNoteStorage.load(blockNoteId);
-				if (contentToLoad) {
-					console.log(
-						"Loading saved content from localStorage:",
-						blockNoteId,
-						contentToLoad,
-					);
-				}
-			}
-
-			if (contentToLoad && contentToLoad.length > 0) {
-				// Replace all blocks with saved content
-				editor.replaceBlocks(editor.document, contentToLoad);
-			} else {
-				// Clear to a single empty paragraph if no saved content
-				editor.replaceBlocks(editor.document, [{ type: "paragraph" }]);
-			}
-			loadedContentRef.current = true;
+		if (!editor || didInitRef.current) return;
+		didInitRef.current = true;
+		setTimeout(() => {
+			editor.replaceBlocks(editor.document, initialBlocks);
 		}, 0);
+	}, [editor, initialBlocks]);
 
-		return () => {
-			clearTimeout(timer);
-		};
-	}, [editor, blockNoteId, initialBlocks, useBackendPersistence]);
-
-	// Save changes whenever editor content changes (but not during initial load)
-	useEditorChange(() => {
-		if (editor && loadedContentRef.current) {
-			if (useBackendPersistence && onBlocksChange) {
-				// For notebooks: use backend persistence via callback
-				onBlocksChange(editor.document);
-			} else {
-				// For events: use localStorage persistence
-				blockNoteStorage.save(blockNoteId, editor.document);
-			}
-		}
+	// Save changes to API (for events page) or call parent callback (for notebooks)
+	useEditorChange((editor, { getChanges }) => {
+		if (readonly || getChanges().length === 0) return;
+		const blocks = editor.document as Block[];
+		onBlocksChange(blocks);
 	}, editor);
 
 	return (
@@ -358,7 +290,7 @@ export default function ClientBlockNote({
 						};
 
 						const metricTableItem: DefaultReactSuggestionItem = {
-							title: "Table",
+							title: "Metric Table",
 							subtext: "Insert a metric table",
 							group: "Metrics",
 							icon: <Table2 className="h-4 w-4" />,

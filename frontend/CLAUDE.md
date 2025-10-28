@@ -2,6 +2,10 @@
 
 This file contains project-specific guidelines and conventions for the Dashfrog frontend application.
 
+## Debugging
+
+- When asked to debug an issue first explain fix plan to user and ask for confirmation. Do not proceed to fix without user confirmation.
+
 ## UI Framework
 
 - Use **shadcn/ui** for basic components (e.g., Drawer, Dialog, Card, Button, etc.)

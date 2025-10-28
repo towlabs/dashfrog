@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { v4 as uuidv4 } from "uuid";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNotebooks } from "../src/contexts/notebooks";
@@ -51,17 +50,8 @@ export default function SideMenu({
 
 	const handleCreateNotebook = async () => {
 		try {
-			const newNotebook = await createNotebook({
-				title: "Untitled Notebook",
-				description: "",
-				locked: false,
-				timeWindow: {
-					type: "relative",
-					metadata: { value: "24h" },
-				},
-				blockNoteId: uuidv4(),
-			});
-			navigate(`/notebook/${newNotebook.id}`);
+			const newNotebook = await createNotebook();
+			navigate(`/notebook/${newNotebook.uuid}`);
 		} catch (err) {
 			console.error("Failed to create notebook:", err);
 		}
@@ -211,11 +201,11 @@ export default function SideMenu({
 							)
 						: notebooks.map((notebook) => {
 								const isNotebookActive =
-									pathname === `/notebook/${notebook.id}`;
+									pathname === `/notebook/${notebook.uuid}`;
 								return (
 									<Link
-										key={notebook.id}
-										to={`/notebook/${notebook.id}`}
+										key={notebook.uuid}
+										to={`/notebook/${notebook.uuid}`}
 										className={cn(
 											"flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent",
 											isNotebookActive && "bg-accent text-accent-foreground",

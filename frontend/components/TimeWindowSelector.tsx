@@ -118,18 +118,6 @@ export function TimeWindowSelector({
 			if (range) return range.label;
 		}
 
-		// Check if matches a quick range (for backwards compatibility)
-		for (const range of QUICK_RANGES) {
-			const rangeValue = range.getValue();
-			const diff = Math.abs(
-				rangeValue.start.getTime() - currentWindow.start.getTime(),
-			);
-			if (diff < 60000) {
-				// Within 1 minute
-				return range.label;
-			}
-		}
-
 		// Custom range
 		return `${format(currentWindow.start, "MMM d, HH:mm")} - ${format(currentWindow.end, "MMM d, HH:mm")}`;
 	};

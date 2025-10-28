@@ -29,7 +29,7 @@ const router = createBrowserRouter([
 		),
 	},
 	{
-		path: "/notebook/:id",
+		path: "/notebook/:uuid",
 		element: (
 			<LayoutClient>
 				<NotebookById />

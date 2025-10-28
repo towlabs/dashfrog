@@ -1,9 +1,9 @@
 import type { Block } from "@blocknote/core";
 import { NewRestAPI } from "@/src/services/api/_helper";
 import type {
-	NotebookCreateInput,
 	NotebookData,
-	NotebookUpdateInput,
+	NotebookDataWithContent,
+	RelativeTimeValue,
 	TimeWindowConfig,
 } from "@/src/types/notebook";
 
@@ -94,45 +94,20 @@ const NotebooksAPI = NewRestAPI("api");
  * }
  * ```
  */
-function blockToApiPayload(block: Block, position: number) {
-	return {
-		id: block.id,
-		type: block.type,
-		content: {
-			props: block.props || {},
-			content: block.content || [],
-			children: block.children || [],
-		},
-		position,
-	};
-}
-
-/**
- * Transform backend API block to BlockNote block format
- */
-function apiPayloadToBlock(apiBlock: BlockApiResponse): Block {
-	return {
-		id: apiBlock.id,
-		type: apiBlock.type,
-		props: apiBlock.content.props || {},
-		content: apiBlock.content.content || [],
-		children: apiBlock.content.children || [],
-	} as Block;
-}
 
 /**
  * Raw notebook response from backend API (snake_case)
  * Backend stays close to BlockNote typing
  */
 interface NotebookApiResponse {
-	id: number;
+	uuid: string;
 	title: string;
-	description: string;
+	description: string | null;
 	locked: boolean;
-	time_window?: TimeWindowConfig; // Optional, may not be in response yet
-	blocks?: Block[]; // BlockNote blocks, backend preserves structure
-	created_at: string;
-	updated_at: string;
+	blocknote_uuid: string;
+	timeWindow:
+		| { type: "relative"; metadata: { value: RelativeTimeValue } }
+		| { type: "absolute"; metadata: { start: string; end: string } };
 }
 
 type NotebooksApiResponse = NotebookApiResponse[];
@@ -142,7 +117,7 @@ type NotebooksApiResponse = NotebookApiResponse[];
  */
 interface NotebookCreateApiPayload {
 	title: string;
-	description: string;
+	description: string | null;
 	locked: boolean;
 	time_window: TimeWindowConfig;
 	blocks?: Block[]; // Optional initial blocks
@@ -150,85 +125,39 @@ interface NotebookCreateApiPayload {
 
 /**
  * Raw notebook update payload for backend API (snake_case)
+ * Now includes blocks to push entire notebook state
  */
 interface NotebookUpdateApiPayload {
 	title?: string;
-	description?: string;
+	description?: string | null;
 	locked?: boolean;
 	time_window?: TimeWindowConfig;
+	blocks?: Block[]; // Include blocks for complete notebook updates
 }
-
-/**
- * Raw block response from backend API
- * Backend returns flat structure with content dict
- */
-interface BlockApiResponse {
-	id: string;
-	type: string;
-	content: {
-		props?: Record<string, any>;
-		content?: any[];
-		children?: Block[];
-	};
-	position: number;
-}
-
-type BlocksApiResponse = BlockApiResponse[];
 
 /**
  * Convert backend API response to frontend Notebook type
- * Transforms snake_case to camelCase and number ID to string
+ * Transforms snake_case to camelCase
  */
 function toNotebook(apiNotebook: NotebookApiResponse): NotebookData {
 	return {
-		id: apiNotebook.id.toString(),
+		...apiNotebook,
+		uuid: apiNotebook.uuid,
 		title: apiNotebook.title,
 		description: apiNotebook.description,
 		locked: apiNotebook.locked,
 		// Use provided time_window or default to 24h relative time
-		timeWindow: apiNotebook.time_window || {
-			type: "relative",
-			metadata: { value: "24h" },
-		},
-		// BlockNote ID for local storage - use notebook ID
-		blockNoteId: `notebook-${apiNotebook.id}`,
-		createdAt: new Date(apiNotebook.created_at),
-		updatedAt: new Date(apiNotebook.updated_at),
+		timeWindow:
+			apiNotebook.timeWindow.type === "relative"
+				? apiNotebook.timeWindow
+				: {
+						type: apiNotebook.timeWindow.type,
+						metadata: {
+							start: new Date(apiNotebook.timeWindow.metadata.start),
+							end: new Date(apiNotebook.timeWindow.metadata.end),
+						},
+					},
 	};
-}
-
-/**
- * Convert frontend NotebookCreateInput to backend API payload
- * Transforms camelCase to snake_case
- */
-function toNotebookCreatePayload(
-	input: NotebookCreateInput,
-	blocks?: Block[],
-): NotebookCreateApiPayload {
-	return {
-		title: input.title,
-		description: input.description,
-		locked: input.locked,
-		time_window: input.timeWindow,
-		blocks: blocks,
-	};
-}
-
-/**
- * Convert frontend NotebookUpdateInput to backend API payload
- * Transforms camelCase to snake_case
- */
-function toNotebookUpdatePayload(
-	input: NotebookUpdateInput,
-): NotebookUpdateApiPayload {
-	const payload: NotebookUpdateApiPayload = {};
-
-	if (input.title !== undefined) payload.title = input.title;
-	if (input.description !== undefined) payload.description = input.description;
-	if (input.locked !== undefined) payload.locked = input.locked;
-	if (input.timeWindow !== undefined) payload.time_window = input.timeWindow;
-
-	return payload;
 }
 
 const Notebooks = {
@@ -236,39 +165,38 @@ const Notebooks = {
 	 * Get all notebooks
 	 */
 	getAll: () => {
-		return NotebooksAPI.get<NotebooksApiResponse>("notes/", {
+		return NotebooksAPI.get<NotebooksApiResponse>("notebooks/", {
 			meta: { action: "fetch", resource: "notebooks" },
 		});
 	},
 
-	/**
-	 * Get a single notebook by ID
-	 */
-	getById: (id: string) => {
-		return NotebooksAPI.get<NotebookApiResponse>(`notes/${id}/`, {
-			meta: { action: "fetch", resource: "notebook" },
-		});
+	async get(uiid: string) {
+		const response = await NotebooksAPI.get<NotebookApiResponse>(
+			`notebooks/${uiid}`,
+			{
+				meta: { action: "get", resource: "notebook" },
+			},
+		);
+		return toNotebook(response.data) as NotebookDataWithContent;
 	},
 
 	/**
 	 * Create a new notebook
 	 * Optionally include initial blocks
 	 */
-	create: (input: NotebookCreateInput, blocks?: Block[]) => {
-		const payload = toNotebookCreatePayload(input, blocks);
-		return NotebooksAPI.post<NotebookApiResponse>("notes/", {
-			data: payload,
-			meta: { action: "create", resource: "notebook" },
+	create: (notebook: NotebookData) => {
+		return NotebooksAPI.post<NotebookApiResponse>("notebooks/", {
+			data: notebook,
 		});
 	},
 
 	/**
 	 * Update an existing notebook
+	 * Accepts full notebook data including blocks
 	 */
-	update: (id: string, input: NotebookUpdateInput) => {
-		const payload = toNotebookUpdatePayload(input);
-		return NotebooksAPI.put<NotebookApiResponse>(`notes/${id}/`, {
-			data: payload,
+	update: (uuid: string, data: Partial<NotebookDataWithContent>) => {
+		return NotebooksAPI.put<NotebookApiResponse>(`notebooks/${uuid}`, {
+			data,
 			meta: { action: "update", resource: "notebook" },
 		});
 	},
@@ -276,8 +204,8 @@ const Notebooks = {
 	/**
 	 * Delete a notebook
 	 */
-	delete: (id: string) => {
-		return NotebooksAPI.delete<void>(`notes/${id}/`, {
+	delete: (uuid: string) => {
+		return NotebooksAPI.delete<void>(`notebooks/${uuid}`, {
 			meta: { action: "delete", resource: "notebook" },
 		});
 	},
@@ -285,8 +213,8 @@ const Notebooks = {
 	/**
 	 * Lock a notebook (prevent edits)
 	 */
-	lock: (id: string) => {
-		return NotebooksAPI.post<NotebookApiResponse>(`notes/${id}/lock/`, {
+	lock: (uuid: string) => {
+		return NotebooksAPI.post<NotebookApiResponse>(`notebooks/${uuid}/lock`, {
 			meta: { action: "lock", resource: "notebook" },
 		});
 	},
@@ -294,129 +222,16 @@ const Notebooks = {
 	/**
 	 * Unlock a notebook (allow edits)
 	 */
-	unlock: (id: string) => {
-		return NotebooksAPI.post<NotebookApiResponse>(`notes/${id}/unlock/`, {
+	unlock: (uuid: string) => {
+		return NotebooksAPI.post<NotebookApiResponse>(`notebooks/${uuid}/unlock`, {
 			meta: { action: "unlock", resource: "notebook" },
 		});
 	},
 };
 
-const Blocks = {
-	/**
-	 * Get all blocks for a notebook
-	 * Returns blocks in BlockNote format
-	 */
-	getAll: async (notebookId: string) => {
-		const response = await NotebooksAPI.get<BlocksApiResponse>(
-			`notes/${notebookId}/blocks/`,
-			{
-				meta: { action: "fetch", resource: "blocks" },
-			},
-		);
-
-		// Transform backend blocks to BlockNote format
-		return {
-			...response,
-			data: response.data.map(apiPayloadToBlock),
-		};
-	},
-
-	/**
-	 * Create a new block
-	 * Accepts BlockNote block and transforms it for the backend
-	 */
-	create: async (notebookId: string, block: Block, position: number) => {
-		const payload = blockToApiPayload(block, position);
-
-		const response = await NotebooksAPI.post<BlockApiResponse>(
-			`notes/${notebookId}/blocks/`,
-			{
-				data: payload,
-				meta: { action: "create", resource: "block" },
-			},
-		);
-
-		// Transform response back to BlockNote format
-		return {
-			...response,
-			data: apiPayloadToBlock(response.data),
-		};
-	},
-
-	/**
-	 * Update an existing block
-	 * Accepts BlockNote block and transforms it for the backend
-	 */
-	update: async (
-		notebookId: string,
-		blockId: string,
-		block: Block,
-		position: number,
-	) => {
-		const payload = blockToApiPayload(block, position);
-
-		const response = await NotebooksAPI.put<BlockApiResponse>(
-			`notes/${notebookId}/blocks/${blockId}/`,
-			{
-				data: {
-					type: payload.type,
-					content: payload.content,
-					position: payload.position,
-				},
-				meta: { action: "update", resource: "block" },
-			},
-		);
-
-		// Transform response back to BlockNote format
-		return {
-			...response,
-			data: apiPayloadToBlock(response.data),
-		};
-	},
-
-	/**
-	 * Delete a block
-	 */
-	delete: (notebookId: string, blockId: string) => {
-		return NotebooksAPI.delete<void>(`notes/${notebookId}/blocks/${blockId}/`, {
-			meta: { action: "delete", resource: "block" },
-		});
-	},
-
-	/**
-	 * Update multiple blocks at once (batch update)
-	 * Useful for drag-and-drop reordering or bulk updates
-	 * Accepts BlockNote blocks and transforms them for the backend
-	 */
-	updateBatch: async (
-		notebookId: string,
-		blocks: Array<Block & { position: number }>,
-	) => {
-		// Transform BlockNote blocks to backend format
-		const payload = blocks.map((block) =>
-			blockToApiPayload(block, block.position),
-		);
-
-		const response = await NotebooksAPI.put<BlocksApiResponse>(
-			`notes/${notebookId}/blocks/batch/`,
-			{
-				data: { blocks: payload },
-				meta: { action: "update", resource: "blocks" },
-			},
-		);
-
-		// Transform response back to BlockNote format
-		return {
-			...response,
-			data: response.data.map(apiPayloadToBlock),
-		};
-	},
-};
-
-export { NotebooksAPI, Notebooks, Blocks, toNotebook };
+export { NotebooksAPI, Notebooks, toNotebook };
 export type {
 	NotebookApiResponse,
 	NotebookCreateApiPayload,
 	NotebookUpdateApiPayload,
-	BlockApiResponse,
 };

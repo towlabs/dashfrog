@@ -45,7 +45,7 @@ import {
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useEvents } from "@/src/contexts/events";
 import { useLabels } from "@/src/contexts/labels";
-import { blockNoteStorage } from "@/src/services/api/blocknote";
+import { BlockNote } from "@/src/services/api/blocknote";
 import type { Event, EventKind } from "@/src/types/event";
 import type { ApiFilter, Filter } from "@/src/types/filter";
 
@@ -313,7 +313,7 @@ export default function EventsPage() {
 			const storageKey = editingEventId
 				? `event-${editingEventId}`
 				: `event-new-${selectedDay?.date.toISOString() || "new"}`;
-			blockNoteStorage.clear(storageKey);
+			await BlockNote.clear(storageKey);
 
 			// Close sheet and reset form
 			setIsSheetOpen(false);
@@ -333,7 +333,7 @@ export default function EventsPage() {
 		}
 	};
 
-	const handleDayClick = (day: StatusData) => {
+	const handleDayClick = async (day: StatusData) => {
 		if (day.status === "incident" || day.status === "maintenance") {
 			setSelectedDay(day);
 			const firstEvent = day.events[0];
@@ -376,14 +376,14 @@ export default function EventsPage() {
 				if (firstEvent.description) {
 					try {
 						const descriptionContent = JSON.parse(firstEvent.description);
-						blockNoteStorage.save(`event-${firstEvent.id}`, descriptionContent);
+						await BlockNote.save(`event-${firstEvent.id}`, descriptionContent);
 					} catch (e) {
 						console.error("Failed to parse event description:", e);
-						blockNoteStorage.clear(`event-${firstEvent.id}`);
+						await BlockNote.clear(`event-${firstEvent.id}`);
 					}
 				} else {
 					// Clear storage for events without description
-					blockNoteStorage.clear(`event-${firstEvent.id}`);
+					await BlockNote.clear(`event-${firstEvent.id}`);
 				}
 			}
 
@@ -1011,17 +1011,20 @@ export default function EventsPage() {
 										Description
 									</div>
 									<ClientBlockNote
-										timeWindow={{
-											start: eventStartDate || new Date(),
-											end: eventEndDate || new Date(),
-										}}
-										blockNoteId={
+										key={
 											editingEventId
 												? `event-${editingEventId}`
 												: `event-new-${selectedDay?.date.toISOString() || "new"}`
 										}
-										onEditorReady={(editor) => {
-											editorRef.current = editor;
+										timeWindow={{
+											start: eventStartDate || new Date(),
+											end: eventEndDate || new Date(),
+										}}
+										readonly={false}
+										initialBlocks={[]}
+										onBlocksChange={() => {
+											// Events page doesn't need real-time block updates
+											// Content is saved when user clicks Save
 										}}
 									/>
 								</div>

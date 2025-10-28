@@ -1,74 +1,55 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: wip */
 import type { Block } from "@blocknote/core";
+import { NewRestAPI } from "@/src/services/api/_helper";
+import { toNotebook } from "./notebooks";
 
-const STORAGE_PREFIX = "dashfrog_notebook_";
-const OLD_STORAGE_KEY = "dashfrog_notebook_content"; // Legacy key without ID
+const BlockNoteAPI = NewRestAPI("api");
 
-// Clean up old storage format on import
-if (typeof window !== "undefined") {
-	try {
-		const oldData = localStorage.getItem(OLD_STORAGE_KEY);
-		if (oldData) {
-			console.log("Migrating old notebook storage format...");
-			localStorage.removeItem(OLD_STORAGE_KEY);
-		}
-	} catch (_e) {
-		// Ignore cleanup errors
-	}
+// API response types (snake_case from backend)
+interface BlockNoteContentApiResponse {
+	data: Block<any>[];
 }
 
-export const blockNoteStorage = {
-	save: (id: string, content: Block<any>[]): void => {
+export const BlockNote = {
+	save: async (id: string, content: Block<any>[]): Promise<void> => {
 		try {
-			localStorage.setItem(`${STORAGE_PREFIX}${id}`, JSON.stringify(content));
+			// TODO: Replace with actual backend endpoint when available
+			await BlockNoteAPI.post<void>(`blocknote/${id}`, {
+				data: { content },
+				meta: { action: "save", resource: "blocknote" },
+			});
 		} catch (error) {
 			console.error("Failed to save notebook content:", error);
+			throw error;
 		}
 	},
 
-	load: (id: string): Block<any>[] | null => {
+	load: async (id: string): Promise<BlockNoteContentApiResponse> => {
 		try {
-			const stored = localStorage.getItem(`${STORAGE_PREFIX}${id}`);
-			if (stored) {
-				const content = JSON.parse(stored) as Block<any>[];
-				return content;
-			}
-		} catch (error) {
-			console.error(
-				"Failed to load notebook content, clearing corrupted data:",
-				error,
+			// TODO: Replace with actual backend endpoint when available
+			const response = await BlockNoteAPI.get<BlockNoteContentApiResponse>(
+				`blocknote/${id}`,
+				{
+					meta: { action: "load", resource: "blocknote" },
+				},
 			);
-			// Clear corrupted data
-			try {
-				localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
-			} catch (_e) {
-				// Ignore cleanup errors
-			}
+			return toNotebook(response.data);
+		} catch (error) {
+			console.error("Failed to load notebook content:", error);
+			// Return empty data on error
+			return { data: [] };
 		}
-		return null;
 	},
 
-	clear: (id: string): void => {
+	clear: async (id: string): Promise<void> => {
 		try {
-			localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
+			// TODO: Replace with actual backend endpoint when available
+			await BlockNoteAPI.delete<void>(`blocknote/${id}`, {
+				meta: { action: "clear", resource: "blocknote" },
+			});
 		} catch (error) {
 			console.error("Failed to clear notebook content:", error);
-		}
-	},
-
-	list: (): string[] => {
-		try {
-			const keys: string[] = [];
-			for (let i = 0; i < localStorage.length; i++) {
-				const key = localStorage.key(i);
-				if (key?.startsWith(STORAGE_PREFIX)) {
-					keys.push(key.replace(STORAGE_PREFIX, ""));
-				}
-			}
-			return keys;
-		} catch (error) {
-			console.error("Failed to list notebooks:", error);
-			return [];
+			throw error;
 		}
 	},
 };

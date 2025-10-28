@@ -1,3 +1,4 @@
+import type { Block } from "@blocknote/core";
 import {
 	endOfWeek,
 	startOfWeek,
@@ -5,8 +6,6 @@ import {
 	subHours,
 	subMinutes,
 } from "date-fns";
-
-import type { Filter } from "./filter";
 
 export type RelativeTimeValue =
 	| "15m"
@@ -23,24 +22,22 @@ export type TimeWindowConfig =
 	| { type: "absolute"; metadata: { start: Date; end: Date } };
 
 export interface NotebookData {
-	id: string;
+	uuid: string;
 	title: string;
-	description: string;
+	description: string | null;
 	locked: boolean;
 	timeWindow: TimeWindowConfig;
-	filters?: Filter[];
-	blockNoteId: string;
-	createdAt: Date;
-	updatedAt: Date;
 }
 
-export type NotebookCreateInput = Omit<
-	NotebookData,
-	"id" | "createdAt" | "updatedAt"
->;
+export interface NotebookDataWithContent extends NotebookData {
+	blocknote: {
+		uuid: string;
+		content: Block[];
+	};
+}
 
 export type NotebookUpdateInput = Partial<
-	Omit<NotebookData, "id" | "createdAt" | "updatedAt">
+	Omit<NotebookData, "uuid" | "id" | "blocknote_uuid" | "blockNoteId">
 >;
 
 /**
