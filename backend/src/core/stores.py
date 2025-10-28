@@ -65,7 +65,3 @@ def StoreIn(key: str, value: Iterable[Any], **kwargs) -> StoreFilter:
         del kwargs["op"]
 
     return StoreFilter(key=key, value=value, op="in", **kwargs)
-
-
-class Base(DeclarativeBase):
-    pass

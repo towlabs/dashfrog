@@ -1,9 +1,13 @@
+"""Workflow entities (ClickHouse-based, no SQLAlchemy models)."""
+
 from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class Flow(BaseModel):
+    """Workflow flow entity."""
+
     trace_id: str
     name: str
     description: str | None = None
@@ -17,6 +21,8 @@ class Flow(BaseModel):
 
 
 class Step(BaseModel):
+    """Workflow step entity."""
+
     id: str
     for_flow: str
     trace_id: str
@@ -35,6 +41,8 @@ class Step(BaseModel):
 
 
 class WorkflowEvent(BaseModel):
+    """Workflow event entity."""
+
     name: str
     description: str | None = None
     labels: dict[str, str]

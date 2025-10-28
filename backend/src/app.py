@@ -11,9 +11,16 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from structlog._generic import BoundLogger
 
 from _inits import setup_logging
-from api.routes import events, flows, health, labels, metrics, notes
 from core import Config
 from core.context import is_app_initialized, set_app
+from routes import (
+    events_router,
+    flows_router,
+    health_router,
+    labels_router,
+    metrics_router,
+    notebook_router,
+)
 
 
 @dataclass
@@ -45,14 +52,14 @@ class Application(BaseApplication[Config]):
                 "Application instance already exists. Multiple app instances may cause conflicts."
             )
 
-        self.clickhouse_client = clickhouse_connect.get_client(
-            host=self.configuration.click_house.host,
-            port=self.configuration.click_house.port or 8123,
-            user=self.configuration.click_house.user,
-            password=self.configuration.click_house.password,
-            database=self.configuration.click_house.database,
-            autogenerate_session_id=False,
-        )
+        # self.clickhouse_client = clickhouse_connect.get_client(
+        #     host=self.configuration.click_house.host,
+        #     port=self.configuration.click_house.port or 8123,
+        #     user=self.configuration.click_house.user,
+        #     password=self.configuration.click_house.password,
+        #     database=self.configuration.click_house.database,
+        #     autogenerate_session_id=False,
+        # )
 
         # Build PostgreSQL connection string with optional port
         psql_host = self.configuration.psql.host
@@ -90,7 +97,11 @@ class Application(BaseApplication[Config]):
     @staticmethod
     def init_web() -> APIRouter:
         router = APIRouter()
-        for route in [flows, labels, metrics, events, notes, health]:
-            router.include_router(route.ep)
+        router.include_router(flows_router)
+        router.include_router(labels_router)
+        router.include_router(metrics_router)
+        router.include_router(events_router)
+        router.include_router(notebook_router)
+        router.include_router(health_router)
 
         return router

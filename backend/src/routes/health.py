@@ -2,10 +2,10 @@
 
 from fastapi import APIRouter
 
-ep = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(prefix="/health", tags=["health"])
 
 
-@ep.get("")
+@router.get("")
 async def health_check():
     """
     Health check endpoint for Kubernetes probes.
