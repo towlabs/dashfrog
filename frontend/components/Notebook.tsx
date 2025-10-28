@@ -1,18 +1,16 @@
 import type { Block } from "@blocknote/core";
 import { Lock, Unlock } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import ClientBlockNote from "@/components/ClientBlockNote";
 import {
 	type TimeWindow,
 	TimeWindowSelector,
 } from "@/components/TimeWindowSelector";
 import { Button } from "@/components/ui/button";
-import { useNotebooks } from "@/src/contexts/notebooks";
-import { Notebooks } from "@/src/services/api/notebooks";
-import {
-	type NotebookDataWithContent,
-	resolveTimeWindow,
-	type TimeWindowConfig,
+import { useNotebooksStore } from "@/src/stores/notebooks";
+import type {
+	NotebookDataWithContent,
+	TimeWindowConfig,
 } from "@/src/types/notebook";
 import { ShareNotebook } from "./ShareNotebook";
 
@@ -25,66 +23,28 @@ export default function Notebook({
 	notebookUuid,
 	isView = false,
 }: NotebookProps) {
-	const { updateNotebook } = useNotebooks();
-	const [notebook, setNotebook] = useState<NotebookDataWithContent | null>(
-		null,
-	);
+	// Get current notebook, time window, and actions from Zustand
+	const notebook = useNotebooksStore((state) => state.currentNotebook);
+	const timeWindow = useNotebooksStore((state) => state.currentTimeWindow);
+	const fetchNotebook = useNotebooksStore((state) => state.fetchNotebook);
+	const updateNotebook = useNotebooksStore((state) => state.updateNotebook);
 
-	// Resolve time window and auto-refresh for relative windows
-	const [timeWindow, setTimeWindow] = useState<TimeWindow>(() =>
-		notebook
-			? resolveTimeWindow(notebook.timeWindow)
-			: { start: new Date(), end: new Date() },
-	);
-
+	// Fetch notebook when UUID changes
+	// Store automatically resolves time window and sets up interval
 	useEffect(() => {
-		if (!notebook) return;
-		// Update time window when config changes
-		setTimeWindow(resolveTimeWindow(notebook.timeWindow));
-
-		// Only set up interval for relative time windows
-		if (notebook.timeWindow.type !== "relative") {
-			return;
-		}
-
-		// Re-evaluate relative time window every 10 seconds
-		const intervalId = setInterval(() => {
-			setTimeWindow(resolveTimeWindow(notebook.timeWindow));
-		}, 10000);
-
-		return () => clearInterval(intervalId);
-	}, [notebook]);
-
-	useEffect(() => {
-		void (async () => {
-			const fetchedNotebook = await Notebooks.get(notebookUuid);
-			setNotebook(fetchedNotebook);
-		})();
-	}, [notebookUuid]);
+		void fetchNotebook(notebookUuid);
+	}, [notebookUuid, fetchNotebook]);
 
 	/**
 	 * Unified update handler for all notebook changes
-	 * Delegates to context which handles immediate state update and debounced backend sync
+	 * Zustand handles immediate state update and debounced backend sync
 	 */
 	const handleNotebookUpdate = useCallback(
 		(updates: Partial<NotebookDataWithContent>) => {
-			// Store the updated notebook in a variable
-			let updatedNotebook: NotebookDataWithContent | null = null;
-
-			// Use functional update to avoid stale closure issues
-			setNotebook((prevNotebook) => {
-				if (!prevNotebook) return prevNotebook;
-
-				updatedNotebook = { ...prevNotebook, ...updates };
-				return updatedNotebook;
-			});
-
-			// Call context update AFTER setState completes
-			if (updatedNotebook) {
-				updateNotebook(updatedNotebook.uuid, updatedNotebook);
-			}
+			if (!notebook) return;
+			updateNotebook(notebook.uuid, updates);
 		},
-		[updateNotebook],
+		[notebook, updateNotebook],
 	);
 
 	// Individual field handlers
@@ -117,10 +77,9 @@ export default function Notebook({
 	);
 
 	const handleTimeWindowChange = useCallback(
-		(timeWindow: TimeWindow, config: TimeWindowConfig) => {
+		(_timeWindow: TimeWindow, config: TimeWindowConfig) => {
+			// Store will automatically resolve and set up interval
 			handleNotebookUpdate({ timeWindow: config });
-			// Update resolved time window immediately
-			setTimeWindow(timeWindow);
 		},
 		[handleNotebookUpdate],
 	);
@@ -166,11 +125,13 @@ export default function Notebook({
 
 					{/* Right group: Time window + Share */}
 					<div className={`flex items-center gap-3 ${isView ? "ml-auto" : ""}`}>
-						<TimeWindowSelector
-							value={timeWindow}
-							config={notebook.timeWindow}
-							onChange={handleTimeWindowChange}
-						/>
+						{timeWindow && (
+							<TimeWindowSelector
+								value={timeWindow}
+								config={notebook.timeWindow}
+								onChange={handleTimeWindowChange}
+							/>
+						)}
 						{!isView && <ShareNotebook notebookId={notebook.uuid} />}
 					</div>
 				</div>
@@ -203,7 +164,6 @@ export default function Notebook({
 				<div className="mt-6">
 					<ClientBlockNote
 						key={notebook.blocknote.uuid}
-						timeWindow={timeWindow}
 						readonly={notebook.locked}
 						initialBlocks={notebook.blocknote.content}
 						onBlocksChange={handleBlocksChange}

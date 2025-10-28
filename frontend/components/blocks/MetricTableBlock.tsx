@@ -21,7 +21,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useTimeWindow } from "@/src/contexts/time-window";
+import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { Metric, MetricKind } from "@/src/types/metric";
 import { type Aggregation, AggregationSettings } from "./ChartSettingsItem";
@@ -97,7 +97,7 @@ export const createMetricTableBlock = createReactBlockSpec(
 			const exclude = block.props.exclude || "none";
 
 			// Access the time window from context
-			const timeWindow = useTimeWindow();
+			const timeWindow = useNotebooksStore((state) => state.currentTimeWindow);
 
 			// State for table data
 			const [tableData, setTableData] = useState<MetricTableRow[]>([]);

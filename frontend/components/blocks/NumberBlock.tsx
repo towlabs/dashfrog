@@ -12,7 +12,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { useTimeWindow } from "@/src/contexts/time-window";
+import { useNotebooksStore } from "@/src/stores/notebooks";
 import { generatePromQuery } from "@/src/services/promql-builder";
 import type { Filter } from "@/src/types/filter";
 import type {
@@ -80,7 +80,7 @@ export const createNumberBlock = createReactBlockSpec(
 			}, [block.props.filters]);
 
 			// Access the time window from context
-			const timeWindow = useTimeWindow();
+			const timeWindow = useNotebooksStore((state) => state.currentTimeWindow);
 
 			// State for number value
 			const [numberValue, setNumberValue] = React.useState<string>("-");
@@ -88,7 +88,7 @@ export const createNumberBlock = createReactBlockSpec(
 
 			// biome-ignore lint/correctness/useExhaustiveDependencies: use only json strings
 			const promQuery = React.useMemo(() => {
-				if (!selectedMetricValue || !aggregation) return null;
+				if (!selectedMetricValue || !aggregation || !timeWindow) return null;
 				return generatePromQuery(
 					selectedMetricValue,
 					filtersValue,
@@ -102,8 +102,8 @@ export const createNumberBlock = createReactBlockSpec(
 				block.props.aggregation,
 				block.props.filters,
 				block.props.selectedMetric,
-				timeWindow.start,
-				timeWindow.end,
+				timeWindow?.start,
+				timeWindow?.end,
 			]);
 
 			// Mock API call - will be replaced with real API later
@@ -144,7 +144,7 @@ export const createNumberBlock = createReactBlockSpec(
 			// Fetch data whenever dependencies change
 			// biome-ignore lint/correctness/useExhaustiveDependencies: use only json strings
 			React.useEffect(() => {
-				if (selectedMetricValue) {
+				if (selectedMetricValue && timeWindow) {
 					fetchNumberData(
 						selectedMetricValue,
 						filtersValue,
@@ -156,8 +156,8 @@ export const createNumberBlock = createReactBlockSpec(
 				block.props.selectedMetric, // Use the JSON string directly
 				block.props.filters, // Use the JSON string directly
 				block.props.operation, // Use the JSON string directly
-				timeWindow.start.getTime(),
-				timeWindow.end.getTime(),
+				timeWindow?.start.getTime(),
+				timeWindow?.end.getTime(),
 				fetchNumberData,
 			]);
 

@@ -17,7 +17,7 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { useTimeWindow } from "@/src/contexts/time-window";
+import { useNotebooksStore } from "@/src/stores/notebooks";
 import { generatePromQuery } from "@/src/services/promql-builder";
 import type { Filter } from "@/src/types/filter";
 import type { Aggregation, Metric, MetricKind } from "@/src/types/metric";
@@ -51,8 +51,8 @@ export const createChartBlock = createReactBlockSpec(
 	},
 	{
 		render: ({ block, editor }) => {
-			// Access the time window from context
-			const timeWindow = useTimeWindow();
+			// Access the time window from Zustand store
+			const timeWindow = useNotebooksStore((state) => state.currentTimeWindow);
 
 			const grid = block.props.grid !== false;
 			const title = block.props.title || "Line Chart";
@@ -94,7 +94,7 @@ export const createChartBlock = createReactBlockSpec(
 			}, [block.props.groupBy]);
 			// biome-ignore lint/correctness/useExhaustiveDependencies: use only json strings
 			const promQuery = React.useMemo(() => {
-				if (!selectedMetricValue || !aggregation) return null;
+				if (!selectedMetricValue || !aggregation || !timeWindow) return null;
 				return generatePromQuery(
 					selectedMetricValue,
 					filtersValue,
@@ -109,8 +109,8 @@ export const createChartBlock = createReactBlockSpec(
 				block.props.aggregation,
 				block.props.filters,
 				block.props.selectedMetric,
-				timeWindow.start,
-				timeWindow.end,
+				timeWindow?.start,
+				timeWindow?.end,
 			]);
 
 			// State for chart data
@@ -160,7 +160,7 @@ export const createChartBlock = createReactBlockSpec(
 			// Fetch data whenever dependencies change
 			// biome-ignore lint/correctness/useExhaustiveDependencies: use only json strings
 			useEffect(() => {
-				if (selectedMetricValue) {
+				if (selectedMetricValue && timeWindow) {
 					fetchChartData(
 						selectedMetricValue,
 						filtersValue,
@@ -172,8 +172,8 @@ export const createChartBlock = createReactBlockSpec(
 				block.props.selectedMetric, // Use the JSON string directly
 				block.props.filters, // Use the JSON string directly
 				block.props.groupBy, // Use the JSON string directly
-				timeWindow.start.getTime(),
-				timeWindow.end.getTime(),
+				timeWindow?.start.getTime(),
+				timeWindow?.end.getTime(),
 				fetchChartData,
 			]);
 

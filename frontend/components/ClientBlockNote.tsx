@@ -48,20 +48,13 @@ import { createWorkflowBlock } from "@/components/blocks/WorkflowBlock";
 import { WorkflowSettingsItem } from "@/components/blocks/WorkflowSettingsItem";
 import { createWorkflowStatusMapBlock } from "@/components/blocks/WorkflowStatusMapBlock";
 import { WorkflowStatusMapSettingsItem } from "@/components/blocks/WorkflowStatusMapSettingsItem";
-import {
-	type TimeWindow,
-	TimeWindowProvider,
-} from "@/src/contexts/time-window";
-
 interface ClientBlockNoteProps {
-	timeWindow: TimeWindow;
 	readonly: boolean;
 	onBlocksChange: (blocks: Block[]) => void;
 	initialBlocks: Block[];
 }
 
 export default function ClientBlockNote({
-	timeWindow,
 	readonly,
 	onBlocksChange,
 	initialBlocks,
@@ -106,14 +99,13 @@ export default function ClientBlockNote({
 	}, editor);
 
 	return (
-		<TimeWindowProvider timeWindow={timeWindow}>
-			<BlockNoteView
-				editor={editor}
-				theme="light"
-				slashMenu={false}
-				sideMenu={readonly}
-				editable={!readonly}
-			>
+		<BlockNoteView
+			editor={editor}
+			theme="light"
+			slashMenu={false}
+			sideMenu={readonly}
+			editable={!readonly}
+		>
 				{/* Custom Side Menu with Drag Handle Menu item */}
 				<SideMenuController
 					sideMenu={(props) => (
@@ -436,6 +428,5 @@ export default function ClientBlockNote({
 					}}
 				/>
 			</BlockNoteView>
-		</TimeWindowProvider>
 	);
 }

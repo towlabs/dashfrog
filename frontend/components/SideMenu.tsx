@@ -12,11 +12,11 @@ import {
 	Tags,
 	User,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useNotebooks } from "../src/contexts/notebooks";
+import { useNotebooksStore } from "@/src/stores/notebooks";
 import SearchDialog from "./SearchDialog";
 
 const topMenuItems = [
@@ -46,7 +46,16 @@ export default function SideMenu({
 	const [internalCollapsed, setInternalCollapsed] = useState(false);
 	const navigate = useNavigate();
 	const [searchOpen, setSearchOpen] = useState(false);
-	const { notebooks, createNotebook } = useNotebooks();
+
+	// Get notebooks and actions from Zustand
+	const notebooks = useNotebooksStore((state) => state.notebooks);
+	const fetchNotebooks = useNotebooksStore((state) => state.fetchNotebooks);
+	const createNotebook = useNotebooksStore((state) => state.createNotebook);
+
+	// Fetch notebooks on mount
+	useEffect(() => {
+		void fetchNotebooks();
+	}, [fetchNotebooks]);
 
 	const handleCreateNotebook = async () => {
 		try {
