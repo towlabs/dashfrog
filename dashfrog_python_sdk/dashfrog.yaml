@@ -5,11 +5,12 @@ auto_steps:
   web_value: "API"
   http_value: "InnerCall"
   tasks_value: "ASYNC"
-clickhouse:
-  database: dashfrog
+postgres:
+  dbname: dashfrog
   host: localhost
-  user: tower-ch
-  password: 3cqG0IT1EuOdlLlZNM3zrkhWH
+  port: 5432
+  user: postgres
+  password: ""
 metric_exporter_delay: 10000 # 10s
 infra:
   grpc_insecure: true
