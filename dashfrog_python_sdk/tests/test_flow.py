@@ -1,40 +1,12 @@
 """Tests for flow tracking."""
 
-from unittest.mock import MagicMock, patch
+from sqlalchemy.orm import Session
 
-from dashfrog_python_sdk import flow, setup
-from dashfrog_python_sdk.config import Config
+from dashfrog_python_sdk import flow, get_dashfrog_instance
 from dashfrog_python_sdk.constants import EVENT_FLOW_FAIL, EVENT_FLOW_START, EVENT_FLOW_SUCCESS
+from dashfrog_python_sdk.models import Event
 
 import pytest
-
-
-@pytest.fixture
-def mock_event_insert():
-    """Mock event.insert function."""
-    with patch("dashfrog_python_sdk.flow.event.insert") as mock_insert:
-        yield mock_insert
-
-
-@pytest.fixture
-def mock_db_engine():
-    """Mock SQLAlchemy engine."""
-    with patch("dashfrog_python_sdk.dashfrog.create_engine") as mock_engine:
-        mock_eng = MagicMock()
-        mock_engine.return_value = mock_eng
-        yield mock_eng
-
-
-@pytest.fixture
-def setup_dashfrog(mock_db_engine, mock_event_insert):
-    """Initialize DashFrog with mocked SQLAlchemy engine and event insertion."""
-    config = Config(
-        otel_endpoint="localhost:4317",
-        postgres_host="localhost",
-        postgres_dbname="dashfrog_test",
-    )
-    setup(config)
-    return mock_event_insert
 
 
 class TestFlowContextManager:
@@ -42,116 +14,121 @@ class TestFlowContextManager:
 
     def test_successful_flow(self, setup_dashfrog):
         """Test flow that completes successfully."""
-        mock_insert = setup_dashfrog
-
         # Execute flow
-        with flow.start("test_flow", customer_id="123", region="us-east"):
+        with flow.start("test_flow", tenant="test_tenant", customer_id="123", region="us-east"):
             pass  # Successful completion
 
-        # Verify event.insert was called twice (START and SUCCESS)
-        assert mock_insert.call_count == 2
+        # Query database to verify events
+        dashfrog = get_dashfrog_instance()
+        with Session(dashfrog.db_engine) as session:
+            events = session.query(Event).order_by(Event.id).all()
 
-        # Verify START event
-        start_call = mock_insert.call_args_list[0]
-        start_trace_id = start_call[0][0]
-        start_event_name = start_call[0][1]
-        start_labels = start_call[0][2]
+            # Verify 2 events were inserted (START and SUCCESS)
+            assert len(events) == 2
 
-        assert start_event_name == EVENT_FLOW_START
-        assert start_labels == {
-            "flow_name": "test_flow",
-            "customer_id": "123",
-            "region": "us-east",
-        }
-        assert start_trace_id > 0  # valid trace_id
+            # Verify START event
+            start_event = events[0]
+            assert start_event.event_name == EVENT_FLOW_START
+            assert start_event.labels == {
+                "flow_name": "test_flow",
+                "customer_id": "123",
+                "region": "us-east",
+                "tenant": "test_tenant",
+            }
+            assert start_event.flow_id is not None  # valid trace_id
 
-        # Verify SUCCESS event
-        success_call = mock_insert.call_args_list[1]
-        success_trace_id = success_call[0][0]
-        success_event_name = success_call[0][1]
-        success_labels = success_call[0][2]
+            # Verify SUCCESS event
+            success_event = events[1]
+            assert success_event.event_name == EVENT_FLOW_SUCCESS
+            assert success_event.labels == {
+                "flow_name": "test_flow",
+                "customer_id": "123",
+                "region": "us-east",
+                "tenant": "test_tenant",
+            }
 
-        assert success_event_name == EVENT_FLOW_SUCCESS
-        assert success_labels["flow_name"] == "test_flow"
-        assert success_labels["customer_id"] == "123"
-        assert success_labels["region"] == "us-east"
-
-        # Verify trace_id is consistent
-        assert start_trace_id == success_trace_id
+            # Verify trace_id is consistent
+            assert start_event.flow_id == success_event.flow_id
 
     def test_failed_flow(self, setup_dashfrog):
         """Test flow that raises an exception."""
-        mock_insert = setup_dashfrog
-
         # Execute flow that fails
         with pytest.raises(ValueError):
-            with flow.start("failing_flow", operation="delete"):
+            with flow.start("failing_flow", tenant="test_tenant", operation="delete"):
                 raise ValueError("Something went wrong")
 
-        # Verify event.insert was called twice (START and FAIL)
-        assert mock_insert.call_count == 2
+        # Query database to verify events
+        dashfrog = get_dashfrog_instance()
+        with Session(dashfrog.db_engine) as session:
+            events = session.query(Event).order_by(Event.id).all()
 
-        # Verify START event
-        start_call = mock_insert.call_args_list[0]
-        assert start_call[0][1] == EVENT_FLOW_START
+            # Verify 2 events were inserted (START and FAIL)
+            assert len(events) == 2
 
-        # Verify FAIL event
-        fail_call = mock_insert.call_args_list[1]
-        fail_trace_id = fail_call[0][0]
-        fail_event_name = fail_call[0][1]
-        fail_labels = fail_call[0][2]
+            # Verify START event
+            start_event = events[0]
+            assert start_event.event_name == EVENT_FLOW_START
 
-        assert fail_event_name == EVENT_FLOW_FAIL
-        assert fail_labels["flow_name"] == "failing_flow"
-        assert fail_labels["operation"] == "delete"
+            # Verify FAIL event
+            fail_event = events[1]
+            assert fail_event.event_name == EVENT_FLOW_FAIL
+            assert fail_event.labels["flow_name"] == "failing_flow"
+            assert fail_event.labels["operation"] == "delete"
 
-        # Verify trace_id is consistent
-        assert start_call[0][0] == fail_trace_id
+            # Verify trace_id is consistent
+            assert start_event.flow_id == fail_event.flow_id
 
     def test_flow_with_end_on_exit_false(self, setup_dashfrog):
         """Test flow with end_on_exit=False (async mode)."""
-        mock_insert = setup_dashfrog
-
         # Execute flow with manual ending
-        with flow.start("async_flow", end_on_exit=False, batch_id="456"):
+        with flow.start("async_flow", tenant="test_tenant", end_on_exit=False, batch_id="456"):
             pass  # No automatic end event
 
-        # Verify only START event was inserted
-        assert mock_insert.call_count == 1
+        # Query database to verify events
+        dashfrog = get_dashfrog_instance()
+        with Session(dashfrog.db_engine) as session:
+            events = session.query(Event).order_by(Event.id).all()
 
-        start_call = mock_insert.call_args_list[0]
-        assert start_call[0][1] == EVENT_FLOW_START
-        assert start_call[0][2] == {
-            "flow_name": "async_flow",
-            "batch_id": "456",
-        }
+            # Verify only 1 event was inserted (START)
+            assert len(events) == 1
+
+            start_event = events[0]
+            assert start_event.event_name == EVENT_FLOW_START
+            assert start_event.labels == {
+                "flow_name": "async_flow",
+                "batch_id": "456",
+                "tenant": "test_tenant",
+            }
 
     def test_multiple_sequential_flows(self, setup_dashfrog):
         """Test multiple flows executed sequentially."""
-        mock_insert = setup_dashfrog
-
-        with flow.start("flow1", tag="a"):
+        with flow.start("flow1", tenant="test_tenant", tag="a"):
             pass
 
-        with flow.start("flow2", tag="b"):
+        with flow.start("flow2", tenant="test_tenant", tag="b"):
             pass
 
-        # Should have 4 inserts (2 flows × 2 events each)
-        assert mock_insert.call_count == 4
+        # Query database to verify events
+        dashfrog = get_dashfrog_instance()
+        with Session(dashfrog.db_engine) as session:
+            events = session.query(Event).order_by(Event.id).all()
 
-        # Verify flow1 events
-        flow1_start = mock_insert.call_args_list[0]
-        flow1_success = mock_insert.call_args_list[1]
-        assert flow1_start[0][2]["flow_name"] == "flow1"
-        assert flow1_start[0][2]["tag"] == "a"
-        assert flow1_success[0][2]["tag"] == "a"
+            # Should have 4 events (2 flows × 2 events each)
+            assert len(events) == 4
 
-        # Verify flow2 events
-        flow2_start = mock_insert.call_args_list[2]
-        flow2_success = mock_insert.call_args_list[3]
-        assert flow2_start[0][2]["flow_name"] == "flow2"
-        assert flow2_start[0][2]["tag"] == "b"
-        assert flow2_success[0][2]["tag"] == "b"
+            # Verify flow1 events
+            flow1_start = events[0]
+            flow1_success = events[1]
+            assert flow1_start.labels["flow_name"] == "flow1"
+            assert flow1_start.labels["tag"] == "a"
+            assert flow1_success.labels["tag"] == "a"
 
-        # Verify different trace_ids
-        assert flow1_start[0][0] != flow2_start[0][0]
+            # Verify flow2 events
+            flow2_start = events[2]
+            flow2_success = events[3]
+            assert flow2_start.labels["flow_name"] == "flow2"
+            assert flow2_start.labels["tag"] == "b"
+            assert flow2_success.labels["tag"] == "b"
+
+            # Verify different trace_ids
+            assert flow1_start.flow_id != flow2_start.flow_id

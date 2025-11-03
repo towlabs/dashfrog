@@ -1,49 +1,46 @@
 [project]
 name = "dashfrog-python-sdk"
 version = "0.1.0"
-description = "Add your description here"
+description = "Business Observability on OpenTelemetry"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "bandit>=1.8.6",
-    "celery>=5.5.3",
-    "celery-types>=0.23.0",
-    "click>=8.0.0",
-    "psycopg[binary]>=3.2.0",
-    "fastapi>=0.118.0",
-    "fastapi-cli>=0.0.13",
-    "flask>=3.1.2",
-    "flask-cli>=0.4.0",
-    "httpx>=0.28.1",
-    "isort>=6.0.1",
-    "structlog>=24.1.0",
-    "opentelemetry-api>=1.37.0",
-    "opentelemetry-exporter-jaeger>=1.11.1",
-    "opentelemetry-exporter-otlp>=1.37.0",
+    # Core OpenTelemetry
+    "opentelemetry-api>=1.37.0,<2.0.0",
+    "opentelemetry-sdk>=1.37.0,<2.0.0",
+    "opentelemetry-exporter-otlp>=1.37.0,<2.0.0",
+    # Database
+    "sqlalchemy>=2.0.0,<3.0.0",
+    "psycopg2-binary>=2.9.0",
+    # Configuration
+    "pydantic>=2.0.0,<3.0.0",
+]
+
+[project.optional-dependencies]
+# Instrumentation packages (optional, imported on-demand)
+instrumentation = [
     "opentelemetry-instrumentation-aws-lambda>=0.58b0",
     "opentelemetry-instrumentation-botocore>=0.58b0",
     "opentelemetry-instrumentation-celery>=0.58b0",
-    "opentelemetry-instrumentation-click>=0.58b0",
     "opentelemetry-instrumentation-fastapi>=0.58b0",
     "opentelemetry-instrumentation-flask>=0.58b0",
     "opentelemetry-instrumentation-httpx>=0.58b0",
-    "opentelemetry-instrumentation-openai>=0.47.3",
-    "opentelemetry-instrumentation-pymongo>=0.58b0",
     "opentelemetry-instrumentation-requests>=0.58b0",
-    "opentelemetry-instrumentation-sqlalchemy>=0.58b0",
-    "opentelemetry-sdk>=1.37.0",
-    "opentelemetry-semantic-conventions>=0.58b0",
-    "pdoc3>=0.11.6",
-    "pydantic>=2.11.9",
-    "pydantic-settings[yaml]>=2.11.0",
-    "pyright>=1.1.405",
+]
+
+# Development tools
+dev = [
     "pytest>=8.4.2",
-    "redis>=5.2.2",
+    "pyright>=1.1.405",
     "ruff>=0.13.2",
-    "setuptools>=80.9.0",
-    "shortuuid>=1.0.13",
-    "sqlalchemy>=2.0.43",
-    "wheel>=0.45.1",
+]
+
+# Testing dependencies (includes instrumentation for tests)
+test = [
+    "pytest>=8.4.2",
+    "fastapi>=0.118.0",
+    "httpx>=0.28.0",
+    "opentelemetry-instrumentation-fastapi>=0.58b0",
 ]
 
 [tool.ruff]

@@ -1,12 +1,9 @@
 """Shared constants for DashFrog SDK."""
 
 # Baggage keys
-BAGGAGE_FLOW_NAME = "dashfrog.flow.name"
-BAGGAGE_FLOW_LABEL_PREFIX = "dashfrog.flow.label."
-BAGGAGE_STEP_NAME = "dashfrog.step.name"
-
-# Table name
-TABLE_EVENTS = "dashfrog_events"
+BAGGAGE_FLOW_LABEL_PREFIX = "dashfrog.flow."
+BAGGAGE_FLOW_LABEL_NAME = "flow_name"
+BAGGAGE_STEP_LABEL_NAME = "step_name"
 
 # Event names
 EVENT_FLOW_START = "flow_start"

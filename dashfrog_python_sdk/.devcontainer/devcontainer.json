@@ -1,9 +1,5 @@
 {
   "name": "DashFrog Python SDK",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
   "customizations": {
     "vscode": {
       "settings": {
@@ -34,9 +30,7 @@
         "charliermarsh.ruff",
         "ms-python.debugpy",
         "tamasfe.even-better-toml",
-        "github.copilot",
         "redhat.vscode-yaml",
-        "ms-azuretools.vscode-docker",
         "anthropic.claude-code"
       ]
     }
@@ -48,9 +42,13 @@
       "version": "lts"
     }
   },
-  "postCreateCommand": "uv sync --all-groups && npm install -g @anthropic-ai/claude-code",
+  "dockerComposeFile": [
+    "docker-compose.yml"
+  ],
+  "service": "app",
+  "postCreateCommand": "uv pip install -e . && npm install -g @anthropic-ai/claude-code",
   "remoteUser": "vscode",
-  "workspaceFolder": "/workspaces/dashfrog/dashfrog_python_sdk",
+  "workspaceFolder": "/workspaces/dashfrog_python_sdk",
   "remoteEnv": {
     "VIRTUAL_ENV": "${workspaceFolder}/.venv",
     "PATH": "${workspaceFolder}/.venv/bin:${containerEnv:PATH}"

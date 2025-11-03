@@ -29,9 +29,9 @@ __version__ = "0.1.0"
 
 # Core setup and configuration
 # Submodules (users import from these)
-from . import event, flow, metric, step
+from . import event, flow, models, step
 from .config import Config
-from .dashfrog import Dashfrog, get_dashfrog_instance, setup
+from .dashfrog import Dashfrog, create_tables, get_dashfrog_instance, setup
 
 # Instrumentation helpers (optional convenience)
 with_fastapi = Dashfrog.with_fastapi
@@ -46,6 +46,7 @@ __all__ = [
     "__version__",
     # Setup
     "setup",
+    "create_tables",
     "get_dashfrog_instance",
     "Config",
     "Dashfrog",
@@ -53,7 +54,7 @@ __all__ = [
     "event",
     "flow",
     "step",
-    "metric",
+    "models",
     # Instrumentation
     "with_fastapi",
     "with_flask",

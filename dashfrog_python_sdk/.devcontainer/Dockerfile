@@ -12,7 +12,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Set working directory
-WORKDIR /workspaces/dashfrog/dashfrog_python_sdk
+WORKDIR /workspaces/dashfrog_python_sdk
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \

@@ -1,21 +1,21 @@
+from collections.abc import Generator
 from contextlib import contextmanager
 from logging import warning
 
 from . import event
 from .constants import (
-    BAGGAGE_FLOW_LABEL_PREFIX,
-    BAGGAGE_FLOW_NAME,
+    BAGGAGE_FLOW_LABEL_NAME,
     EVENT_FLOW_FAIL,
     EVENT_FLOW_START,
     EVENT_FLOW_SUCCESS,
 )
+from .utils import get_flow_id, get_labels_from_baggage, write_to_baggage
 
-from opentelemetry import baggage, context, trace
-from opentelemetry.trace import INVALID_SPAN, get_current_span
+from opentelemetry import trace
 
 
 @contextmanager
-def start(name: str, end_on_exit: bool = True, **labels: str):
+def start(name: str, tenant: str, end_on_exit: bool = True, **labels: str) -> Generator[str, None, None]:
     """
     Start a business workflow/process flow.
 
@@ -41,49 +41,37 @@ def start(name: str, end_on_exit: bool = True, **labels: str):
 
     # Always create fresh span
     with tracer.start_as_current_span(f"flow.{name}") as span:
-        trace_id = span.get_span_context().trace_id
+        flow_id = str(span.get_span_context().trace_id)
+        event_labels = {BAGGAGE_FLOW_LABEL_NAME: name, "tenant": tenant, **labels}
+        with write_to_baggage(event_labels):
+            # Write START event
+            event.insert(flow_id, EVENT_FLOW_START, event_labels)
 
-        # Set all baggage on current context
-        ctx = context.get_current()
-        ctx = baggage.set_baggage(BAGGAGE_FLOW_NAME, name, ctx)
-        for k, v in labels.items():
-            ctx = baggage.set_baggage(f"{BAGGAGE_FLOW_LABEL_PREFIX}{k}", v, ctx)
-        context.attach(ctx)
-
-        # Insert START event
-        event_labels = {"flow_name": name, **labels}
-        event.insert(trace_id, EVENT_FLOW_START, event_labels)
-
-        try:
-            yield
-        except Exception:
-            if end_on_exit:
-                _end_flow(EVENT_FLOW_FAIL)
-            raise
-        else:
-            if end_on_exit:
-                _end_flow(EVENT_FLOW_SUCCESS)
+            try:
+                yield flow_id
+            except Exception:
+                if end_on_exit:
+                    _end_flow(EVENT_FLOW_FAIL)
+                raise
+            else:
+                if end_on_exit:
+                    _end_flow(EVENT_FLOW_SUCCESS)
 
 
 def _end_flow(event_name: str):
-    span = get_current_span()
-    if span == INVALID_SPAN:
-        warning("Trying to end flow without a span")
-        return
-    trace_id = span.get_span_context().trace_id
-    flow_name = baggage.get_baggage(BAGGAGE_FLOW_NAME)
-    if not flow_name:
-        warning("Trying to end flow without a flow name")
+    try:
+        flow_id = get_flow_id()
+    except ValueError as e:
+        warning(e.args[0])
         return
 
-    # Build labels dict with flow_name and all flow labels
-    event_labels = {"flow_name": str(flow_name)}
-    for k, v in baggage.get_all().items():
-        if k.startswith(BAGGAGE_FLOW_LABEL_PREFIX):
-            label_key = k.removeprefix(BAGGAGE_FLOW_LABEL_PREFIX)
-            event_labels[label_key] = str(v)
+    try:
+        event_labels = get_labels_from_baggage(mandatory_labels=[BAGGAGE_FLOW_LABEL_NAME])
+    except ValueError as e:
+        warning(e.args[0])
+        return
 
-    event.insert(trace_id, event_name, event_labels)
+    event.insert(flow_id, event_name, event_labels)
 
 
 def success():

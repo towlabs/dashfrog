@@ -205,3 +205,22 @@ def get_dashfrog_instance() -> Dashfrog:
             "DashFrog not initialized. Call setup() first:\n\n  from dashfrog_python_sdk import setup\n  setup()\n"
         )
     return _dashfrog
+
+
+def create_tables() -> None:
+    """
+    Create all database tables.
+
+    This will create tables defined in the models module using SQLAlchemy.
+    Must be called after setup().
+
+    Example:
+        from dashfrog_python_sdk import setup, create_tables
+
+        setup()
+        create_tables()
+    """
+    from .models import Base
+
+    dashfrog = get_dashfrog_instance()
+    Base.metadata.create_all(dashfrog.db_engine)
