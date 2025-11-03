@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, text
 
 from dashfrog_python_sdk import setup
 from dashfrog_python_sdk.config import Config
+from dashfrog_python_sdk.migrations import run_migrations
 from dashfrog_python_sdk.models import Base
 
 import pytest
@@ -14,25 +15,24 @@ def test_engine():
     """Create SQLAlchemy engine for test database."""
     # Postgres runs in devcontainer on localhost
     engine = create_engine("postgresql://postgres:postgres@localhost:5432/dashfrog_test")
+
+    # Run migrations to ensure schema is up to date
+    run_migrations(engine)
+
     yield engine
     engine.dispose()
 
 
-@pytest.fixture(scope="session")
-def setup_test_db(test_engine):
-    """Create all tables in test database."""
-    Base.metadata.drop_all(test_engine)
-    Base.metadata.create_all(test_engine)
-    yield
-    Base.metadata.drop_all(test_engine)
-
-
 @pytest.fixture(scope="function")
-def clean_db(test_engine, setup_test_db):
+def clean_db(test_engine):
     """Clean all data from tables before each test."""
     with test_engine.begin() as conn:
         for table in reversed(Base.metadata.sorted_tables):
-            conn.execute(text(f"TRUNCATE TABLE {table.name} CASCADE"))
+            if not table.info.get("is_view"):
+                conn.execute(text(f"TRUNCATE TABLE {table.name} CASCADE"))
+
+            if table.name == "dashfrog_metadata":
+                conn.execute(text("INSERT INTO dashfrog_metadata (id, last_refresh_ts) VALUES (1, null)"))
     yield
 
 
@@ -40,7 +40,6 @@ def clean_db(test_engine, setup_test_db):
 def setup_dashfrog(clean_db):
     """Initialize DashFrog with test database."""
     config = Config(
-        otel_endpoint="localhost:4317",
         postgres_host="localhost",
         postgres_port=5432,
         postgres_dbname="dashfrog_test",

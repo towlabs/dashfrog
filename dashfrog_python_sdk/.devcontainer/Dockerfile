@@ -26,7 +26,7 @@ COPY --chown=vscode:vscode pyproject.toml ./
 USER vscode
 
 # Install Python dependencies using uv
-RUN uv sync --all-groups || true
+RUN uv sync --all-extras || true
 
 # Default command
 CMD ["/bin/bash"]

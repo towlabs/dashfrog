@@ -6,14 +6,6 @@ from sqlalchemy import Engine, create_engine
 
 from .config import Config
 
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
-    OTLPMetricExporter as HTTPMetricExporter,
-)
-from opentelemetry.metrics import Histogram, Meter
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics._internal.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.metrics.view import ExponentialBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import (
@@ -35,50 +27,18 @@ class Dashfrog:
     config: Config
 
     db_engine: Engine = field(init=False)
-    meter_provider: MeterProvider = field(init=False)
-    meter: Meter = field(init=False)
+    last_refresh_ts: float | None = field(default=None, init=False)
 
     def __post_init__(self):
-        # Build resource
-        resource = Resource.create(
-            attributes={
-                "service.instance.id": str(uuid.uuid4()),
-                "service.name": "dashfrog",
-            }
-        )
-
-        # Parse endpoint to determine protocol and security
-        use_http, insecure, endpoint = self.parse_otel_config(self.config.otel_endpoint)
-
-        if use_http:
-            metric_exporter = HTTPMetricExporter(endpoint=endpoint, timeout=10)
-        else:
-            metric_exporter = OTLPMetricExporter(
-                endpoint=endpoint,
-                insecure=insecure,
-                timeout=10,
-            )
-
-        reader = PeriodicExportingMetricReader(
-            exporter=metric_exporter,
-            export_interval_millis=self.config.export_interval_ms,
-        )
-
-        self.meter_provider = MeterProvider(
-            metric_readers=[reader],
-            resource=resource,
-            views=[
-                View(
-                    instrument_type=Histogram,
-                    aggregation=ExponentialBucketHistogramAggregation(),
-                )
-            ],
-        )
-
-        self.meter = self.meter_provider.get_meter("dashfrog")
-
         trace_provider = get_tracer_provider()
         if isinstance(trace_provider, (NoOpTracerProvider, ProxyTracerProvider)):
+            # Build resource
+            resource = Resource.create(
+                attributes={
+                    "service.instance.id": str(uuid.uuid4()),
+                    "service.name": "dashfrog",
+                }
+            )
             set_tracer_provider(TracerProvider(resource=resource))
 
         # Create SQLAlchemy engine with connection pooling
@@ -180,22 +140,34 @@ _dashfrog: Dashfrog | None = None
 
 def setup(
     config: Config | None = None,
+    *,
+    run_migrations: bool = True,
 ) -> None:
     """
     Initialize DashFrog observability.
 
     Args:
         config: Optional Config object (defaults to reading from environment)
-        requests: Auto-instrument requests library (default: True)
-        httpx: Auto-instrument httpx library (default: False)
-        celery: Auto-instrument Celery (default: False)
-        aws_lambda: Auto-instrument AWS Lambda (default: False)
-        fastapi: Auto-instrument FastAPI (default: False)
-        flask: Auto-instrument Flask (default: False)
+        run_migrations: If True, automatically run database migrations during setup.
+                       Default is False - call create_tables() explicitly instead.
+
+    Example:
+        from dashfrog_python_sdk import setup
+
+        # Setup without migrations (run create_tables() later)
+        setup()
+
+        # Setup with automatic migrations
+        setup(run_migrations=True)
     """
     global _dashfrog
 
     _dashfrog = Dashfrog(config or Config())
+
+    if run_migrations:
+        from .migrations import run_migrations as run_db_migrations
+
+        run_db_migrations(_dashfrog.db_engine)
 
 
 def get_dashfrog_instance() -> Dashfrog:
@@ -207,20 +179,33 @@ def get_dashfrog_instance() -> Dashfrog:
     return _dashfrog
 
 
-def create_tables() -> None:
+def refresh_views(*, concurrent: bool = True) -> None:
     """
-    Create all database tables.
+    Refresh the Flow and Label materialized views.
 
-    This will create tables defined in the models module using SQLAlchemy.
-    Must be called after setup().
+    This updates the materialized views with the latest data from the Event table.
+    Should be called periodically or after bulk inserts to keep views up-to-date.
+
+    Args:
+        concurrent: If True, uses REFRESH MATERIALIZED VIEW CONCURRENTLY which
+                   allows reads during refresh but requires unique indexes (default: True)
 
     Example:
-        from dashfrog_python_sdk import setup, create_tables
+        from dashfrog_python_sdk import refresh_views
 
-        setup()
-        create_tables()
+        # After processing events
+        refresh_views()
+
+        # Or schedule periodically
+        # schedule.every(5).minutes.do(refresh_views)
     """
-    from .models import Base
+    from sqlalchemy import text
 
     dashfrog = get_dashfrog_instance()
-    Base.metadata.create_all(dashfrog.db_engine)
+
+    refresh_cmd = "REFRESH MATERIALIZED VIEW CONCURRENTLY" if concurrent else "REFRESH MATERIALIZED VIEW"
+
+    with dashfrog.db_engine.connect() as conn:
+        conn.execute(text(f"{refresh_cmd} flow"))
+        conn.execute(text(f"{refresh_cmd} label"))
+        conn.commit()

@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/mehdi/Workspace/observability/dashfrog/**)",
+      "Bash(mkdir:*)",
+      "Bash(uv sync:*)",
+      "Bash(.venv/bin/uv sync:*)",
+      "Bash(python -m ruff check:*)",
+      "Bash(python -m pyright:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(tree:*)",
+      "Bash(cat:*)",
+      "Bash(python:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker compose:*)",
+      "Bash(pg_isready:*)",
+      "Bash(.venv/bin/pytest tests/ -v)",
+      "Bash(.venv/bin/pytest tests/test_metric.py -v)",
+      "Bash(.venv/bin/ruff check src/)",
+      "Bash(.venv/bin/ruff check src/ --fix)",
+      "Bash(.venv/bin/python:*)",
+      "Bash(.venv/bin/pip:*)",
+      "Bash(.venv/bin/pytest tests/test_metric.py -v --tb=short)",
+      "Bash(uv pip list:*)",
+      "Bash(.venv/bin/pytest tests/test_views.py -v)",
+      "Bash(.venv/bin/pytest tests/test_views.py -v --tb=short)",
+      "Bash(psql:*)",
+      "Bash(docker exec:*)",
+      "Bash(.venv/bin/pytest tests/test_views.py::TestMaterializedViewRefresh::test_refresh_called_when_stale -v --tb=short)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
