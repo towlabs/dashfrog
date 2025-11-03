@@ -12,3 +12,6 @@ EVENT_FLOW_FAIL = "flow_fail"
 EVENT_STEP_START = "step_start"
 EVENT_STEP_SUCCESS = "step_success"
 EVENT_STEP_FAIL = "step_fail"
+
+# Minimum time between refreshes in seconds (default: 60 seconds)
+MIN_REFRESH_INTERVAL = 60.0

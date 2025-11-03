@@ -132,3 +132,123 @@ class TestFlowContextManager:
 
             # Verify different trace_ids
             assert flow1_start.flow_id != flow2_start.flow_id
+
+
+class TestFlowEvent:
+    """Test flow.event() function."""
+
+    def test_event_within_flow(self, setup_dashfrog):
+        """Test writing custom events within a flow."""
+        with flow.start("order_flow", tenant="test_tenant", order_id="ORD-123"):
+            flow.event("payment_initiated")
+            flow.event("payment_completed")
+
+        # Query database to verify events
+        dashfrog = get_dashfrog_instance()
+        with Session(dashfrog.db_engine) as session:
+            events = session.query(Event).order_by(Event.id).all()
+
+            # Verify 4 events: START, payment_initiated, payment_completed, SUCCESS
+            assert len(events) == 4
+
+            start_event = events[0]
+            payment_initiated_event = events[1]
+            payment_completed_event = events[2]
+            success_event = events[3]
+
+            # Verify START event
+            assert start_event.event_name == EVENT_FLOW_START
+            assert start_event.labels["flow_name"] == "order_flow"
+            assert start_event.labels["order_id"] == "ORD-123"
+
+            # Verify custom payment_initiated event
+            assert payment_initiated_event.event_name == "payment_initiated"
+            assert payment_initiated_event.labels["flow_name"] == "order_flow"
+            assert payment_initiated_event.labels["order_id"] == "ORD-123"
+            assert payment_initiated_event.flow_id == start_event.flow_id
+
+            # Verify custom payment_completed event
+            assert payment_completed_event.event_name == "payment_completed"
+            assert payment_completed_event.labels["flow_name"] == "order_flow"
+            assert payment_completed_event.labels["order_id"] == "ORD-123"
+            assert payment_completed_event.flow_id == start_event.flow_id
+
+            # Verify SUCCESS event
+            assert success_event.event_name == EVENT_FLOW_SUCCESS
+            assert success_event.flow_id == start_event.flow_id
+
+    def test_event_outside_flow(self, setup_dashfrog, caplog):
+        """Test that event() warns and does nothing when called outside a flow."""
+        import logging
+        caplog.set_level(logging.WARNING)
+
+        # Call event outside of any flow context
+        flow.event("orphan_event")
+
+        # Verify warning was logged
+        assert "No span found" in caplog.text
+
+        # Query database to verify no events were inserted
+        dashfrog = get_dashfrog_instance()
+        with Session(dashfrog.db_engine) as session:
+            events = session.query(Event).all()
+            assert len(events) == 0
+
+    def test_multiple_events_in_flow(self, setup_dashfrog):
+        """Test multiple custom events with different names."""
+        with flow.start("checkout_flow", tenant="test_tenant", session_id="sess-456"):
+            flow.event("cart_validated")
+            flow.event("inventory_checked")
+            flow.event("shipping_calculated")
+            flow.event("order_confirmed")
+
+        # Query database
+        dashfrog = get_dashfrog_instance()
+        with Session(dashfrog.db_engine) as session:
+            events = session.query(Event).order_by(Event.id).all()
+
+            # Verify 6 events: START + 4 custom events + SUCCESS
+            assert len(events) == 6
+
+            # All events should have the same flow_id
+            flow_ids = [e.flow_id for e in events]
+            assert len(set(flow_ids)) == 1
+
+            # Verify custom event names
+            event_names = [e.event_name for e in events]
+            assert EVENT_FLOW_START in event_names
+            assert "cart_validated" in event_names
+            assert "inventory_checked" in event_names
+            assert "shipping_calculated" in event_names
+            assert "order_confirmed" in event_names
+            assert EVENT_FLOW_SUCCESS in event_names
+
+            # All events should inherit the flow labels
+            for event in events:
+                assert event.labels["flow_name"] == "checkout_flow"
+                assert event.labels["session_id"] == "sess-456"
+                assert event.labels["tenant"] == "test_tenant"
+
+    def test_event_in_failed_flow(self, setup_dashfrog):
+        """Test that custom events are recorded even if flow fails."""
+        with pytest.raises(RuntimeError):
+            with flow.start("risky_operation", tenant="test_tenant", user_id="user-789"):
+                flow.event("validation_passed")
+                flow.event("processing_started")
+                raise RuntimeError("Unexpected error")
+
+        # Query database
+        dashfrog = get_dashfrog_instance()
+        with Session(dashfrog.db_engine) as session:
+            events = session.query(Event).order_by(Event.id).all()
+
+            # Verify 4 events: START, 2 custom events, FAIL
+            assert len(events) == 4
+
+            assert events[0].event_name == EVENT_FLOW_START
+            assert events[1].event_name == "validation_passed"
+            assert events[2].event_name == "processing_started"
+            assert events[3].event_name == EVENT_FLOW_FAIL
+
+            # All should have same flow_id
+            assert events[0].flow_id == events[1].flow_id == events[2].flow_id == events[3].flow_id

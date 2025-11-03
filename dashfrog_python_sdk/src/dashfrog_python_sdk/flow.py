@@ -2,14 +2,13 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from logging import warning
 
-from . import event
 from .constants import (
     BAGGAGE_FLOW_LABEL_NAME,
     EVENT_FLOW_FAIL,
     EVENT_FLOW_START,
     EVENT_FLOW_SUCCESS,
 )
-from .utils import get_flow_id, get_labels_from_baggage, write_to_baggage
+from .utils import get_flow_id, get_labels_from_baggage, insert, write_to_baggage
 
 from opentelemetry import trace
 
@@ -45,7 +44,7 @@ def start(name: str, tenant: str, end_on_exit: bool = True, **labels: str) -> Ge
         event_labels = {BAGGAGE_FLOW_LABEL_NAME: name, "tenant": tenant, **labels}
         with write_to_baggage(event_labels):
             # Write START event
-            event.insert(flow_id, EVENT_FLOW_START, event_labels)
+            insert(flow_id, EVENT_FLOW_START, event_labels)
 
             try:
                 yield flow_id
@@ -56,6 +55,24 @@ def start(name: str, tenant: str, end_on_exit: bool = True, **labels: str) -> Ge
             else:
                 if end_on_exit:
                     _end_flow(EVENT_FLOW_SUCCESS)
+
+
+def event(event_name: str):
+    """Write a custom event to the database."""
+
+    try:
+        flow_id = get_flow_id()
+    except ValueError as e:
+        warning(e.args[0])
+        return
+
+    try:
+        event_labels = get_labels_from_baggage(mandatory_labels=[BAGGAGE_FLOW_LABEL_NAME])
+    except ValueError as e:
+        warning(e.args[0])
+        return
+
+    insert(flow_id, event_name, event_labels)
 
 
 def _end_flow(event_name: str):
@@ -71,7 +88,7 @@ def _end_flow(event_name: str):
         warning(e.args[0])
         return
 
-    event.insert(flow_id, event_name, event_labels)
+    insert(flow_id, event_name, event_labels)
 
 
 def success():

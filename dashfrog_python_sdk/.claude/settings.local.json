@@ -26,7 +26,9 @@
       "Bash(.venv/bin/pytest tests/test_views.py -v --tb=short)",
       "Bash(psql:*)",
       "Bash(docker exec:*)",
-      "Bash(.venv/bin/pytest tests/test_views.py::TestMaterializedViewRefresh::test_refresh_called_when_stale -v --tb=short)"
+      "Bash(.venv/bin/pytest tests/test_views.py::TestMaterializedViewRefresh::test_refresh_called_when_stale -v --tb=short)",
+      "Bash(.venv/bin/pytest tests/test_flow.py::TestFlowEvent -v)",
+      "Bash(.venv/bin/pytest tests/test_flow.py -v)"
     ],
     "deny": [],
     "ask": []
