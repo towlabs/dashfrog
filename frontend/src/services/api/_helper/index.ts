@@ -38,10 +38,6 @@ const NewRestAPI = (basePath: string) => {
 				options = {};
 			}
 
-			// Extract metadata for error handling
-			const meta = options.meta;
-			const skipErrorToast = meta?.skipErrorToast || false;
-
 			// Set default Content-Type for POST/PUT/PATCH requests
 			const defaultHeaders: Record<string, string> = {
 				X_REQUEST_ID: crypto.randomUUID(),
@@ -57,51 +53,18 @@ const NewRestAPI = (basePath: string) => {
 				options.headers = defaultHeaders;
 			}
 
-			try {
-				return await Axios.request<ResponseType>({
-					...options,
-					url: `${API_URL}/${basePath}/${path}`,
-					method: methodName,
-					// Set default timeout if not provided
-					timeout:
-						options.timeout !== undefined ? options.timeout : DEFAULT_TIMEOUT,
-					headers: {
-						// Authorization: `Bearer ${token}`,
-						...options.headers,
-					},
-				});
-			} catch (error) {
-				const axiosError = error as AxiosError<APIError>;
-
-				// Check if error is a timeout
-				const isTimeout =
-					axiosError.code === "ECONNABORTED" ||
-					axiosError.code === "ERR_NETWORK";
-
-				// Show error toast if not skipped
-				if (!skipErrorToast && meta?.action && meta?.resource) {
-					if (isTimeout) {
-						// Special message for timeout errors
-						showApiError(
-							meta.action,
-							meta.resource,
-							408, // Request Timeout status code
-							"Request timed out after 180 seconds",
-						);
-					} else {
-						const status = axiosError.response?.status || 500;
-						const apiErrorMessage =
-							axiosError.response?.data?.error ||
-							axiosError.response?.data?.key ||
-							undefined;
-
-						showApiError(meta.action, meta.resource, status, apiErrorMessage);
-					}
-				}
-
-				// Re-throw the error for handling by the caller
-				throw error;
-			}
+			return await Axios.request<ResponseType>({
+				...options,
+				url: `${API_URL}/${basePath}/${path}`,
+				method: methodName,
+				// Set default timeout if not provided
+				timeout:
+					options.timeout !== undefined ? options.timeout : DEFAULT_TIMEOUT,
+				headers: {
+					// Authorization: `Bearer ${token}`,
+					...options.headers,
+				},
+			});
 		};
 
 	return {

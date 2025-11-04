@@ -36,40 +36,15 @@ export const toast = {
 /**
  * Format API error message based on status code
  */
-export function formatApiError(
-	action: string,
-	resource: string,
-	status: number,
-	apiError?: string,
-): string {
-	const baseMessage = `Could not ${action} ${resource}`;
-
-	if (status >= 500) {
-		return baseMessage;
-	}
-
-	// 4xx errors - include API error if provided
-	if (apiError) {
-		return `${baseMessage} (${apiError})`;
-	}
-
-	return baseMessage;
+export function formatApiError(action: string, resource: string): string {
+	return `Could not ${action} ${resource}`;
 }
 
 /**
  * Show toast for API error
  */
-export function showApiError(
-	action: string,
-	resource: string,
-	status: number,
-	apiError?: string,
-) {
-	const message = formatApiError(action, resource, status, apiError);
+export function showApiError(action: string, resource: string) {
+	const message = formatApiError(action, resource);
 
-	if (status >= 500) {
-		toast.error(message);
-	} else if (status >= 400) {
-		toast.warning(message);
-	}
+	toast.error(message);
 }

@@ -14,7 +14,12 @@
  */
 
 // Event Types
-export type { Event, EventCreateInput, EventKind, EventsStore } from "./event";
+export type {
+	Event,
+	EventCreateInput,
+	EventKind,
+	EventsStore,
+} from "./timeline";
 
 // Filter Types
 export type { ApiFilter, Filter, FilterOperator } from "./filter";
@@ -23,17 +28,7 @@ export type { ApiFilter, Filter, FilterOperator } from "./filter";
 export type { Flow } from "./flow";
 
 // Label Types
-export type { Label, LabelsStore, LabelUsage } from "./label";
-
-// Metric Types
-export type {
-	Aggregation,
-	Metric,
-	MetricKind,
-	MetricScope,
-	MetricsStore,
-	MetricUnits,
-} from "./metric";
+export type { Label } from "./label";
 
 // Notebook Types
 export type {
@@ -46,3 +41,6 @@ export type {
 
 // Step Types
 export type { Step } from "./step";
+
+// Timeline Types
+export type { TimelineEvent } from "./timeline";

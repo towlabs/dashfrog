@@ -1,36 +1,25 @@
 import {
-	BookOpen,
-	Calendar,
 	ChevronLeft,
-	ChevronRight,
-	Hash,
+	Terminal,
 	Home,
 	Package,
-	Plus,
-	Search,
-	Settings,
-	Tags,
-	User,
+	ChevronRight,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useNotebooksStore } from "@/src/stores/notebooks";
 import SearchDialog from "./SearchDialog";
 
 const topMenuItems = [
 	{ id: "home", label: "Home", icon: Home, href: "/" },
 	{
 		id: "search",
-		label: "Search",
-		icon: Search,
+		label: "Go To",
+		icon: Terminal,
 		href: "/search",
 		shortcut: "⌘K",
 	},
-	{ id: "catalog", label: "Data Catalog", icon: BookOpen, href: "/catalog" },
-	{ id: "labels", label: "Labels", icon: Tags, href: "/labels" },
-	{ id: "events", label: "Calendar", icon: Calendar, href: "/events" },
 ];
 
 interface SideMenuProps {
@@ -46,25 +35,6 @@ export default function SideMenu({
 	const [internalCollapsed, setInternalCollapsed] = useState(false);
 	const navigate = useNavigate();
 	const [searchOpen, setSearchOpen] = useState(false);
-
-	// Get notebooks and actions from Zustand
-	const notebooks = useNotebooksStore((state) => state.notebooks);
-	const fetchNotebooks = useNotebooksStore((state) => state.fetchNotebooks);
-	const createNotebook = useNotebooksStore((state) => state.createNotebook);
-
-	// Fetch notebooks on mount
-	useEffect(() => {
-		void fetchNotebooks();
-	}, [fetchNotebooks]);
-
-	const handleCreateNotebook = async () => {
-		try {
-			const newNotebook = await createNotebook();
-			navigate(`/notebook/${newNotebook.uuid}`);
-		} catch (err) {
-			console.error("Failed to create notebook:", err);
-		}
-	};
 
 	// Use controlled state if provided, otherwise use internal state
 	const isCollapsed =
@@ -173,105 +143,7 @@ export default function SideMenu({
 							</Link>
 						);
 					})}
-
-					{/* Separator */}
-					<div className="py-2">
-						<div className="border-t border-border" />
-					</div>
-
-					{/* Notebooks Section */}
-					{!isCollapsed && (
-						<div className="group px-3 py-1 flex items-center justify-between">
-							<h3 className="text-xs font-medium" style={{ color: "#5f5e5b" }}>
-								Notebooks
-							</h3>
-							{notebooks.length > 0 && (
-								<button
-									type="button"
-									onClick={handleCreateNotebook}
-									className="opacity-0 group-hover:opacity-100 hover:bg-accent rounded p-1 transition-all"
-									title="Add notebook"
-								>
-									<Plus className="h-3 w-3" />
-								</button>
-							)}
-						</div>
-					)}
-					{notebooks.length === 0
-						? !isCollapsed && (
-								<Button
-									onClick={handleCreateNotebook}
-									variant="outline"
-									className="mx-2 my-1 flex w-[calc(100%-1rem)] items-center justify-center gap-2 px-3 py-2"
-								>
-									<Plus className="h-4 w-4 text-muted-foreground" />
-									Create new notebook
-								</Button>
-							)
-						: notebooks.map((notebook) => {
-								const isNotebookActive =
-									pathname === `/notebook/${notebook.uuid}`;
-								return (
-									<Link
-										key={notebook.uuid}
-										to={`/notebook/${notebook.uuid}`}
-										className={cn(
-											"flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent",
-											isNotebookActive && "bg-accent text-accent-foreground",
-											isCollapsed && "justify-center px-2",
-										)}
-										style={{ color: isNotebookActive ? undefined : "#5f5e5b" }}
-									>
-										<Hash className="h-4 w-4 shrink-0 text-muted-foreground" />
-										{!isCollapsed && (
-											<span className="flex-1">{notebook.title}</span>
-										)}
-									</Link>
-								);
-							})}
 				</nav>
-			</div>
-
-			{/* Bottom Section - Settings and Avatar */}
-			<div className="mt-auto border-t border-border">
-				<div className="space-y-1 p-2">
-					<Link
-						to="/settings"
-						className={cn(
-							"flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent",
-							pathname === "/settings" && "bg-accent text-accent-foreground",
-							isCollapsed && "justify-center px-2",
-						)}
-						style={{ color: pathname === "/settings" ? undefined : "#5f5e5b" }}
-					>
-						<Settings className="h-4 w-4 shrink-0" />
-						{!isCollapsed && <span>Settings</span>}
-					</Link>
-
-					<div
-						className={cn(
-							"flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent",
-							isCollapsed && "justify-center px-2",
-						)}
-					>
-						<div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-							<User className="h-4 w-4" />
-						</div>
-						{!isCollapsed && (
-							<div className="flex flex-col">
-								<span
-									className="text-sm font-medium"
-									style={{ color: "#5f5e5b" }}
-								>
-									John Doe
-								</span>
-								<span className="text-xs" style={{ color: "#5f5e5b" }}>
-									john@example.com
-								</span>
-							</div>
-						)}
-					</div>
-				</div>
 			</div>
 
 			<SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />

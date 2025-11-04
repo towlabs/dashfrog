@@ -4,7 +4,7 @@ import type {
 	EventCreateInput,
 	EventKind,
 	EventsStore,
-} from "@/src/types/event";
+} from "@/src/types/timeline";
 import type { ApiFilter } from "@/src/types/filter";
 
 const EventsAPI = NewRestAPI(`api`);

@@ -1,12 +1,6 @@
-import {
-	ChartNoAxesGantt,
-	ChartScatter,
-	Hash,
-	Home,
-	RadioTower,
-	Settings,
-} from "lucide-react";
+import { Building2 } from "lucide-react";
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	CommandDialog,
 	CommandEmpty,
@@ -15,80 +9,22 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
+import { useLabelsStore } from "@/src/stores/labels";
 
 interface SearchDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 }
 
-const searchItems = [
-	{
-		group: "Navigation",
-		items: [
-			{ id: "home", title: "Home", icon: Home, href: "/" },
-			{ id: "settings", title: "Settings", icon: Settings, href: "/settings" },
-		],
-	},
-	{
-		group: "Building blocks",
-		items: [
-			{ id: "flows", title: "Flows", icon: ChartNoAxesGantt, href: "/flows" },
-			{
-				id: "observations",
-				title: "Observables",
-				icon: ChartScatter,
-				href: "/observations",
-			},
-			{ id: "events", title: "Events", icon: RadioTower, href: "/events" },
-		],
-	},
-	{
-		group: "Teamspaces",
-		items: [
-			{
-				id: "engineering",
-				title: "Engineering",
-				icon: Hash,
-				href: "/teamspaces/engineering",
-			},
-			{
-				id: "product",
-				title: "Product",
-				icon: Hash,
-				href: "/teamspaces/product",
-			},
-			{
-				id: "performance",
-				title: "Performance Dashboard",
-				icon: Hash,
-				href: "/teamspaces/engineering/performance",
-			},
-			{
-				id: "errors",
-				title: "Error Tracking",
-				icon: Hash,
-				href: "/teamspaces/engineering/errors",
-			},
-			{
-				id: "analytics",
-				title: "User Analytics",
-				icon: Hash,
-				href: "/teamspaces/product/analytics",
-			},
-			{
-				id: "conversion",
-				title: "Conversion Dashboard",
-				icon: Hash,
-				href: "/teamspaces/product/conversion",
-			},
-		],
-	},
-];
-
 export default function SearchDialog({
 	open,
 	onOpenChange,
 }: SearchDialogProps) {
+	const navigate = useNavigate();
+	const tenantLabels = useLabelsStore((state) => state.tenants);
+
+	// Get tenant values
+	const tenants = tenantLabels.length > 0 ? tenantLabels[0].values : [];
 	useEffect(() => {
 		const down = (e: KeyboardEvent) => {
 			if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -101,33 +37,28 @@ export default function SearchDialog({
 		return () => document.removeEventListener("keydown", down);
 	}, [open, onOpenChange]);
 
-	const handleSelect = (href: string) => {
+	const handleSelectTenant = (tenantName: string) => {
 		onOpenChange(false);
-		window.location.href = href;
+		navigate(`/tenants/${encodeURIComponent(tenantName)}`);
 	};
 
 	return (
 		<CommandDialog open={open} onOpenChange={onOpenChange}>
-			<CommandInput placeholder="Search for pages, features, or teamspaces..." />
+			<CommandInput placeholder="Search for tenants..." />
 			<CommandList>
-				<CommandEmpty>No results found.</CommandEmpty>
-				{searchItems.map((group) => (
-					<CommandGroup key={group.group} heading={group.group}>
-						{group.items.map((item) => {
-							const Icon = item.icon;
-							return (
-								<CommandItem
-									key={item.id}
-									onSelect={() => handleSelect(item.href)}
-									className="flex items-center gap-3"
-								>
-									<Icon className="h-4 w-4" />
-									<span>{item.title}</span>
-								</CommandItem>
-							);
-						})}
-					</CommandGroup>
-				))}
+				<CommandEmpty>No tenants found.</CommandEmpty>
+				<CommandGroup heading="Tenants">
+					{tenants.map((tenantName) => (
+						<CommandItem
+							key={tenantName}
+							onSelect={() => handleSelectTenant(tenantName)}
+							className="flex items-center gap-3"
+						>
+							<Building2 className="h-4 w-4" />
+							<span>{tenantName}</span>
+						</CommandItem>
+					))}
+				</CommandGroup>
 			</CommandList>
 		</CommandDialog>
 	);

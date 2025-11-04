@@ -1,6 +1,6 @@
 import { Events } from "./events";
 import { Flows } from "./flows";
 import { Labels } from "./labels";
-import { Metrics } from "./metrics";
+import { Timeline } from "./timeline";
 
-export { Events, Flows, Labels, Metrics };
+export { Events, Flows, Labels, Timeline };

@@ -1,136 +1,48 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
-import type { Label, LabelsStore } from "@/src/types/label";
+import type { Label } from "@/src/types/label";
 
 const LabelsAPI = NewRestAPI(`api`);
-
-/**
- * Raw label value from backend API (snake_case)
- */
-interface LabelValueApiResponse {
-	value: string;
-	mapped_to: string | null;
-}
-
-/**
- * Raw label usage from backend API (snake_case)
- */
-interface LabelUsageApiResponse {
-	used_in: string | number;
-	kind: string;
-}
 
 /**
  * Raw label response from backend API (snake_case)
  * This is internal to the API service and converted to Label (camelCase)
  */
 interface LabelApiResponse {
-	id: number;
-	label: string;
-	display_as: string | null;
-	description: string | null;
-	hide: boolean;
-	values: LabelValueApiResponse[];
-	used_in: LabelUsageApiResponse[];
+	name: string;
+	values: string[];
 }
 
 type LabelsApiResponse = LabelApiResponse[];
 
 /**
  * Convert backend API response to frontend Label type
- * Transforms snake_case to camelCase and processes value mappings
+ * In this case, the structure is the same, but this maintains consistency
+ * with our API service pattern
  */
 function toLabel(apiLabel: LabelApiResponse): Label {
-	const valueMappings = new Map<string, string>();
-	const actualValues: string[] = [];
-
-	// Process values and their mappings
-	apiLabel.values.forEach((val) => {
-		// Only include actual values that can be used in queries
-		actualValues.push(val.value);
-
-		// Store mapping for display purposes only
-		if (val.mapped_to) {
-			valueMappings.set(val.value, val.mapped_to);
-		}
-	});
-
 	return {
-		id: apiLabel.id,
-		name: apiLabel.label,
-		displayAs: apiLabel.display_as,
-		description: apiLabel.description,
-		hide: apiLabel.hide,
-		values: actualValues.sort(),
-		valueMappings,
-		usedIn: apiLabel.used_in.map((usage) => ({
-			usedIn: String(usage.used_in),
-			kind: usage.kind,
-		})),
+		name: apiLabel.name,
+		values: apiLabel.values,
 	};
 }
 
 /**
- * Process labels from API into indexed store
+ * Process labels from API
  * Converts API response format to JavaScript conventions
  */
-function processLabels(apiLabels: LabelApiResponse[]): LabelsStore {
-	const store: LabelsStore = {};
-
-	apiLabels.forEach((apiLabel) => {
-		const label = toLabel(apiLabel);
-		store[label.name] = label;
-	});
-
-	return store;
+function processLabels(apiLabels: LabelApiResponse[]): Label[] {
+	return apiLabels.map((apiLabel) => toLabel(apiLabel));
 }
 
 const Labels = {
-	getAll: (withHidden = false) => {
-		const params = new URLSearchParams();
-		if (withHidden) {
-			params.append("with_hidden", "true");
-		}
-		const queryString = params.toString();
-		const path = queryString ? `labels?${queryString}` : "labels";
-		return LabelsAPI.get<LabelsApiResponse>(path, {
+	/**
+	 * Get all labels
+	 */
+	getAll: () => {
+		return LabelsAPI.get<LabelsApiResponse>("labels", {
 			meta: { action: "fetch", resource: "labels" },
 		});
 	},
-
-	updateDescription: (labelId: number, description: string) => {
-		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
-			data: { description },
-			meta: { action: "update", resource: "label" },
-		});
-	},
-
-	updateDisplayAs: (labelId: number, displayAs: string) => {
-		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
-			data: { display_as: displayAs },
-			meta: { action: "update", resource: "label" },
-		});
-	},
-
-	updateHide: (labelId: number, hide: boolean) => {
-		return LabelsAPI.put<LabelApiResponse>(`labels/${labelId}`, {
-			data: { hide },
-			meta: { action: "update", resource: "label" },
-		});
-	},
-
-	updateValueProxy: (
-		labelId: number,
-		valueName: string,
-		proxy: string | null,
-	) => {
-		return LabelsAPI.put<LabelValueApiResponse>(
-			`labels/${labelId}/value/${valueName}`,
-			{
-				data: { proxy },
-				meta: { action: "update", resource: "label value" },
-			},
-		);
-	},
 };
 
-export { LabelsAPI, Labels, processLabels };
+export { LabelsAPI, Labels, processLabels, toLabel };
