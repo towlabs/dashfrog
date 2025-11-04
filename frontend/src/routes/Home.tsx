@@ -11,13 +11,9 @@ import {
 import { useLabelsStore } from "@/src/stores/labels";
 
 export default function HomePage() {
-	const tenantLabels = useLabelsStore((state) => state.tenants);
+	const tenants = useLabelsStore((state) => state.tenants);
 	const loading = useLabelsStore((state) => state.loading);
 	const navigate = useNavigate();
-
-	// Get tenant values (these are the different tenants)
-	// Since tenants is an array of Label objects, we get the first one and extract its values
-	const tenants = tenantLabels.length > 0 ? tenantLabels[0].values : [];
 
 	const handleTenantClick = (tenantName: string) => {
 		navigate(`/tenants/${encodeURIComponent(tenantName)}`);

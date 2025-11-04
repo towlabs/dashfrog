@@ -1,5 +1,7 @@
 import {
+	endOfDay,
 	endOfWeek,
+	startOfDay,
 	startOfWeek,
 	subDays,
 	subHours,
@@ -8,12 +10,14 @@ import {
 
 export type RelativeTimeValue =
 	| "15m"
+	| "30m"
 	| "1h"
 	| "6h"
 	| "12h"
 	| "24h"
 	| "7d"
 	| "30d"
+	| "today"
 	| "w";
 
 export type TimeWindow =
@@ -40,6 +44,8 @@ export function resolveTimeWindow(timeWindow: TimeWindow): {
 	switch (value) {
 		case "15m":
 			return { start: subMinutes(now, 15), end: now };
+		case "30m":
+			return { start: subMinutes(now, 30), end: now };
 		case "1h":
 			return { start: subHours(now, 1), end: now };
 		case "6h":
@@ -52,6 +58,11 @@ export function resolveTimeWindow(timeWindow: TimeWindow): {
 			return { start: subDays(now, 7), end: now };
 		case "30d":
 			return { start: subDays(now, 30), end: now };
+		case "today":
+			return {
+				start: startOfDay(now),
+				end: endOfDay(now),
+			};
 		case "w":
 			return {
 				start: startOfWeek(now, { weekStartsOn: 0 }),

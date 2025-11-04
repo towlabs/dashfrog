@@ -19,9 +19,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
-	RelativeTimeValue,
+	type RelativeTimeValue,
 	resolveTimeWindow,
-	TimeWindow,
+	type TimeWindow,
 } from "@/src/types/timewindow";
 
 interface TimeWindowSelectorProps {
@@ -37,6 +37,10 @@ const QUICK_RANGES: Array<{
 	{
 		label: "Last 15 minutes",
 		value: "15m",
+	},
+	{
+		label: "Last 30 minutes",
+		value: "30m",
 	},
 	{
 		label: "Last hour",
@@ -61,6 +65,10 @@ const QUICK_RANGES: Array<{
 	{
 		label: "Last 30 days",
 		value: "30d",
+	},
+	{
+		label: "Today",
+		value: "today",
 	},
 	{
 		label: "This week",
@@ -128,29 +136,41 @@ export function TimeWindowSelector({
 					{getDisplayLabel()}
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent className="w-[280px] p-0" align="end">
+			<PopoverContent className="w-80 p-0" align="end">
 				{!showCustom ? (
-					<div className="p-2">
-						<div className="space-y-1">
-							{QUICK_RANGES.map((range) => (
-								<Button
-									key={range.label}
-									variant="ghost"
-									size="sm"
-									className="w-full justify-start"
-									onClick={() => handleQuickRange(range.value)}
-								>
-									{range.label}
-								</Button>
-							))}
+					<div className="p-3 space-y-3">
+						<div>
+							<label className="text-xs font-medium text-muted-foreground mb-2 block">
+								Quick Ranges
+							</label>
+							<div className="grid grid-cols-2 gap-2">
+								{QUICK_RANGES.map((range) => (
+									<Button
+										key={range.label}
+										variant={
+											value?.type === "relative" &&
+											value.metadata.value === range.value
+												? "default"
+												: "outline"
+										}
+										size="sm"
+										className="text-xs h-7"
+										onClick={() => handleQuickRange(range.value)}
+									>
+										{range.label}
+									</Button>
+								))}
+							</div>
 						</div>
-						<Separator className="my-2" />
+						<Separator />
 						<Button
-							variant="ghost"
+							variant="outline"
 							size="sm"
-							className="w-full justify-start"
+							className="w-full text-xs h-7"
 							onClick={() => {
 								// Ensure custom fields reflect the currently selected window
+								setCustomStart(start);
+								setCustomEnd(end);
 								setShowCustom(true);
 							}}
 						>

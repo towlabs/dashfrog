@@ -10,6 +10,7 @@ This file contains project-specific guidelines and conventions for the Dashfrog 
 
 - Use **shadcn/ui** for basic components (e.g., Drawer, Dialog, Card, Button, etc.)
 - Use **Tailwind v4 syntax** for styling
+- Do not apply any specific styling to tables; leave them unstyled beyond defaults
 
 ## TypeScript Type Organization
 

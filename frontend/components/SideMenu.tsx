@@ -1,9 +1,9 @@
 import {
 	ChevronLeft,
-	Terminal,
+	ChevronRight,
 	Home,
 	Package,
-	ChevronRight,
+	CornerDownRight,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -16,7 +16,7 @@ const topMenuItems = [
 	{
 		id: "search",
 		label: "Go To",
-		icon: Terminal,
+		icon: CornerDownRight,
 		href: "/search",
 		shortcut: "⌘K",
 	},

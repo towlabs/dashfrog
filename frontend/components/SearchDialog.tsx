@@ -21,10 +21,8 @@ export default function SearchDialog({
 	onOpenChange,
 }: SearchDialogProps) {
 	const navigate = useNavigate();
-	const tenantLabels = useLabelsStore((state) => state.tenants);
+	const tenants = useLabelsStore((state) => state.tenants);
 
-	// Get tenant values
-	const tenants = tenantLabels.length > 0 ? tenantLabels[0].values : [];
 	useEffect(() => {
 		const down = (e: KeyboardEvent) => {
 			if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
