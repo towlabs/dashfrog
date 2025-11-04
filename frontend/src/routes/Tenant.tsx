@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { FlowTable } from "@/components/FlowTable";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { TenantControls } from "@/components/TenantControls";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useTenantStore } from "@/src/stores/tenant";
 
@@ -68,27 +69,30 @@ export default function TenantPage() {
 			</div>
 
 			{/* Page Content */}
-			<div className="space-y-4">
-				{/* Flows Section */}
-				<div className="space-y-4">
-					<h3 className="text-lg font-semibold">Flows</h3>
+			<Tabs defaultValue="flows" className="space-y-4">
+				<div className="flex justify-end">
+					<TabsList>
+						<TabsTrigger value="flows">Flows</TabsTrigger>
+						<TabsTrigger value="timeline">Timeline</TabsTrigger>
+					</TabsList>
+				</div>
+
+				<TabsContent value="flows" className="space-y-4">
 					{flowsLoading ? (
 						<TableSkeleton columns={6} rows={5} />
 					) : (
 						<FlowTable flows={flows} onAddFilter={addFilter} />
 					)}
-				</div>
+				</TabsContent>
 
-				{/* Timeline Section */}
-				<div className="space-y-4">
-					<h3 className="text-lg font-semibold">Timeline</h3>
+				<TabsContent value="timeline" className="space-y-4">
 					<div className="rounded-lg border bg-card p-8">
 						<div className="text-center text-muted-foreground">
 							Timeline: {timeline.length} events
 						</div>
 					</div>
-				</div>
-			</div>
+				</TabsContent>
+			</Tabs>
 		</div>
 	);
 }

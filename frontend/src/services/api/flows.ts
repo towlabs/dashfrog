@@ -3,6 +3,7 @@ import type { TimeWindow } from "@/src/types/timewindow";
 import type { Filter } from "@/src/types/filter";
 import type {
 	Flow,
+	DetailedFlow,
 	FlowHistory,
 	FlowHistoryEvent,
 	FlowHistoryStep,
@@ -47,17 +48,16 @@ interface FlowHistoryStepApiResponse {
  * Raw flow history response from backend API (snake_case)
  */
 interface FlowHistoryApiResponse {
-	name: string;
-	start_time: string; // ISO date string
-	end_time: string | null; // ISO date string
-	status: "success" | "failure" | "running";
-	events: FlowHistoryEventApiResponse[];
-	steps: FlowHistoryStepApiResponse[];
-	labels: Record<string, string>;
+	flow: FlowApiResponse;
+	histories: {
+		start_time: string; // ISO date string
+		end_time: string | null; // ISO date string
+		status: "success" | "failure" | "running";
+		events: FlowHistoryEventApiResponse[];
+		steps: FlowHistoryStepApiResponse[];
+		labels: Record<string, string>;
+	}[];
 }
-
-type FlowsApiResponse = FlowApiResponse[];
-type FlowHistoriesApiResponse = FlowHistoryApiResponse[];
 
 /**
  * Convert backend API response to frontend Flow type
@@ -107,24 +107,23 @@ function toFlowHistoryStep(
 /**
  * Convert backend API response to frontend FlowHistory type
  */
-function toFlowHistory(apiFlowHistory: FlowHistoryApiResponse): FlowHistory {
-	return {
-		name: apiFlowHistory.name,
-		startTime: new Date(apiFlowHistory.start_time),
-		endTime: apiFlowHistory.end_time ? new Date(apiFlowHistory.end_time) : null,
-		status: apiFlowHistory.status,
-		events: apiFlowHistory.events.map(toFlowHistoryEvent),
-		steps: apiFlowHistory.steps.map(toFlowHistoryStep),
-		labels: apiFlowHistory.labels,
-	};
+function toFlowHistory(
+	apiFlowHistory: FlowHistoryApiResponse["histories"],
+): FlowHistory[] {
+	return apiFlowHistory.map((h) => ({
+		startTime: new Date(h.start_time),
+		endTime: h.end_time ? new Date(h.end_time) : null,
+		status: h.status,
+		events: h.events.map(toFlowHistoryEvent),
+		steps: h.steps.map(toFlowHistoryStep),
+		labels: h.labels,
+	}));
 }
 
 // Dummy data generator for development
-function generateDummyFlowHistories(
-	flowName: string,
-): FlowHistoryApiResponse[] {
+function generateDummyFlowHistories() {
 	const now = new Date();
-	const histories: FlowHistoryApiResponse[] = [];
+	const histories: FlowHistoryApiResponse["histories"] = [];
 
 	// Generate 20 runs over the past 24 hours
 	for (let i = 0; i < 20; i++) {
@@ -138,7 +137,6 @@ function generateDummyFlowHistories(
 			: "running";
 
 		histories.push({
-			name: flowName,
 			start_time: startTime.toISOString(),
 			end_time: hasEnded
 				? new Date(startTime.getTime() + duration).toISOString()
@@ -180,24 +178,44 @@ function generateDummyFlowHistories(
 					name: "initialize",
 					start_time: startTime.toISOString(),
 					end_time: new Date(
-						startTime.getTime() + duration * 0.2,
+						startTime.getTime() + duration * 0.15,
+					).toISOString(),
+					status: "success",
+				},
+				{
+					name: "fetch_user_data",
+					start_time: new Date(
+						startTime.getTime() + duration * 0.15,
+					).toISOString(),
+					end_time: new Date(
+						startTime.getTime() + duration * 0.45,
+					).toISOString(),
+					status: "success",
+				},
+				{
+					name: "validate_input",
+					start_time: new Date(
+						startTime.getTime() + duration * 0.15,
+					).toISOString(),
+					end_time: new Date(
+						startTime.getTime() + duration * 0.3,
 					).toISOString(),
 					status: "success",
 				},
 				{
 					name: "process_data",
 					start_time: new Date(
-						startTime.getTime() + duration * 0.2,
+						startTime.getTime() + duration * 0.45,
 					).toISOString(),
 					end_time: new Date(
-						startTime.getTime() + duration * 0.7,
+						startTime.getTime() + duration * 0.8,
 					).toISOString(),
 					status: "success",
 				},
 				{
 					name: "finalize",
 					start_time: new Date(
-						startTime.getTime() + duration * 0.7,
+						startTime.getTime() + duration * 0.8,
 					).toISOString(),
 					end_time: hasEnded
 						? new Date(startTime.getTime() + duration).toISOString()
@@ -335,47 +353,6 @@ const Flows = {
 	},
 
 	/**
-	 * Get flow history (runs) for a specific flow
-	 */
-	getHistory: async (
-		_tenant: string,
-		flowName: string,
-		_start: Date,
-		_end: Date,
-		_filters?: Filter[],
-	) => {
-		// TODO: Remove dummy data when backend is ready
-		// Simulate network delay for testing loading states
-		await new Promise((resolve) => setTimeout(resolve, 1500));
-
-		// Return dummy data for now
-		// TIP: To test empty state, change dummyData to []
-		const dummyData = generateDummyFlowHistories(flowName);
-		return Promise.resolve({ data: dummyData });
-
-		/* Uncomment when backend is ready
-		const params: Record<string, string> = {};
-
-		// Add time range
-		params.from = start.toISOString();
-		params.to = end.toISOString();
-
-		// Add filters if provided
-		if (filters && filters.length > 0) {
-			params.filters = JSON.stringify(filters);
-		}
-
-		return FlowsAPI.get<FlowHistoriesApiResponse>(
-			`flows/${encodeURIComponent(tenant)}/${encodeURIComponent(flowName)}/history`,
-			{
-				params,
-				meta: { action: "fetch", resource: "flow-history" },
-			},
-		);
-		*/
-	},
-
-	/**
 	 * Get a specific flow run by ID
 	 */
 	getHistoryById: (tenant: string, flowName: string, runId: string) => {
@@ -385,6 +362,70 @@ const Flows = {
 				meta: { action: "fetch", resource: "flow-history-detail" },
 			},
 		);
+	},
+
+	/**
+	 * Get detailed flow (flow metadata + history)
+	 */
+	getDetailedFlow: async (
+		_tenant: string,
+		flowName: string,
+		_start: Date,
+		_end: Date,
+		_filters?: Filter[],
+	): Promise<{ data: DetailedFlow }> => {
+		// TODO: Remove dummy data when backend is ready
+		// Simulate network delay for testing loading states
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+
+		// Generate dummy flow data
+		const dummyFlowData: FlowApiResponse = {
+			name: flowName,
+			labels: {
+				environment: "production",
+				service: "api",
+				region: "us-east-1",
+			},
+			last_run_status: "success",
+			last_run_started_at: new Date("2025-01-04T10:00:00Z").toISOString(),
+			last_run_ended_at: new Date("2025-01-04T10:02:30Z").toISOString(),
+			run_count: 150,
+			success_count: 145,
+			pending_count: 2,
+			failed_count: 3,
+		};
+
+		// Generate dummy history data
+		const dummyHistoryData = generateDummyFlowHistories();
+
+		// Convert to frontend types
+		const flow = toFlow(dummyFlowData);
+		const histories = toFlowHistory(dummyHistoryData);
+
+		const detailedFlow: DetailedFlow = {
+			...flow,
+			histories,
+		};
+
+		return { data: detailedFlow };
+
+		/* Uncomment when backend is ready
+		const params: Record<string, string> = {};
+		params.from = start.toISOString();
+		params.to = end.toISOString();
+
+		if (filters && filters.length > 0) {
+			params.filters = JSON.stringify(filters);
+		}
+
+		return FlowsAPI.get<DetailedFlowApiResponse>(
+			`flows/${encodeURIComponent(tenant)}/${encodeURIComponent(flowName)}/detailed`,
+			{
+				params,
+				meta: { action: "fetch", resource: "detailed-flow" },
+			},
+		);
+		*/
 	},
 };
 

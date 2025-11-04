@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { CircleDot, Clock, Hash, PlayCircle, Timer, Workflow } from "lucide-react";
+import {
+	CircleDot,
+	Clock,
+	Hash,
+	PlayCircle,
+	Timer,
+	Workflow,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
 import {
@@ -30,16 +37,6 @@ import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
 import { FlowStatus } from "@/components/FlowStatus";
 import { FlowDetail } from "@/components/FlowDetail";
-import { FlowStatusButtons } from "@/components/FlowStatusButtons";
-import type { StatusFilter } from "@/components/FlowStatusButtons";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/ui/sheet";
-import { CardHeader } from "@/components/ui/card";
 
 type Props = {
 	flows: Flow[];
@@ -49,7 +46,6 @@ type Props = {
 export function FlowTable({ flows, onAddFilter }: Props) {
 	const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null);
 	const [detailOpen, setDetailOpen] = useState(false);
-	const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
 	const handleAddFilter = (label: string, value: string) => {
 		if (onAddFilter) {
@@ -210,37 +206,11 @@ export function FlowTable({ flows, onAddFilter }: Props) {
 			</TooltipProvider>
 
 			{/* Flow Detail Sheet */}
-			<Sheet open={detailOpen} onOpenChange={setDetailOpen}>
-				<SheetContent className="sm:max-w-[1000px] w-full p-0 flex flex-col gap-0">
-					<SheetHeader className="flex-shrink-0">
-						<CardHeader className="flex flex-col items-stretch border-b !p-0 sm:flex-row">
-							<div className="flex flex-1 flex-col justify-center gap-1 px-6 pt-4 pb-3 sm:py-6">
-								<SheetTitle className="text-2xl">
-									{selectedFlow?.name || "Flow Details"}
-								</SheetTitle>
-								<SheetDescription>
-									Flow execution history and details
-								</SheetDescription>
-							</div>
-							<div className="flex">
-								{selectedFlow && (
-									<FlowStatusButtons
-										flow={selectedFlow}
-										statusFilter={statusFilter}
-										onStatusFilterChange={setStatusFilter}
-									/>
-								)}
-							</div>
-						</CardHeader>
-					</SheetHeader>
-
-					<div className="flex-1 flex flex-col px-6 py-6 overflow-hidden">
-						{selectedFlow && (
-							<FlowDetail flow={selectedFlow} statusFilter={statusFilter} />
-						)}
-					</div>
-				</SheetContent>
-			</Sheet>
+			<FlowDetail
+				initialFlow={selectedFlow}
+				open={detailOpen}
+				onOpenChange={setDetailOpen}
+			/>
 		</>
 	);
 }
