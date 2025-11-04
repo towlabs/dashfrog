@@ -208,6 +208,7 @@ export function FlowHistoryTable({
 												<div className="px-4">
 													<Waterfall
 														steps={flow.steps}
+														events={flow.events}
 														startTime={flow.startTime}
 														endTime={flow.endTime}
 													/>
