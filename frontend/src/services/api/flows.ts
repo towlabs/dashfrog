@@ -120,7 +120,9 @@ function toFlowHistory(apiFlowHistory: FlowHistoryApiResponse): FlowHistory {
 }
 
 // Dummy data generator for development
-function generateDummyFlowHistories(flowName: string): FlowHistoryApiResponse[] {
+function generateDummyFlowHistories(
+	flowName: string,
+): FlowHistoryApiResponse[] {
 	const now = new Date();
 	const histories: FlowHistoryApiResponse[] = [];
 
@@ -149,11 +151,15 @@ function generateDummyFlowHistories(flowName: string): FlowHistoryApiResponse[] 
 				},
 				{
 					event_name: "step_1_completed",
-					event_dt: new Date(startTime.getTime() + duration * 0.3).toISOString(),
+					event_dt: new Date(
+						startTime.getTime() + duration * 0.3,
+					).toISOString(),
 				},
 				{
 					event_name: "step_2_completed",
-					event_dt: new Date(startTime.getTime() + duration * 0.6).toISOString(),
+					event_dt: new Date(
+						startTime.getTime() + duration * 0.6,
+					).toISOString(),
 				},
 				...(hasEnded
 					? [
@@ -214,7 +220,99 @@ const Flows = {
 	/**
 	 * Get flows for a specific tenant with optional time range and filters
 	 */
-	getByTenant: (tenant: string, start: Date, end: Date, filters?: Filter[]) => {
+	getByTenant: async (
+		_tenant: string,
+		_start: Date,
+		_end: Date,
+		_filters?: Filter[],
+	) => {
+		// TODO: Remove dummy data when backend is ready
+		// Simulate network delay for testing loading states
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+
+		// Return dummy data
+		// TIP: To test empty state, change dummyData to []
+		const dummyData: FlowApiResponse[] = [
+			{
+				name: "user-registration-flow",
+				labels: {
+					environment: "production",
+					service: "api",
+					region: "us-east-1",
+				},
+				last_run_status: "success",
+				last_run_started_at: new Date("2025-01-04T10:00:00Z").toISOString(),
+				last_run_ended_at: new Date("2025-01-04T10:02:30Z").toISOString(),
+				run_count: 150,
+				success_count: 145,
+				pending_count: 2,
+				failed_count: 3,
+			},
+			{
+				name: "payment-processing",
+				labels: {
+					environment: "production",
+					service: "worker",
+					region: "us-west-2",
+				},
+				last_run_status: "success",
+				last_run_started_at: new Date("2025-01-04T10:05:00Z").toISOString(),
+				last_run_ended_at: new Date("2025-01-04T10:06:15Z").toISOString(),
+				run_count: 320,
+				success_count: 310,
+				pending_count: 5,
+				failed_count: 5,
+			},
+			{
+				name: "data-sync-job",
+				labels: {
+					environment: "staging",
+					service: "database",
+					region: "eu-west-1",
+				},
+				last_run_status: "running",
+				last_run_started_at: new Date("2025-01-04T10:10:00Z").toISOString(),
+				last_run_ended_at: null,
+				run_count: 89,
+				success_count: 75,
+				pending_count: 10,
+				failed_count: 4,
+			},
+			{
+				name: "email-notification",
+				labels: {
+					environment: "production",
+					service: "worker",
+					region: "us-east-1",
+				},
+				last_run_status: "failure",
+				last_run_started_at: new Date("2025-01-04T09:55:00Z").toISOString(),
+				last_run_ended_at: new Date("2025-01-04T09:55:45Z").toISOString(),
+				run_count: 210,
+				success_count: 180,
+				pending_count: 15,
+				failed_count: 15,
+			},
+			{
+				name: "backup-process",
+				labels: {
+					environment: "production",
+					service: "database",
+					region: "us-east-1",
+				},
+				last_run_status: "success",
+				last_run_started_at: new Date("2025-01-04T09:30:00Z").toISOString(),
+				last_run_ended_at: new Date("2025-01-04T09:45:20Z").toISOString(),
+				run_count: 50,
+				success_count: 50,
+				pending_count: 0,
+				failed_count: 0,
+			},
+		];
+
+		return Promise.resolve({ data: dummyData });
+
+		/* Uncomment when backend is ready
 		const params: Record<string, string> = {};
 
 		// Add time range
@@ -233,6 +331,7 @@ const Flows = {
 				meta: { action: "fetch", resource: "flows" },
 			},
 		);
+		*/
 	},
 
 	/**
@@ -246,7 +345,11 @@ const Flows = {
 		_filters?: Filter[],
 	) => {
 		// TODO: Remove dummy data when backend is ready
+		// Simulate network delay for testing loading states
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+
 		// Return dummy data for now
+		// TIP: To test empty state, change dummyData to []
 		const dummyData = generateDummyFlowHistories(flowName);
 		return Promise.resolve({ data: dummyData });
 

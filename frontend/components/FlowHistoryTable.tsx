@@ -1,8 +1,10 @@
 "use client";
 
 import { format } from "date-fns";
+import { History } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/EmptyState";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -82,6 +84,16 @@ export function FlowHistoryTable({
 	const handleNextPage = () => {
 		setCurrentPage((prev) => Math.min(totalPages, prev + 1));
 	};
+
+	if (filteredFlows.length === 0) {
+		return (
+			<EmptyState
+				icon={History}
+				title="No execution history"
+				description="This flow hasn't been executed yet, or no runs match the selected filter."
+			/>
+		);
+	}
 
 	return (
 		<TooltipProvider>

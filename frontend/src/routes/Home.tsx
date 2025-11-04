@@ -1,4 +1,4 @@
-import { ChevronRight, Home as HomeIcon, Inbox } from "lucide-react";
+import { Building2, ChevronRight, Home as HomeIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
 	Table,
@@ -8,6 +8,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { EmptyState } from "@/components/EmptyState";
+import { TableSkeleton } from "@/components/TableSkeleton";
 import { useLabelsStore } from "@/src/stores/labels";
 
 export default function HomePage() {
@@ -38,42 +40,23 @@ export default function HomePage() {
 
 			{/* Tenant Table */}
 			<div>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Tenant Name</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{loading ? (
+				{loading ? (
+					<TableSkeleton columns={1} rows={5} />
+				) : tenants.length === 0 ? (
+					<EmptyState
+						icon={Building2}
+						title="No tenants yet"
+						description="Tenants will appear automatically once you start pushing events to Dashfrog."
+					/>
+				) : (
+					<Table>
+						<TableHeader>
 							<TableRow>
-								<TableCell colSpan={2} className="text-center py-12">
-									<div className="flex flex-col items-center justify-center space-y-3">
-										<div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-										<p className="text-sm text-muted-foreground">
-											Loading tenants...
-										</p>
-									</div>
-								</TableCell>
+								<TableHead>Tenant Name</TableHead>
 							</TableRow>
-						) : tenants.length === 0 ? (
-							<TableRow>
-								<TableCell colSpan={2} className="text-center py-12">
-									<div className="flex flex-col items-center justify-center space-y-4">
-										<div className="rounded-full bg-muted p-4">
-											<Inbox className="h-8 w-8 text-muted-foreground" />
-										</div>
-										<div className="space-y-1">
-											<h3 className="font-semibold">No tenants found</h3>
-											<p className="text-sm text-muted-foreground">
-												There are no tenants configured in the system yet.
-											</p>
-										</div>
-									</div>
-								</TableCell>
-							</TableRow>
-						) : (
-							tenants.map((tenantName) => (
+						</TableHeader>
+						<TableBody>
+							{tenants.map((tenantName) => (
 								<TableRow
 									key={tenantName}
 									onClick={() => handleTenantClick(tenantName)}
@@ -81,10 +64,10 @@ export default function HomePage() {
 								>
 									<TableCell className="font-medium">{tenantName}</TableCell>
 								</TableRow>
-							))
-						)}
-					</TableBody>
-				</Table>
+							))}
+						</TableBody>
+					</Table>
+				)}
 			</div>
 		</div>
 	);

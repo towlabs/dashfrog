@@ -14,16 +14,8 @@ interface LabelsState {
 export const useLabelsStore = create<LabelsState>()(
 	devtools(
 		(set) => ({
-			// Dummy data for testing
-			labels: [
-				{
-					name: "environment",
-					values: ["production", "staging", "development"],
-				},
-				{ name: "service", values: ["api", "web", "worker", "database"] },
-				{ name: "region", values: ["us-east-1", "us-west-2", "eu-west-1"] },
-			],
-			tenants: ["acme-corp", "globex-corporation", "stark-industries"],
+			labels: [],
+			tenants: [],
 			loading: false,
 			error: null,
 

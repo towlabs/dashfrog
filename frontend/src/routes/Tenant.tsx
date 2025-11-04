@@ -2,6 +2,7 @@ import { ChevronRight, Home } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FlowTable } from "@/components/FlowTable";
+import { TableSkeleton } from "@/components/TableSkeleton";
 import { TenantControls } from "@/components/TenantControls";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useTenantStore } from "@/src/stores/tenant";
@@ -12,7 +13,7 @@ export default function TenantPage() {
 	const fetchFlows = useTenantStore((state) => state.fetchFlows);
 	const timeline = useTenantStore((state) => state.timeline);
 	const flows = useTenantStore((state) => state.flows);
-	const loading = useTenantStore((state) => state.loading);
+	const flowsLoading = useTenantStore((state) => state.flowsLoading);
 	const timeWindow = useTenantStore((state) => state.timeWindow);
 	const filters = useTenantStore((state) => state.filters);
 	const setTimeWindow = useTenantStore((state) => state.setTimeWindow);
@@ -71,10 +72,8 @@ export default function TenantPage() {
 				{/* Flows Section */}
 				<div className="space-y-4">
 					<h3 className="text-lg font-semibold">Flows</h3>
-					{loading ? (
-						<div className="rounded-lg border bg-card p-8 text-center text-muted-foreground">
-							Loading flows...
-						</div>
+					{flowsLoading ? (
+						<TableSkeleton columns={6} rows={5} />
 					) : (
 						<FlowTable flows={flows} onAddFilter={addFilter} />
 					)}

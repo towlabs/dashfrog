@@ -45,18 +45,20 @@ export default function SearchDialog({
 			<CommandInput placeholder="Search for tenants..." />
 			<CommandList>
 				<CommandEmpty>No tenants found.</CommandEmpty>
-				<CommandGroup heading="Tenants">
-					{tenants.map((tenantName) => (
-						<CommandItem
-							key={tenantName}
-							onSelect={() => handleSelectTenant(tenantName)}
-							className="flex items-center gap-3"
-						>
-							<Building2 className="h-4 w-4" />
-							<span>{tenantName}</span>
-						</CommandItem>
-					))}
-				</CommandGroup>
+				{tenants.length > 0 && (
+					<CommandGroup heading="Tenants">
+						{tenants.map((tenantName) => (
+							<CommandItem
+								key={tenantName}
+								onSelect={() => handleSelectTenant(tenantName)}
+								className="flex items-center gap-3"
+							>
+								<Building2 className="h-4 w-4" />
+								<span>{tenantName}</span>
+							</CommandItem>
+						))}
+					</CommandGroup>
+				)}
 			</CommandList>
 		</CommandDialog>
 	);

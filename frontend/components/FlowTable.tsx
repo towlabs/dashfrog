@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { CircleDot, Clock, Hash, PlayCircle, Timer } from "lucide-react";
+import { CircleDot, Clock, Hash, PlayCircle, Timer, Workflow } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/EmptyState";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -63,9 +64,11 @@ export function FlowTable({ flows, onAddFilter }: Props) {
 
 	if (flows.length === 0) {
 		return (
-			<div className="flex items-center justify-center h-64 text-muted-foreground">
-				No flows found
-			</div>
+			<EmptyState
+				icon={Workflow}
+				title="No flows yet"
+				description="Flows will appear here once you start tracking workflow executions."
+			/>
 		);
 	}
 

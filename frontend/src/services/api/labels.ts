@@ -38,10 +38,33 @@ const Labels = {
 	/**
 	 * Get all labels
 	 */
-	getAll: () => {
+	getAll: async () => {
+		// TODO: Remove dummy data when backend is ready
+		// Simulate network delay for testing loading states
+		await new Promise((resolve) => setTimeout(resolve, 1500));
+
+		// Return dummy data
+		// TIP: To test empty state, change dummyData to []
+		const dummyData: LabelsApiResponse = [
+			{
+				name: "tenant",
+				values: ["acme-corp", "globex-corporation", "stark-industries"],
+			},
+			{
+				name: "environment",
+				values: ["production", "staging", "development"],
+			},
+			{ name: "service", values: ["api", "web", "worker", "database"] },
+			{ name: "region", values: ["us-east-1", "us-west-2", "eu-west-1"] },
+		];
+
+		return Promise.resolve({ data: dummyData } as any);
+
+		/* Uncomment when backend is ready
 		return LabelsAPI.get<LabelsApiResponse>("labels", {
 			meta: { action: "fetch", resource: "labels" },
 		});
+		*/
 	},
 };
 

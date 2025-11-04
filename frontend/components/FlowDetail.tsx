@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FlowHistoryTable } from "@/components/FlowHistoryTable";
+import { TableSkeleton } from "@/components/TableSkeleton";
 import { TenantControls } from "@/components/TenantControls";
 import type { Flow, FlowHistory } from "@/src/types/flow";
 import type { Filter } from "@/src/types/filter";
@@ -86,9 +87,7 @@ export function FlowDetail({ flow, statusFilter }: FlowDetailProps) {
 			{/* Flow History Table - Scrollable */}
 			<div className="flex-1 overflow-y-auto">
 				{loading ? (
-					<div className="flex items-center justify-center h-32 text-muted-foreground">
-						Loading history...
-					</div>
+					<TableSkeleton columns={5} rows={10} />
 				) : (
 					<FlowHistoryTable
 						flowHistories={flowHistories}
