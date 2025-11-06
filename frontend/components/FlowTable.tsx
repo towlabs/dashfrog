@@ -6,6 +6,7 @@ import {
 	Clock,
 	Hash,
 	PlayCircle,
+	Tag,
 	Timer,
 	Workflow,
 } from "lucide-react";
@@ -77,6 +78,12 @@ export function FlowTable({ flows, onAddFilter }: Props) {
 							</TableHead>
 							<TableHead>
 								<div className="flex items-center gap-2">
+									<Tag className="h-4 w-4" />
+									<span>Labels</span>
+								</div>
+							</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
 									<CircleDot className="h-4 w-4" />
 									<span>Last Status</span>
 								</div>
@@ -116,18 +123,21 @@ export function FlowTable({ flows, onAddFilter }: Props) {
 									className="cursor-pointer"
 								>
 									<TableCell>
-										<div className="space-y-2">
-											<div className="font-medium">{flow.name}</div>
-											<div className="flex flex-wrap gap-1">
-												{Object.entries(flow.labels).map(([key, value]) => (
-													<LabelBadge
-														key={key}
-														labelKey={key}
-														labelValue={value}
-														onAddFilter={handleAddFilter}
-													/>
-												))}
-											</div>
+										<div className="font-medium">{flow.name}</div>
+									</TableCell>
+									<TableCell>
+										<div
+											className="flex flex-wrap gap-1"
+											onClick={(e) => e.stopPropagation()}
+										>
+											{Object.entries(flow.labels).map(([key, value]) => (
+												<LabelBadge
+													key={key}
+													labelKey={key}
+													labelValue={value}
+													onAddFilter={handleAddFilter}
+												/>
+											))}
 										</div>
 									</TableCell>
 									<TableCell>

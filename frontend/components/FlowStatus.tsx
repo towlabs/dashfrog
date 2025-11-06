@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { CheckCircle2, Loader, XCircle } from "lucide-react";
 import type { FlowStatus as FlowStatusType } from "@/src/types/flow";
 
 interface FlowStatusProps {
@@ -10,18 +11,18 @@ interface FlowStatusProps {
 const statusConfig = {
 	success: {
 		label: "Success",
-		dotColor: "bg-[#5cb660]",
-		badgeClass: "border-0 bg-[#dbe6dd] text-green-700",
+		Icon: CheckCircle2,
+		iconClass: "text-[#5cb660] dark:text-[#5cb660]",
 	},
 	failure: {
 		label: "Failed",
-		dotColor: "bg-[#e56458]",
-		badgeClass: "border-0 bg-[#f9dcd9] text-red-700",
+		Icon: XCircle,
+		iconClass: "text-[#e56458] dark:text-[#e56458]",
 	},
 	running: {
 		label: "Running",
-		dotColor: "bg-[#2883df]",
-		badgeClass: "border-0 bg-[#d2e4f8] text-blue-700",
+		Icon: Loader,
+		iconClass: "text-[#2883df] dark:text-[#2883df]",
 	},
 } as const;
 
@@ -29,8 +30,11 @@ export function FlowStatus({ status, className }: FlowStatusProps) {
 	const config = statusConfig[status];
 
 	return (
-		<Badge variant="outline" className={cn(config.badgeClass, className)}>
-			<span className={cn("mr-1.5 h-2 w-2 rounded-full", config.dotColor)} />
+		<Badge
+			variant="outline"
+			className={cn("text-muted-foreground px-1.5 gap-1.5", className)}
+		>
+			<config.Icon className={cn("h-4 w-4", config.iconClass)} />
 			{config.label}
 		</Badge>
 	);

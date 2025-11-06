@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight, History } from "lucide-react";
+import { ChevronDown, ChevronRight, History, Tag } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { FlowStatus } from "@/components/FlowStatus";
@@ -114,6 +114,12 @@ export function FlowHistoryTable({
 						<TableRow>
 							<TableHead className="w-8"></TableHead>
 							<TableHead>Name</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Tag className="h-4 w-4" />
+									<span>Labels</span>
+								</div>
+							</TableHead>
 							<TableHead>Start</TableHead>
 							<TableHead>End</TableHead>
 							<TableHead>Duration</TableHead>
@@ -141,21 +147,21 @@ export function FlowHistoryTable({
 											)}
 										</TableCell>
 										<TableCell>
-											<div className="space-y-2">
-												<div className="font-medium">{detailedFlow.name}</div>
-												<div
-													className="flex flex-wrap gap-1"
-													onClick={(e) => e.stopPropagation()}
-												>
-													{Object.entries(flow.labels).map(([key, value]) => (
-														<LabelBadge
-															key={key}
-															labelKey={key}
-															labelValue={value}
-															onAddFilter={handleAddFilter}
-														/>
-													))}
-												</div>
+											<div className="font-medium">{detailedFlow.name}</div>
+										</TableCell>
+										<TableCell>
+											<div
+												className="flex flex-wrap gap-1"
+												onClick={(e) => e.stopPropagation()}
+											>
+												{Object.entries(flow.labels).map(([key, value]) => (
+													<LabelBadge
+														key={key}
+														labelKey={key}
+														labelValue={value}
+														onAddFilter={handleAddFilter}
+													/>
+												))}
 											</div>
 										</TableCell>
 										<TableCell className="text-muted-foreground text-sm">
@@ -191,7 +197,7 @@ export function FlowHistoryTable({
 									</TableRow>
 									{isExpanded && (
 										<TableRow key={`${detailedFlow.name}-${rowIndex}-expanded`}>
-											<TableCell colSpan={6} className="bg-muted/30 p-0">
+											<TableCell colSpan={7} className="bg-muted/30 p-0">
 												<div className="px-4">
 													<Waterfall
 														steps={flow.steps}
