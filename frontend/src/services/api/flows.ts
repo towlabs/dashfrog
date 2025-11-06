@@ -1,9 +1,8 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
-import type { TimeWindow } from "@/src/types/timewindow";
 import type { Filter } from "@/src/types/filter";
 import type {
-	Flow,
 	DetailedFlow,
+	Flow,
 	FlowHistory,
 	FlowHistoryEvent,
 	FlowHistoryStep,

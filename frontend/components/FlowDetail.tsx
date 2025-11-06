@@ -2,19 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { FlowHistoryTable } from "@/components/FlowHistoryTable";
-import { TableSkeleton } from "@/components/TableSkeleton";
-import { TenantControls } from "@/components/TenantControls";
+import type { StatusFilter } from "@/components/FlowStatusButtons";
 import {
 	FlowStatusButtons,
 	FlowStatusButtonsSkeleton,
 } from "@/components/FlowStatusButtons";
-import type { StatusFilter } from "@/components/FlowStatusButtons";
-import type { DetailedFlow, Flow } from "@/src/types/flow";
-import type { Filter } from "@/src/types/filter";
-import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
-import { useLabelsStore } from "@/src/stores/labels";
-import { useTenantStore } from "@/src/stores/tenant";
-import { Flows } from "@/src/services/api/flows";
+import { TableSkeleton } from "@/components/TableSkeleton";
+import { TenantControls } from "@/components/TenantControls";
+import { CardHeader } from "@/components/ui/card";
 import {
 	Sheet,
 	SheetContent,
@@ -22,7 +17,12 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { CardHeader } from "@/components/ui/card";
+import { Flows } from "@/src/services/api/flows";
+import { useLabelsStore } from "@/src/stores/labels";
+import { useTenantStore } from "@/src/stores/tenant";
+import type { Filter } from "@/src/types/filter";
+import type { DetailedFlow, Flow } from "@/src/types/flow";
+import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 export interface FlowDetailProps {
 	initialFlow: Flow | null;

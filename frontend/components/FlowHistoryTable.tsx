@@ -1,9 +1,11 @@
 "use client";
 
 import { format } from "date-fns";
-import { History } from "lucide-react";
+import { ChevronDown, ChevronRight, History } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { FlowStatus } from "@/components/FlowStatus";
+import type { StatusFilter } from "@/components/FlowStatusButtons";
 import { LabelBadge } from "@/components/LabelBadge";
 import {
 	Pagination,
@@ -26,13 +28,10 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Waterfall } from "@/components/Waterfall";
 import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
 import type { Filter } from "@/src/types/filter";
-import type { DetailedFlow, FlowHistory } from "@/src/types/flow";
-import { FlowStatus } from "@/components/FlowStatus";
-import type { StatusFilter } from "@/components/FlowStatusButtons";
-import { Waterfall } from "@/components/Waterfall";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import type { DetailedFlow } from "@/src/types/flow";
 
 type Props = {
 	detailedFlow: DetailedFlow;
@@ -66,6 +65,7 @@ export function FlowHistoryTable({
 	const paginatedFlows = filteredFlows.slice(startIndex, endIndex);
 
 	// Reset to page 1 when filter changes
+	// biome-ignore lint/correctness/useExhaustiveDependencies: we want to reset the page when the filter changes
 	useEffect(() => {
 		setCurrentPage(1);
 	}, [statusFilter]);

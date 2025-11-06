@@ -1,5 +1,7 @@
 import { Building2, ChevronRight, Home as HomeIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { EmptyState } from "@/components/EmptyState";
+import { TableSkeleton } from "@/components/TableSkeleton";
 import {
 	Table,
 	TableBody,
@@ -8,8 +10,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { EmptyState } from "@/components/EmptyState";
-import { TableSkeleton } from "@/components/TableSkeleton";
 import { useLabelsStore } from "@/src/stores/labels";
 
 export default function HomePage() {

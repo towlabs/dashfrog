@@ -1,6 +1,6 @@
-import type { FlowStatus as FlowStatusType } from "@/src/types/flow";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { FlowStatus as FlowStatusType } from "@/src/types/flow";
 
 interface FlowStatusProps {
 	status: FlowStatusType;

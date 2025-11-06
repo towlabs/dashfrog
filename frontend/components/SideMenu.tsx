@@ -1,18 +1,18 @@
 import {
+	Building2,
 	ChevronLeft,
 	ChevronRight,
+	CornerDownRight,
 	Home,
 	Package,
-	CornerDownRight,
-	Building2,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import SearchDialog from "./SearchDialog";
 import { useLabelsStore } from "@/src/stores/labels";
+import SearchDialog from "./SearchDialog";
 
 const topMenuItems = [
 	{ id: "home", label: "Home", icon: Home, href: "/" },
@@ -38,7 +38,7 @@ export default function SideMenu({
 }: SideMenuProps = {}) {
 	const pathname = useLocation().pathname;
 	const [internalCollapsed, setInternalCollapsed] = useState(false);
-	const navigate = useNavigate();
+	const _navigate = useNavigate();
 	const [searchOpen, setSearchOpen] = useState(false);
 	const tenants = useLabelsStore((state) => state.tenants);
 

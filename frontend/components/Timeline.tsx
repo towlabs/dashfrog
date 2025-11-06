@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Clock, Sparkles, Tag } from "lucide-react";
+import { useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
-import type { TimelineEvent } from "@/src/types/timeline";
-import { formatTimeAgo } from "@/src/lib/formatters";
 import {
 	Pagination,
 	PaginationContent,
@@ -20,6 +18,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { formatTimeAgo } from "@/src/lib/formatters";
+import type { TimelineEvent } from "@/src/types/timeline";
 
 const ITEMS_PER_PAGE = 10;
 

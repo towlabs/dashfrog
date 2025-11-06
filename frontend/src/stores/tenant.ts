@@ -1,9 +1,9 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { Flows, toFlow, toFlowHistory } from "@/src/services/api/flows";
+import { Flows, toFlow } from "@/src/services/api/flows";
 import { processTimelineEvents, Timeline } from "@/src/services/api/timeline";
 import type { Filter } from "@/src/types/filter";
-import type { Flow, FlowHistory } from "@/src/types/flow";
+import type { Flow } from "@/src/types/flow";
 import type { TimelineEvent } from "@/src/types/timeline";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 

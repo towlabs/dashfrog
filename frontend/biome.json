@@ -19,7 +19,9 @@
 			"a11y": {
 				"noLabelWithoutControl": "off",
 				"noStaticElementInteractions": "off",
-				"useKeyWithClickEvents": "off"
+				"useKeyWithClickEvents": "off",
+				"useSemanticElements": "off",
+				"noRedundantRoles": "off"
 			},
 			"style": {
 				"noNonNullAssertion": "off"

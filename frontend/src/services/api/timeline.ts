@@ -1,5 +1,5 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
-import type { ApiFilter, Filter } from "@/src/types/filter";
+import type { Filter } from "@/src/types/filter";
 import type { TimelineEvent } from "@/src/types/timeline";
 
 const TimelineAPI = NewRestAPI(`api`);
@@ -42,27 +42,15 @@ function processTimelineEvents(
 	return apiEvents.map((apiEvent) => toTimelineEvent(apiEvent));
 }
 
-/**
- * Convert Filter to ApiFilter format for backend
- */
-function toApiFilter(filter: Filter): ApiFilter {
-	return {
-		key: filter.label,
-		operator: filter.operator,
-		value: filter.value,
-		is_label: true,
-	};
-}
-
 const Timeline = {
 	/**
 	 * Get timeline events for a specific tenant with optional time range and filters
 	 */
 	getByTenant: async (
 		tenant: string,
-		start: Date,
-		end: Date,
-		filters?: Filter[],
+		_start: Date,
+		_end: Date,
+		_filters?: Filter[],
 	) => {
 		// TODO: Remove dummy data when backend is ready
 		// Simulate network delay for testing loading states

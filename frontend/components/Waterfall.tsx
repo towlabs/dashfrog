@@ -1,11 +1,11 @@
-import { cn } from "@/lib/utils";
-import type { FlowHistoryEvent, FlowHistoryStep } from "@/src/types/flow";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { FlowHistoryEvent, FlowHistoryStep } from "@/src/types/flow";
 
 type WaterfallProps = {
 	steps: FlowHistoryStep[];

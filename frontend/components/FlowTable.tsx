@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { format } from "date-fns";
 import {
 	CircleDot,
@@ -10,9 +9,12 @@ import {
 	Timer,
 	Workflow,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
+import { FlowDetail } from "@/components/FlowDetail";
+import { FlowStatus } from "@/components/FlowStatus";
 import { LabelBadge } from "@/components/LabelBadge";
+import { Badge } from "@/components/ui/badge";
 import {
 	Table,
 	TableBody,
@@ -30,8 +32,6 @@ import {
 import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
-import { FlowStatus } from "@/components/FlowStatus";
-import { FlowDetail } from "@/components/FlowDetail";
 
 type Props = {
 	flows: Flow[];

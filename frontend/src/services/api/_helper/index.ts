@@ -1,5 +1,4 @@
 import Axios, { type AxiosError, type AxiosRequestConfig } from "axios";
-import { showApiError } from "@/src/lib/toast";
 
 // Use relative URL (empty string) to go through nginx proxy in production
 // Set VITE_API_URL in .env for local development (e.g., http://localhost:8080)

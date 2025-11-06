@@ -1,7 +1,16 @@
 "use client";
 
 import { X } from "lucide-react";
+import React from "react";
 import { Badge } from "@/components/ui/badge";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -13,15 +22,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
-import React from "react";
 
 type LabelBadgeProps = {
 	labelKey: string;
