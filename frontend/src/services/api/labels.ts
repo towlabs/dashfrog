@@ -48,7 +48,23 @@ const Labels = {
 		const dummyData: LabelsApiResponse = [
 			{
 				name: "tenant",
-				values: ["acme-corp", "globex-corporation", "stark-industries"],
+				values: [
+					"acme-corp",
+					"globex-corporation",
+					"stark-industries",
+					"wayne-enterprises",
+					"umbrella-corporation",
+					"oscorp-industries",
+					"cyberdyne-systems",
+					"weyland-yutani",
+					"tyrell-corporation",
+					"aperture-science",
+					"black-mesa",
+					"massive-dynamic",
+					"initech",
+					"pied-piper",
+					"hooli",
+				],
 			},
 			{
 				name: "environment",

@@ -1,9 +1,14 @@
 @import "tailwindcss";
 @import "react-day-picker/style.css";
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-sans/700.css";
 @plugin "tailwindcss-animate";
 @source "../node_modules/@blocknote/shadcn";
 
 @theme {
+	--font-family-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
 	--color-background: oklch(100% 0 0);
 	--color-foreground: oklch(3.9% 0 0);
 	--color-card: oklch(100% 0 0);
@@ -70,6 +75,7 @@
 
 body {
 	@apply bg-background text-foreground;
+	font-family: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Override ProseMirror table styles that conflict with shadcn/ui tables */

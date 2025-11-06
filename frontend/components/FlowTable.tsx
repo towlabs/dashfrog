@@ -12,12 +12,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
-import {
-	ContextMenu,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+import { LabelBadge } from "@/components/LabelBadge";
 import {
 	Table,
 	TableBody,
@@ -125,23 +120,12 @@ export function FlowTable({ flows, onAddFilter }: Props) {
 											<div className="font-medium">{flow.name}</div>
 											<div className="flex flex-wrap gap-1">
 												{Object.entries(flow.labels).map(([key, value]) => (
-													<ContextMenu key={key}>
-														<ContextMenuTrigger>
-															<Badge
-																variant="secondary"
-																className="h-5 px-2 text-xs font-normal border-0"
-															>
-																{key}={value}
-															</Badge>
-														</ContextMenuTrigger>
-														<ContextMenuContent>
-															<ContextMenuItem
-																onClick={() => handleAddFilter(key, value)}
-															>
-																Add to filters
-															</ContextMenuItem>
-														</ContextMenuContent>
-													</ContextMenu>
+													<LabelBadge
+														key={key}
+														labelKey={key}
+														labelValue={value}
+														onAddFilter={handleAddFilter}
+													/>
 												))}
 											</div>
 										</div>

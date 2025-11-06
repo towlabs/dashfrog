@@ -152,11 +152,11 @@ export function FlowDetail({
 
 						{/* Flow History Table - Scrollable */}
 						<div className="flex-1 overflow-y-auto">
-							{loading ? (
+							{loading || !flowDetail ? (
 								<TableSkeleton columns={6} rows={10} />
 							) : (
 								<FlowHistoryTable
-									flowHistories={flowDetail?.histories ?? []}
+									detailedFlow={flowDetail}
 									statusFilter={statusFilter}
 									onAddFilter={handleAddFilter}
 								/>

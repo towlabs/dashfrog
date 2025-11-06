@@ -4,12 +4,15 @@ import {
 	Home,
 	Package,
 	CornerDownRight,
+	Building2,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import SearchDialog from "./SearchDialog";
+import { useLabelsStore } from "@/src/stores/labels";
 
 const topMenuItems = [
 	{ id: "home", label: "Home", icon: Home, href: "/" },
@@ -27,6 +30,8 @@ interface SideMenuProps {
 	onToggleCollapse?: (collapsed: boolean) => void;
 }
 
+const MAX_VISIBLE_TENANTS = 10;
+
 export default function SideMenu({
 	isCollapsed: controlledCollapsed,
 	onToggleCollapse,
@@ -35,6 +40,7 @@ export default function SideMenu({
 	const [internalCollapsed, setInternalCollapsed] = useState(false);
 	const navigate = useNavigate();
 	const [searchOpen, setSearchOpen] = useState(false);
+	const tenants = useLabelsStore((state) => state.tenants);
 
 	// Use controlled state if provided, otherwise use internal state
 	const isCollapsed =
@@ -143,6 +149,53 @@ export default function SideMenu({
 							</Link>
 						);
 					})}
+
+					{/* Separator */}
+					{!isCollapsed && tenants.length > 0 && (
+						<div className="px-3 py-2">
+							<Separator />
+						</div>
+					)}
+
+					{/* Tenant List */}
+					{!isCollapsed && tenants.length > 0 && (
+						<div className="space-y-1">
+							{tenants.slice(0, MAX_VISIBLE_TENANTS).map((tenant) => {
+								const tenantPath = `/tenants/${encodeURIComponent(tenant)}`;
+								const isActive = pathname === tenantPath;
+
+								return (
+									<Link
+										key={tenant}
+										to={tenantPath}
+										className={cn(
+											"flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent",
+											isActive && "bg-accent text-accent-foreground",
+										)}
+										style={{ color: isActive ? undefined : "#5f5e5b" }}
+									>
+										<Building2 className="h-4 w-4 shrink-0" />
+										<span className="flex-1 truncate">{tenant}</span>
+									</Link>
+								);
+							})}
+
+							{/* "and x more" button */}
+							{tenants.length > MAX_VISIBLE_TENANTS && (
+								<button
+									type="button"
+									onClick={() => setSearchOpen(true)}
+									className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent w-full text-left"
+									style={{ color: "#5f5e5b" }}
+								>
+									<div className="h-4 w-4 shrink-0" />
+									<span className="flex-1 text-xs text-muted-foreground">
+										and {tenants.length - MAX_VISIBLE_TENANTS} more...
+									</span>
+								</button>
+							)}
+						</div>
+					)}
 				</nav>
 			</div>
 

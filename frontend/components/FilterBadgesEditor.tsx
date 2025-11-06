@@ -88,7 +88,7 @@ export function FilterBadgesEditor({
 						<PopoverTrigger asChild>
 							<Badge
 								variant="secondary"
-								className="gap-1 cursor-pointer hover:bg-secondary/80 transition-all duration-200 border-0 h-6 px-3"
+								className="gap-1 cursor-pointer hover:bg-secondary/80 transition-all duration-200 border-0 h-6 px-3 text-muted-foreground"
 							>
 								{filter.label}
 								{filter.value && `: ${filter.value}`}

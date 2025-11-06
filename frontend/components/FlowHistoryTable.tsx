@@ -3,14 +3,8 @@
 import { format } from "date-fns";
 import { History } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/EmptyState";
-import {
-	ContextMenu,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+import { LabelBadge } from "@/components/LabelBadge";
 import {
 	Pagination,
 	PaginationContent,
@@ -34,14 +28,14 @@ import {
 } from "@/components/ui/tooltip";
 import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
 import type { Filter } from "@/src/types/filter";
-import type { FlowHistory } from "@/src/types/flow";
+import type { DetailedFlow, FlowHistory } from "@/src/types/flow";
 import { FlowStatus } from "@/components/FlowStatus";
 import type { StatusFilter } from "@/components/FlowStatusButtons";
 import { Waterfall } from "@/components/Waterfall";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 type Props = {
-	flowHistories: FlowHistory[];
+	detailedFlow: DetailedFlow;
 	statusFilter: StatusFilter;
 	onAddFilter?: (filter: Filter) => void;
 };
@@ -49,12 +43,14 @@ type Props = {
 const ITEMS_PER_PAGE = 10;
 
 export function FlowHistoryTable({
-	flowHistories,
+	detailedFlow,
 	statusFilter,
 	onAddFilter,
 }: Props) {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+	const flowHistories = useMemo(() => detailedFlow.histories, [detailedFlow]);
 
 	const filteredFlows = useMemo(() => {
 		if (statusFilter === "all") {
@@ -129,9 +125,11 @@ export function FlowHistoryTable({
 							const rowIndex = startIndex + index;
 							const isExpanded = expandedRows.has(rowIndex);
 							return (
-								<React.Fragment key={`${flow.name}-${rowIndex}-fragment`}>
+								<React.Fragment
+									key={`${detailedFlow.name}-${rowIndex}-fragment`}
+								>
 									<TableRow
-										key={`${flow.name}-${rowIndex}`}
+										key={`${detailedFlow.name}-${rowIndex}`}
 										className="cursor-pointer hover:bg-muted/50"
 										onClick={() => toggleRowExpansion(rowIndex)}
 									>
@@ -144,29 +142,18 @@ export function FlowHistoryTable({
 										</TableCell>
 										<TableCell>
 											<div className="space-y-2">
-												<div className="font-medium">{flow.name}</div>
-												<div className="flex flex-wrap gap-1">
+												<div className="font-medium">{detailedFlow.name}</div>
+												<div
+													className="flex flex-wrap gap-1"
+													onClick={(e) => e.stopPropagation()}
+												>
 													{Object.entries(flow.labels).map(([key, value]) => (
-														<ContextMenu key={key}>
-															<ContextMenuTrigger>
-																<Badge
-																	variant="secondary"
-																	className="h-5 px-2 text-xs font-normal border-0"
-																>
-																	{key}={value}
-																</Badge>
-															</ContextMenuTrigger>
-															<ContextMenuContent>
-																<ContextMenuItem
-																	onClick={(e) => {
-																		e.stopPropagation();
-																		handleAddFilter(key, value);
-																	}}
-																>
-																	Add to filters
-																</ContextMenuItem>
-															</ContextMenuContent>
-														</ContextMenu>
+														<LabelBadge
+															key={key}
+															labelKey={key}
+															labelValue={value}
+															onAddFilter={handleAddFilter}
+														/>
 													))}
 												</div>
 											</div>
@@ -203,7 +190,7 @@ export function FlowHistoryTable({
 										</TableCell>
 									</TableRow>
 									{isExpanded && (
-										<TableRow key={`${flow.name}-${rowIndex}-expanded`}>
+										<TableRow key={`${detailedFlow.name}-${rowIndex}-expanded`}>
 											<TableCell colSpan={6} className="bg-muted/30 p-0">
 												<div className="px-4">
 													<Waterfall
