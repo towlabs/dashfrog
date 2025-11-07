@@ -19,14 +19,6 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-def include_object(object, name, type_, reflected, compare_to):
-    """
-    Exclude views from Alembic's consideration.
-    """
-
-    return not object.info.get("is_view", False)
-
-
 def run_migrations_offline() -> None:
     """
     Run migrations in 'offline' mode.
@@ -45,7 +37,6 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        include_object=include_object,
     )
 
     with context.begin_transaction():

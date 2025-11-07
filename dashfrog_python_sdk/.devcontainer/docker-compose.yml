@@ -8,13 +8,18 @@ services:
     volumes:
       - ../..:/workspaces:cached
     command: sleep infinity
-    network_mode: service:postgres
+    networks:
+      - dashfrog
     environment:
-      DASHFROG_TEST_DB_URL: postgresql://postgres:postgres@localhost:5432/dashfrog_test
+      DASHFROG_TEST_DB_URL: postgresql://postgres:postgres@postgres:5432/dashfrog_test
 
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    networks:
+      - dashfrog
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -22,5 +27,44 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yml"]
+    networks:
+      - dashfrog
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8888:8888"   # Collector internal metrics
+    depends_on:
+      - prometheus
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    networks:
+      - dashfrog
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--enable-feature=native-histograms'
+      - '--web.enable-remote-write-receiver'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+networks:
+  dashfrog:
+    driver: bridge
+
 volumes:
   postgres-data:
+  prometheus-data:

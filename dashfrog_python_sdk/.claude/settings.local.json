@@ -28,7 +28,17 @@
       "Bash(docker exec:*)",
       "Bash(.venv/bin/pytest tests/test_views.py::TestMaterializedViewRefresh::test_refresh_called_when_stale -v --tb=short)",
       "Bash(.venv/bin/pytest tests/test_flow.py::TestFlowEvent -v)",
-      "Bash(.venv/bin/pytest tests/test_flow.py -v)"
+      "Bash(.venv/bin/pytest tests/test_flow.py -v)",
+      "Bash(.venv/bin/pytest tests/test_timeline.py -v)",
+      "Bash(.venv/bin/pytest tests/ -v --tb=short)",
+      "Bash(.venv/bin/pytest tests/test_metric.py::TestCounter::test_counter_data_in_prometheus -v)",
+      "Bash(curl:*)",
+      "Bash(ping:*)",
+      "Bash(python3:*)",
+      "Bash(echo:*)",
+      "Bash(test:*)",
+      "Bash(nc:*)",
+      "Bash(docker ps:*)"
     ],
     "deny": [],
     "ask": []

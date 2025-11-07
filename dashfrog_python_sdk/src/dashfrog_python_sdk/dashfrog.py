@@ -1,11 +1,25 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, overload
 import uuid
 
 from sqlalchemy import Engine, create_engine
+from sqlalchemy.dialects.postgresql import insert
 
 from .config import Config
+from .constants import MetricUnitT
+from .models import (
+    Flow,
+    Metric as MetricModel,
+)
 
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter as GRPCMetricExporter
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
+    OTLPMetricExporter as HTTPMetricExporter,
+)
+from opentelemetry.metrics import Histogram, Instrument, Meter
+from opentelemetry.sdk.metrics import Counter, MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+from opentelemetry.sdk.metrics.view import ExponentialBucketHistogramAggregation, View
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import (
@@ -27,19 +41,47 @@ class Dashfrog:
     config: Config
 
     db_engine: Engine = field(init=False)
-    last_refresh_ts: float | None = field(default=None, init=False)
+    meter: Meter = field(init=False)
+    resource: Resource = field(init=False)
+
+    _flows: set[str] = field(init=False, default_factory=set)
+    _metrics: set[str] = field(init=False, default_factory=set)
 
     def __post_init__(self):
+        # Build resource
+        self.resource = Resource.create(
+            attributes={
+                "service.instance.id": str(uuid.uuid4()),
+                "service.name": "dashfrog",
+            }
+        )
+
+        # trace provider
         trace_provider = get_tracer_provider()
         if isinstance(trace_provider, (NoOpTracerProvider, ProxyTracerProvider)):
-            # Build resource
-            resource = Resource.create(
-                attributes={
-                    "service.instance.id": str(uuid.uuid4()),
-                    "service.name": "dashfrog",
-                }
+            set_tracer_provider(TracerProvider(resource=self.resource))
+
+        # Create meter
+        use_http, insecure, endpoint = self.parse_otel_config(self.config.otlp_endpoint)
+        exporter = (
+            HTTPMetricExporter(
+                endpoint=endpoint,
             )
-            set_tracer_provider(TracerProvider(resource=resource))
+            if use_http
+            else GRPCMetricExporter(endpoint=endpoint, insecure=insecure)
+        )
+        reader = PeriodicExportingMetricReader(exporter, export_interval_millis=1000)
+        meter_provider = MeterProvider(
+            metric_readers=[reader],
+            resource=self.resource,
+            views=[
+                View(
+                    instrument_type=Histogram,
+                    aggregation=ExponentialBucketHistogramAggregation(),
+                )
+            ],
+        )
+        self.meter = meter_provider.get_meter("dashfrog")
 
         # Create SQLAlchemy engine with connection pooling
         db_url = (
@@ -84,6 +126,89 @@ class Dashfrog:
         else:
             # Plain host:port defaults to gRPC insecure (for dev)
             return False, True, endpoint
+
+    def register_flow(self, flow_name: str, *labels: str) -> None:
+        if flow_name in self._flows:
+            return
+
+        with self.db_engine.begin() as conn:
+            conn.execute(
+                insert(Flow)
+                .values(name=flow_name, labels=list(labels))
+                .on_conflict_do_update(index_elements=[Flow.name], set_=dict(labels=list(labels)))
+            )
+        self._flows.add(flow_name)
+
+    @overload
+    def register_metric(
+        self,
+        metric_type: Literal["counter"],
+        metric_name: str,
+        pretty_name: str,
+        unit: MetricUnitT,
+        labels: list[str],
+        default_aggregation: str,
+    ) -> Counter: ...
+
+    @overload
+    def register_metric(
+        self,
+        metric_type: Literal["histogram"],
+        metric_name: str,
+        pretty_name: str,
+        unit: MetricUnitT,
+        labels: list[str],
+        default_aggregation: str,
+    ) -> Histogram: ...
+
+    @overload
+    def register_metric(
+        self,
+        metric_type: Literal["counter", "histogram"],
+        metric_name: str,
+        pretty_name: str,
+        unit: MetricUnitT,
+        labels: list[str],
+        default_aggregation: str,
+    ) -> Instrument: ...
+
+    def register_metric(
+        self,
+        metric_type: Literal["counter", "histogram"],
+        metric_name: str,
+        pretty_name: str,
+        unit: MetricUnitT,
+        labels: list[str],
+        default_aggregation: str,
+    ) -> Instrument:
+        if metric_name not in self._metrics:
+            with self.db_engine.begin() as conn:
+                conn.execute(
+                    insert(MetricModel)
+                    .values(
+                        type=metric_type,
+                        name=metric_name,
+                        labels=list(labels),
+                        pretty_name=pretty_name,
+                        unit=unit,
+                        default_aggregation=default_aggregation,
+                    )
+                    .on_conflict_do_update(
+                        index_elements=[MetricModel.name],
+                        set_=dict(
+                            pretty_name=pretty_name,
+                            unit=unit,
+                            default_aggregation=default_aggregation,
+                            labels=list(labels),
+                        ),
+                    )
+                )
+            self._metrics.add(metric_name)
+
+        if metric_type == "counter":
+            return self.meter.create_counter(metric_name, description=metric_name, unit=unit or "")
+        else:
+            return self.meter.create_histogram(metric_name, description=metric_name, unit=unit or "")
 
     @staticmethod
     def with_flask(flask_app: "Flask") -> None:
@@ -177,35 +302,3 @@ def get_dashfrog_instance() -> Dashfrog:
             "DashFrog not initialized. Call setup() first:\n\n  from dashfrog_python_sdk import setup\n  setup()\n"
         )
     return _dashfrog
-
-
-def refresh_views(*, concurrent: bool = True) -> None:
-    """
-    Refresh the Flow and Label materialized views.
-
-    This updates the materialized views with the latest data from the Event table.
-    Should be called periodically or after bulk inserts to keep views up-to-date.
-
-    Args:
-        concurrent: If True, uses REFRESH MATERIALIZED VIEW CONCURRENTLY which
-                   allows reads during refresh but requires unique indexes (default: True)
-
-    Example:
-        from dashfrog_python_sdk import refresh_views
-
-        # After processing events
-        refresh_views()
-
-        # Or schedule periodically
-        # schedule.every(5).minutes.do(refresh_views)
-    """
-    from sqlalchemy import text
-
-    dashfrog = get_dashfrog_instance()
-
-    refresh_cmd = "REFRESH MATERIALIZED VIEW CONCURRENTLY" if concurrent else "REFRESH MATERIALIZED VIEW"
-
-    with dashfrog.db_engine.connect() as conn:
-        conn.execute(text(f"{refresh_cmd} flow"))
-        conn.execute(text(f"{refresh_cmd} label"))
-        conn.commit()

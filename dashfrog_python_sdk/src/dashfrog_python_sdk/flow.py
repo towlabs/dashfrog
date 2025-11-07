@@ -8,7 +8,8 @@ from .constants import (
     EVENT_FLOW_START,
     EVENT_FLOW_SUCCESS,
 )
-from .utils import get_flow_id, get_labels_from_baggage, insert, write_to_baggage
+from .dashfrog import get_dashfrog_instance
+from .utils import get_flow_id, get_labels_from_baggage, insert_flow_event, write_to_baggage
 
 from opentelemetry import trace
 
@@ -37,6 +38,8 @@ def start(name: str, tenant: str, end_on_exit: bool = True, **labels: str) -> Ge
     Automatically creates span for trace propagation and records to Postgres.
     """
     tracer = trace.get_tracer("dashfrog")
+    dashfrog = get_dashfrog_instance()
+    dashfrog.register_flow(name, *labels)
 
     # Always create fresh span
     with tracer.start_as_current_span(f"flow.{name}") as span:
@@ -44,7 +47,7 @@ def start(name: str, tenant: str, end_on_exit: bool = True, **labels: str) -> Ge
         event_labels = {BAGGAGE_FLOW_LABEL_NAME: name, "tenant": tenant, **labels}
         with write_to_baggage(event_labels):
             # Write START event
-            insert(flow_id, EVENT_FLOW_START, event_labels)
+            insert_flow_event(flow_id, EVENT_FLOW_START, event_labels)
 
             try:
                 yield flow_id
@@ -72,7 +75,7 @@ def event(event_name: str):
         warning(e.args[0])
         return
 
-    insert(flow_id, event_name, event_labels)
+    insert_flow_event(flow_id, event_name, event_labels)
 
 
 def _end_flow(event_name: str):
@@ -88,7 +91,7 @@ def _end_flow(event_name: str):
         warning(e.args[0])
         return
 
-    insert(flow_id, event_name, event_labels)
+    insert_flow_event(flow_id, event_name, event_labels)
 
 
 def success():

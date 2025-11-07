@@ -9,7 +9,7 @@ from .constants import (
     EVENT_STEP_START,
     EVENT_STEP_SUCCESS,
 )
-from .utils import get_flow_id, get_labels_from_baggage, insert, write_to_baggage
+from .utils import get_flow_id, get_labels_from_baggage, insert_flow_event, write_to_baggage
 
 
 @contextmanager
@@ -68,7 +68,7 @@ def _write_step_event(event_name: str) -> None:
         warning(e.args[0])
         return
 
-    insert(flow_id, event_name, event_labels)
+    insert_flow_event(flow_id, event_name, event_labels)
 
 
 def success() -> None:

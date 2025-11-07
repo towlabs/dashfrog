@@ -1,5 +1,7 @@
 """Shared constants for DashFrog SDK."""
 
+from typing import Literal
+
 # Baggage keys
 BAGGAGE_FLOW_LABEL_PREFIX = "dashfrog.flow."
 BAGGAGE_FLOW_LABEL_NAME = "flow_name"
@@ -15,3 +17,6 @@ EVENT_STEP_FAIL = "step_fail"
 
 # Minimum time between refreshes in seconds (default: 60 seconds)
 MIN_REFRESH_INTERVAL = 60.0
+
+# Types
+MetricUnitT = Literal["percent"] | str | None

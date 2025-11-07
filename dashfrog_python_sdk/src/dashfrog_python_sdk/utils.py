@@ -1,16 +1,13 @@
 from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
-import time
 
 from sqlalchemy import (
-    insert as sa_insert,
-    select,
-    update,
+    insert as insert,
 )
 
-from .constants import BAGGAGE_FLOW_LABEL_PREFIX, MIN_REFRESH_INTERVAL
-from .dashfrog import get_dashfrog_instance, refresh_views
-from .models import DashfrogMetadata, Event
+from .constants import BAGGAGE_FLOW_LABEL_PREFIX
+from .dashfrog import get_dashfrog_instance
+from .models import FlowEvent
 
 from opentelemetry import baggage, context
 from opentelemetry.trace import INVALID_SPAN, get_current_span
@@ -47,7 +44,7 @@ def get_flow_id() -> str:
     return str(span.get_span_context().trace_id)
 
 
-def insert(flow_id: str, event_name: str, labels: Mapping[str, str]) -> None:
+def insert_flow_event(flow_id: str, event_name: str, labels: Mapping[str, str]) -> None:
     """
     Insert an event into Postgres.
 
@@ -61,38 +58,11 @@ def insert(flow_id: str, event_name: str, labels: Mapping[str, str]) -> None:
     """
     dashfrog = get_dashfrog_instance()
 
-    # Insert using SQLAlchemy Core
-    stmt = sa_insert(Event).values(
-        flow_id=flow_id,
-        event_name=event_name,
-        labels=dict(labels),
-    )
     with dashfrog.db_engine.begin() as conn:
-        conn.execute(stmt)
-
-    # Check if enough time has passed since last refresh
-    current_time = time.time()
-    if dashfrog.last_refresh_ts is None or (current_time - dashfrog.last_refresh_ts) >= MIN_REFRESH_INTERVAL:
-        # Try to lock the metadata row (non-blocking with SKIP LOCKED)
-        with dashfrog.db_engine.connect() as conn:
-            # Try to lock the row - if already locked by another process, skip
-            result = conn.execute(
-                select(DashfrogMetadata).where(DashfrogMetadata.id == 1).with_for_update(skip_locked=True)
+        conn.execute(
+            insert(FlowEvent).values(
+                flow_id=flow_id,
+                event_name=event_name,
+                labels=dict(labels),
             )
-            metadata_row = result.fetchone()
-
-            # If we got the lock (row returned), proceed with refresh
-            if metadata_row is not None:
-                # Refresh the views
-                refresh_views(concurrent=True)
-
-                # Update the metadata table
-                update_stmt = (
-                    update(DashfrogMetadata).where(DashfrogMetadata.id == 1).values(last_refresh_ts=current_time)
-                )
-                conn.execute(update_stmt)
-
-                # Update in-memory timestamp
-                dashfrog.last_refresh_ts = current_time
-
-                conn.commit()
+        )

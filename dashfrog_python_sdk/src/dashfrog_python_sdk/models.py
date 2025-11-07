@@ -1,6 +1,7 @@
 """SQLAlchemy models for DashFrog."""
 
 from datetime import datetime
+from typing import Literal
 
 from sqlalchemy import BigInteger, Index, String, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -13,13 +14,13 @@ class Base(DeclarativeBase):
     pass
 
 
-class Event(Base):
+class FlowEvent(Base):
     """Event model for tracking flow/step events."""
 
-    __tablename__ = "event"
+    __tablename__ = "flow_event"
     __table_args__ = (
         # Use a BRIN index for time-ordered queries on event_dt
-        Index("ix_event_event_dt_brin", "event_dt", postgresql_using="brin"),
+        Index("ix_flow_event_event_dt_brin", "event_dt", postgresql_using="brin"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
@@ -31,55 +32,41 @@ class Event(Base):
 
 class Flow(Base):
     """
-    Materialized view of flows derived from Event table.
-
-    This is not a regular table - it's a materialized view that aggregates
-    flow names and their steps from the event data. The view is created
-    and managed by Alembic migrations.
-
-    Flow name is extracted from: labels->>'dashfrog.flow.flow_name'
-    Steps are extracted from: labels->>'dashfrog.flow.step_name'
-
-    To refresh: REFRESH MATERIALIZED VIEW CONCURRENTLY flow;
+    Static view of flows and their labels.
     """
 
     __tablename__ = "flow"
-    __table_args__ = {"info": {"is_view": True}}
 
     name: Mapped[str] = mapped_column(String, primary_key=True)
-    steps: Mapped[list[str]] = mapped_column(ARRAY(String))
+    labels: Mapped[list[str]] = mapped_column(ARRAY(String))
 
 
-class Label(Base):
+class Metric(Base):
     """
-    Materialized view of labels derived from Event table.
-
-    This is not a regular table - it's a materialized view that aggregates
-    all label keys and their possible values from the event data.
-    The view is created and managed by Alembic migrations.
-
-    To refresh: REFRESH MATERIALIZED VIEW CONCURRENTLY label;
+    Static view of metrics and their labels.
     """
 
-    __tablename__ = "label"
-    __table_args__ = {"info": {"is_view": True}}
+    __tablename__ = "metric"
 
     name: Mapped[str] = mapped_column(String, primary_key=True)
-    values: Mapped[list[str]] = mapped_column(ARRAY(String))
+    pretty_name: Mapped[str]
+    type: Mapped[Literal["counter", "histogram"]] = mapped_column(String, nullable=False)
+    unit: Mapped[str]
+    default_aggregation: Mapped[str]
+    labels: Mapped[list[str]] = mapped_column(ARRAY(String))
 
 
-class DashfrogMetadata(Base):
-    """
-    Metadata table for tracking DashFrog internal state.
+class TimelineEvent(Base):
+    """Timeline event model for tracking business events with descriptions."""
 
-    This table stores metadata about the DashFrog system itself,
-    such as the last time materialized views were refreshed.
+    __tablename__ = "timeline_event"
+    __table_args__ = (
+        # Use a BRIN index for time-ordered queries on event_dt
+        Index("ix_timeline_event_event_dt_brin", "event_dt", postgresql_using="brin"),
+    )
 
-    Currently tracks:
-    - last_refresh_at: Timestamp of the last materialized view refresh
-    """
-
-    __tablename__ = "dashfrog_metadata"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    last_refresh_ts: Mapped[float | None]
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    event_dt: Mapped[datetime] = mapped_column(server_default=func.now())
+    event_name: Mapped[str]
+    event_description: Mapped[str]
+    labels: Mapped[dict] = mapped_column(JSONB)
