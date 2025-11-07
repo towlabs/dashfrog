@@ -38,7 +38,9 @@
       "Bash(echo:*)",
       "Bash(test:*)",
       "Bash(nc:*)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(.venv/bin/pytest tests/test_api.py::TestMetricAPI::test_get_all_labels -v)",
+      "Bash(.venv/bin/pytest:*)"
     ],
     "deny": [],
     "ask": []

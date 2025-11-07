@@ -18,6 +18,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# API server dependencies
+api = [
+    "fastapi>=0.118.0",
+    "uvicorn>=0.30.0",
+]
+
 # Instrumentation packages (optional, imported on-demand)
 instrumentation = [
     "opentelemetry-instrumentation-aws-lambda>=0.58b0",

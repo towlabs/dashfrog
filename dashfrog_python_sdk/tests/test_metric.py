@@ -9,6 +9,8 @@ from dashfrog_python_sdk import get_dashfrog_instance
 from dashfrog_python_sdk.metric import Counter, Histogram
 from dashfrog_python_sdk.models import Metric as MetricModel
 
+from tests.utils import wait_for_metric_in_prometheus
+
 
 class TestCounter:
     """Tests for Counter metric."""
@@ -77,21 +79,10 @@ class TestCounter:
         # Note: The metric name has the 'dashfrog' namespace prefix from OTEL collector config
         query = f'dashfrog_test_counter{{instance="{service_instance_id}"}}'
 
-        response = requests.get(
-            f"{get_dashfrog_instance().config.prometheus_endpoint}/api/v1/query",
-            params={"query": query},
-            timeout=5,
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-
-        # Check that we got results
-        assert data["status"] == "success"
-        assert len(data["data"]["result"]) > 0
+        data = wait_for_metric_in_prometheus(query)
 
         for idx, tenant in enumerate(["tenant1", "tenant2", "tenant3"]):
-            tenant_data = next(r for r in data["data"]["result"] if r["metric"].get("tenant") == tenant)
+            tenant_data = next(r for r in data if r["metric"].get("tenant") == tenant)
             assert tenant_data is not None
             assert float(tenant_data["value"][1]) == idx + 1
 
@@ -156,30 +147,15 @@ class TestHistogram:
             endpoint="/api/v2",
         )
 
-        # Wait for metrics to be exported (export interval is 1000ms + some buffer)
-        time.sleep(10)
-
         # Query Prometheus to verify the native histogram exists
         # Native histograms don't use _bucket, _sum, _count suffixes (add_metric_suffixes: false)
         query = f'dashfrog_test_histogram{{instance="{service_instance_id}"}}'
-
-        response = requests.get(
-            f"{get_dashfrog_instance().config.prometheus_endpoint}/api/v1/query",
-            params={"query": query},
-            timeout=5,
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-
-        # Check that we got results
-        assert data["status"] == "success"
-        assert len(data["data"]["result"]) > 0
+        data = wait_for_metric_in_prometheus(query)
 
         # Verify each tenant has recorded data in the native histogram
         # Native histograms store the full distribution, we just verify they exist
         for idx, tenant in enumerate(["tenant1", "tenant2", "tenant3"]):
-            tenant_data = next(r for r in data["data"]["result"] if r["metric"].get("tenant") == tenant)
+            tenant_data = next(r for r in data if r["metric"].get("tenant") == tenant)
             assert tenant_data is not None
             # Native histogram value contains the histogram data structure
             assert tenant_data["histogram"][1]["count"] == "1"
