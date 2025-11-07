@@ -41,11 +41,6 @@ export interface Metric {
 }
 
 export interface MetricHistory {
-	name: string;
-	prometheusName: string;
 	timestamp: Date;
-	labels: Record<string, string>;
 	value: number;
-	unit: string;
-	aggregation: MetricAggregation;
 }

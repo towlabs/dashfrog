@@ -4,7 +4,6 @@ import {
 	ChevronRight,
 	CornerDownRight,
 	Home,
-	Package,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -65,13 +64,14 @@ export default function SideMenu({
 			style={{ backgroundColor: "#f9f8f7" }}
 		>
 			<div className="flex h-14 items-center border-b px-3">
-				<div
-					className={cn(
-						"flex items-center gap-2 transition-all",
-						isCollapsed && "justify-center",
+				<div className={cn("flex transition-all items-center")}>
+					{!isCollapsed && (
+						<img
+							src="/assets/logo.svg"
+							alt="DashFrog"
+							className={cn("transition-all", "w-6")}
+						/>
 					)}
-				>
-					<Package className="h-6 w-6" />
 					{!isCollapsed && <span className="font-semibold">DashFrog</span>}
 				</div>
 				<Button

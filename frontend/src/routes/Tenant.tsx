@@ -2,13 +2,12 @@ import { ChevronRight, Home, BarChart3, Workflow, Clock } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FlowTable } from "@/components/FlowTable";
-import { SoloMetric } from "@/components/SoloMetric";
+import { MetricsTable } from "@/components/MetricsTable";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { TenantControls } from "@/components/TenantControls";
 import { Timeline } from "@/components/Timeline";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useTenantStore } from "@/src/stores/tenant";
-import { MetricAggregationLabel } from "@/src/types/metric";
 
 export default function TenantPage() {
 	const { tenant } = useParams<{ tenant: string }>();
@@ -82,36 +81,9 @@ export default function TenantPage() {
 					Metrics
 				</h3>
 				{metricsLoading ? (
-					<div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-						<TableSkeleton columns={1} rows={1} />
-						<TableSkeleton columns={1} rows={1} />
-						<TableSkeleton columns={1} rows={1} />
-						<TableSkeleton columns={1} rows={1} />
-					</div>
+					<TableSkeleton columns={3} rows={5} />
 				) : (
-					<div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-						{metrics.map((metric) => {
-							// Calculate total value for metrics with multiple values
-							const totalValue = metric.values.reduce(
-								(sum, v) => sum + v.value,
-								0,
-							);
-							const displayValue =
-								metric.values.length === 1
-									? metric.values[0].value
-									: totalValue;
-
-							return (
-								<SoloMetric
-									key={metric.name}
-									title={metric.name}
-									value={displayValue}
-									aggregation={metric.aggregation}
-									unit={metric.unit}
-								/>
-							);
-						})}
-					</div>
+					<MetricsTable metrics={metrics} />
 				)}
 			</section>
 
