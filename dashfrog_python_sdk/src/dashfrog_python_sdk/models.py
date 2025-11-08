@@ -68,5 +68,5 @@ class TimelineEvent(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     event_dt: Mapped[datetime] = mapped_column(server_default=func.now())
     event_name: Mapped[str]
-    event_description: Mapped[str]
+    emoji: Mapped[str]
     labels: Mapped[dict] = mapped_column(JSONB)

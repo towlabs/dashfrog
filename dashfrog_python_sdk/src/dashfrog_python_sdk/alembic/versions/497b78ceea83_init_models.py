@@ -51,7 +51,7 @@ def upgrade() -> None:
         sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
         sa.Column("event_dt", sa.DateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("event_name", sa.String(), nullable=False),
-        sa.Column("event_description", sa.String(), nullable=False),
+        sa.Column("emoji", sa.String(), nullable=False),
         sa.Column("labels", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
