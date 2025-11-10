@@ -40,7 +40,10 @@
       "Bash(nc:*)",
       "Bash(docker ps:*)",
       "Bash(.venv/bin/pytest tests/test_api.py::TestMetricAPI::test_get_all_labels -v)",
-      "Bash(.venv/bin/pytest:*)"
+      "Bash(.venv/bin/pytest:*)",
+      "Bash(/tmp/sidemenu_part1.tsx)",
+      "Bash(/tmp/sidemenu_part2.tsx)",
+      "Bash(.venv/bin/ruff check tests/test_api.py --fix)"
     ],
     "deny": [],
     "ask": []

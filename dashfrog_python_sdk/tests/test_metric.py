@@ -2,7 +2,6 @@
 
 import time
 
-import requests
 from sqlalchemy import select
 
 from dashfrog_python_sdk import get_dashfrog_instance

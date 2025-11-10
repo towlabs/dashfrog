@@ -11,12 +11,6 @@ class Label(BaseModel):
     values: list[str]
 
 
-class HealthResponse(BaseModel):
-    """Health check response."""
-
-    status: str
-
-
 class FlowResponse(BaseModel):
     """Response for listing flows."""
 
@@ -31,19 +25,43 @@ class FlowResponse(BaseModel):
     failedCount: int
 
 
+class FlowHistoryEvent(BaseModel):
+    """A single event in flow history."""
+
+    eventName: str
+    eventDt: datetime
+
+
+class FlowHistoryStep(BaseModel):
+    """A single step in flow history."""
+
+    name: str
+    startTime: datetime
+    endTime: datetime | None
+    status: Literal["success", "failure", "running"]
+
+
+class FlowHistory(BaseModel):
+    """History of a single flow run."""
+
+    flowId: str
+    startTime: datetime
+    endTime: datetime | None
+    status: Literal["success", "failure", "running"]
+    events: list[FlowHistoryEvent]
+    steps: list[FlowHistoryStep]
+
+
 class FlowDetailResponse(BaseModel):
-    """Response for getting a specific flow."""
+    """Response for getting flow details with history."""
 
-    flow_id: str
-
-
-class TimelineListResponse(BaseModel):
-    """Response for listing timelines."""
-
-    timelines: list[str]
-
-
-class TimelineDetailResponse(BaseModel):
-    """Response for getting a specific timeline."""
-
-    timeline_id: str
+    name: str
+    labels: dict[str, str]
+    lastRunStatus: Literal["success", "failure", "running"]
+    lastRunStartedAt: datetime
+    lastRunEndedAt: datetime | None
+    runCount: int
+    successCount: int
+    pendingCount: int
+    failedCount: int
+    history: list[FlowHistory]
