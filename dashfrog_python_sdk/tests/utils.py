@@ -5,9 +5,10 @@ import requests
 from dashfrog_python_sdk import get_dashfrog_instance
 
 
-def wait_for_metric_in_prometheus(query: str, max_wait: int = 15):
+def wait_for_metric_in_prometheus(query: str, max_wait: int = 30):
     """Wait for a metric to appear in Prometheus."""
     start_time = time.time()
+    last_error = None
     while True:
         try:
             response = requests.get(
@@ -23,6 +24,8 @@ def wait_for_metric_in_prometheus(query: str, max_wait: int = 15):
             assert data["status"] == "success"
             assert len(data["data"]["result"]) > 0
             return data["data"]["result"]
-        except AssertionError:
-            if time.time() - start_time <= max_wait:
-                time.sleep(0.5)
+        except (AssertionError, Exception) as e:
+            last_error = e
+            if time.time() - start_time > max_wait:
+                raise TimeoutError(f"Metric {query} did not appear in Prometheus after {max_wait}s. Last error: {last_error}")
+            time.sleep(0.5)

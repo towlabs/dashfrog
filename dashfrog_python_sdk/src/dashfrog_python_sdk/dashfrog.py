@@ -6,10 +6,10 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.dialects.postgresql import insert
 
 from .config import Config
-from .constants import MetricUnitT
+from .constants import StatisticUnitT
 from .models import (
     Flow,
-    Metric as MetricModel,
+    Statistic,
 )
 
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter as GRPCMetricExporter
@@ -45,7 +45,7 @@ class Dashfrog:
     resource: Resource = field(init=False)
 
     _flows: set[str] = field(init=False, default_factory=set)
-    _metrics: set[str] = field(init=False, default_factory=set)
+    _statistics: set[str] = field(init=False, default_factory=set)
 
     def __post_init__(self):
         # Build resource
@@ -140,75 +140,76 @@ class Dashfrog:
         self._flows.add(flow_name)
 
     @overload
-    def register_metric(
+    def register_statistic(
         self,
-        metric_type: Literal["counter"],
-        metric_name: str,
+        statistic_type: Literal["counter"],
+        statistic_name: str,
         pretty_name: str,
-        unit: MetricUnitT,
+        unit: StatisticUnitT,
         labels: list[str],
         default_aggregation: str,
     ) -> Counter: ...
 
     @overload
-    def register_metric(
+    def register_statistic(
         self,
-        metric_type: Literal["histogram"],
-        metric_name: str,
+        statistic_type: Literal["histogram"],
+        statistic_name: str,
         pretty_name: str,
-        unit: MetricUnitT,
+        unit: StatisticUnitT,
         labels: list[str],
         default_aggregation: str,
     ) -> Histogram: ...
 
     @overload
-    def register_metric(
+    def register_statistic(
         self,
-        metric_type: Literal["counter", "histogram"],
-        metric_name: str,
+        statistic_type: Literal["counter", "histogram"],
+        statistic_name: str,
         pretty_name: str,
-        unit: MetricUnitT,
+        unit: StatisticUnitT,
         labels: list[str],
         default_aggregation: str,
     ) -> Instrument: ...
 
-    def register_metric(
+    def register_statistic(
         self,
-        metric_type: Literal["counter", "histogram"],
-        metric_name: str,
+        statistic_type: Literal["counter", "histogram"],
+        statistic_name: str,
         pretty_name: str,
-        unit: MetricUnitT,
+        unit: StatisticUnitT,
         labels: list[str],
         default_aggregation: str,
     ) -> Instrument:
-        if metric_name not in self._metrics:
+        if statistic_name not in self._statistics:
             with self.db_engine.begin() as conn:
                 conn.execute(
-                    insert(MetricModel)
+                    insert(Statistic)
                     .values(
-                        type=metric_type,
-                        name=metric_name,
-                        labels=list(labels),
+                        name=statistic_name,
                         pretty_name=pretty_name,
+                        type=statistic_type,
                         unit=unit,
                         default_aggregation=default_aggregation,
+                        labels=list(labels),
                     )
                     .on_conflict_do_update(
-                        index_elements=[MetricModel.name],
+                        index_elements=[Statistic.name],
                         set_=dict(
                             pretty_name=pretty_name,
+                            type=statistic_type,
                             unit=unit,
                             default_aggregation=default_aggregation,
                             labels=list(labels),
                         ),
                     )
                 )
-            self._metrics.add(metric_name)
+            self._statistics.add(statistic_name)
 
-        if metric_type == "counter":
-            return self.meter.create_counter(metric_name, description=metric_name, unit=unit or "")
+        if statistic_type == "counter":
+            return self.meter.create_counter(statistic_name, description=statistic_name, unit=unit or "")
         else:
-            return self.meter.create_histogram(metric_name, description=metric_name, unit=unit or "")
+            return self.meter.create_histogram(statistic_name, description=statistic_name, unit=unit or "")
 
     @staticmethod
     def with_flask(flask_app: "Flask") -> None:

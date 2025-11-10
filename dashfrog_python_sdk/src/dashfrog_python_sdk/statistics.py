@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
-from .constants import MetricUnitT
+from .constants import StatisticUnitT
 from .dashfrog import get_dashfrog_instance
 
 from opentelemetry.metrics import (
@@ -25,15 +25,15 @@ class Counter:
     name: str
     labels: list[str]
     pretty_name: str
-    unit: MetricUnitT
+    unit: StatisticUnitT
     default_aggregation: Literal["sum", "ratePerSecond", "ratePerMinute", "ratePerHour", "ratePerDay"]
     _otel_counter: OTelCounter = field(init=False)
 
     def __post_init__(self):
         dashfrog = get_dashfrog_instance()
-        self._otel_counter = dashfrog.register_metric(
-            metric_type="counter",
-            metric_name=self.name,
+        self._otel_counter = dashfrog.register_statistic(
+            statistic_type="counter",
+            statistic_name=self.name,
             pretty_name=self.pretty_name,
             unit=self.unit,
             labels=self.labels,
@@ -49,15 +49,15 @@ class Histogram:
     name: str
     labels: list[str]
     pretty_name: str
-    unit: MetricUnitT
+    unit: StatisticUnitT
     default_aggregation: Literal["p50", "p90", "p95", "p99"]
     _otel_histogram: OTelHistogram = field(init=False)
 
     def __post_init__(self):
         dashfrog = get_dashfrog_instance()
-        self._otel_histogram = dashfrog.register_metric(
-            metric_type="histogram",
-            metric_name=self.name,
+        self._otel_histogram = dashfrog.register_statistic(
+            statistic_type="histogram",
+            statistic_name=self.name,
             pretty_name=self.pretty_name,
             unit=self.unit,
             labels=self.labels,

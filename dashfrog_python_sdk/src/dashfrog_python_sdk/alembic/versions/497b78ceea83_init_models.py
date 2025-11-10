@@ -37,7 +37,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_flow_event_event_dt_brin", "flow_event", ["event_dt"], unique=False, postgresql_using="brin")
     op.create_table(
-        "metric",
+        "statistic",
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("pretty_name", sa.String(), nullable=False),
         sa.Column("type", sa.String(), nullable=False),
@@ -63,7 +63,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index("ix_timeline_event_event_dt_brin", table_name="timeline_event", postgresql_using="brin")
     op.drop_table("timeline_event")
-    op.drop_table("metric")
+    op.drop_table("statistic")
     op.drop_index("ix_flow_event_event_dt_brin", table_name="flow_event", postgresql_using="brin")
     op.drop_table("flow_event")
     op.drop_table("flow")

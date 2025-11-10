@@ -27,6 +27,7 @@ from .schemas import (
     FlowHistoryStep,
     FlowResponse,
     Label,
+    LabelFilter,
 )
 
 router = APIRouter(prefix="/flows", tags=["flows"])
@@ -96,13 +97,6 @@ def flow_generator(conn: Connection, base_filters: list):
             pendingCount=runCount - successCount - failedCount,
             failedCount=failedCount,
         )
-
-
-class LabelFilter(BaseModel):
-    """A single label filter with key and value."""
-
-    key: str
-    value: str
 
 
 class FlowSearchRequest(BaseModel):

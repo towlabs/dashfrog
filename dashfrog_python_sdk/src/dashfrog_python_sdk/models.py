@@ -41,12 +41,12 @@ class Flow(Base):
     labels: Mapped[list[str]] = mapped_column(ARRAY(String))
 
 
-class Metric(Base):
+class Statistic(Base):
     """
-    Static view of metrics and their labels.
+    Static view of statistics and their labels.
     """
 
-    __tablename__ = "metric"
+    __tablename__ = "statistic"
 
     name: Mapped[str] = mapped_column(String, primary_key=True)
     pretty_name: Mapped[str]

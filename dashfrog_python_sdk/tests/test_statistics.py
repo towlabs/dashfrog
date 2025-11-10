@@ -5,8 +5,8 @@ import time
 from sqlalchemy import select
 
 from dashfrog_python_sdk import get_dashfrog_instance
-from dashfrog_python_sdk.metric import Counter, Histogram
-from dashfrog_python_sdk.models import Metric as MetricModel
+from dashfrog_python_sdk.models import Statistic
+from dashfrog_python_sdk.statistics import Counter, Histogram
 
 from tests.utils import wait_for_metric_in_prometheus
 
@@ -33,7 +33,7 @@ class TestCounter:
         # Verify the metric was registered in the database
         dashfrog = get_dashfrog_instance()
         with dashfrog.db_engine.connect() as conn:
-            result = conn.execute(select(MetricModel).where(MetricModel.name == "test_counter")).fetchone()
+            result = conn.execute(select(Statistic).where(Statistic.name == "test_counter")).fetchone()
 
             assert result is not None
             assert result.name == "test_counter"
@@ -108,7 +108,7 @@ class TestHistogram:
         # Verify the metric was registered in the database
         dashfrog = get_dashfrog_instance()
         with dashfrog.db_engine.connect() as conn:
-            result = conn.execute(select(MetricModel).where(MetricModel.name == "test_histogram")).fetchone()
+            result = conn.execute(select(Statistic).where(Statistic.name == "test_histogram")).fetchone()
 
             assert result is not None
             assert result.name == "test_histogram"

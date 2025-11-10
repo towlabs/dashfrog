@@ -44,11 +44,11 @@ def setup_dashfrog(test_engine):
     with dashfrog.db_engine.begin() as conn:
         conn.execute(Base.metadata.tables["flow_event"].delete())
         conn.execute(Base.metadata.tables["flow"].delete())
-        conn.execute(Base.metadata.tables["metric"].delete())
+        conn.execute(Base.metadata.tables["statistic"].delete())
         conn.execute(Base.metadata.tables["timeline_event"].delete())
 
     # Clear in-memory caches
     dashfrog._flows.clear()
-    dashfrog._metrics.clear()
+    dashfrog._statistics.clear()
 
     yield

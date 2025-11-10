@@ -43,7 +43,9 @@
       "Bash(.venv/bin/pytest:*)",
       "Bash(/tmp/sidemenu_part1.tsx)",
       "Bash(/tmp/sidemenu_part2.tsx)",
-      "Bash(.venv/bin/ruff check tests/test_api.py --fix)"
+      "Bash(.venv/bin/ruff check tests/test_api.py --fix)",
+      "Bash(.venv/bin/ruff check src/dashfrog_python_sdk/api/metric.py)",
+      "Bash(.venv/bin/grep:*)"
     ],
     "deny": [],
     "ask": []

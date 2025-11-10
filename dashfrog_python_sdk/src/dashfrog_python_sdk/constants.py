@@ -19,4 +19,4 @@ EVENT_STEP_FAIL = "step_fail"
 MIN_REFRESH_INTERVAL = 60.0
 
 # Types
-MetricUnitT = Literal["percent"] | str | None
+StatisticUnitT = Literal["percent"] | str | None

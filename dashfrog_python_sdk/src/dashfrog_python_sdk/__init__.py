@@ -29,7 +29,7 @@ __version__ = "0.1.0"
 
 # Core setup and configuration
 # Submodules (users import from these)
-from . import flow, metric, migrations, models, step, timeline
+from . import flow, migrations, models, statistics, step, timeline
 from .config import Config
 from .dashfrog import Dashfrog, get_dashfrog_instance, setup
 
@@ -55,7 +55,7 @@ __all__ = [
     "timeline",
     "models",
     "migrations",
-    "metric",
+    "statistics",
     # Instrumentation
     "with_fastapi",
     "with_flask",
