@@ -35,7 +35,7 @@ router = APIRouter(prefix="/flows", tags=["flows"])
 
 def flow_generator(conn: Connection, base_filters: list):
     """Generate a flow summary query with stats and latest run info."""
-    # CTE 1: flow_stats - aggregate statistics per flow
+    # CTE 1: flow_stats - aggregate metrics per flow
     flow_stats = (
         select(
             FlowEvent.labels["flow_name"].astext.label("name"),

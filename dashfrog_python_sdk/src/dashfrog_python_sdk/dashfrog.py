@@ -6,16 +6,13 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.dialects.postgresql import insert
 
 from .config import Config
-from .constants import StatisticUnitT
+from .constants import MetricUnitT
 from .models import (
     Flow,
-    Statistic,
+    Metric as MetricModel,
 )
 
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter as GRPCMetricExporter
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
-    OTLPMetricExporter as HTTPMetricExporter,
-)
+from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.metrics import Histogram, Instrument, Meter
 from opentelemetry.sdk.metrics import Counter, MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
@@ -45,7 +42,7 @@ class Dashfrog:
     resource: Resource = field(init=False)
 
     _flows: set[str] = field(init=False, default_factory=set)
-    _statistics: set[str] = field(init=False, default_factory=set)
+    _metrics: set[str] = field(init=False, default_factory=set)
 
     def __post_init__(self):
         # Build resource
@@ -62,14 +59,8 @@ class Dashfrog:
             set_tracer_provider(TracerProvider(resource=self.resource))
 
         # Create meter
-        use_http, insecure, endpoint = self.parse_otel_config(self.config.otlp_endpoint)
-        exporter = (
-            HTTPMetricExporter(
-                endpoint=endpoint,
-            )
-            if use_http
-            else GRPCMetricExporter(endpoint=endpoint, insecure=insecure)
-        )
+        insecure, endpoint = self.parse_otel_config(self.config.otlp_endpoint)
+        exporter = OTLPMetricExporter(endpoint=endpoint, insecure=insecure)
         reader = PeriodicExportingMetricReader(exporter, export_interval_millis=1000)
         meter_provider = MeterProvider(
             metric_readers=[reader],
@@ -97,35 +88,22 @@ class Dashfrog:
         )
 
     @staticmethod
-    def parse_otel_config(endpoint: str) -> tuple[bool, bool, str]:
+    def parse_otel_config(endpoint: str) -> tuple[bool, str]:
         """
         Parse OTLP endpoint to determine protocol and security.
 
         Returns:
-            (use_http, insecure, processed_endpoint)
+            (insecure, processed_endpoint): Tuple of insecure flag and processed endpoint
 
         Examples:
-            "localhost:4317" → (False, True, "localhost:4317")  # gRPC insecure
-            "grpc://host:4317" → (False, True, "host:4317")  # gRPC insecure
-            "grpcs://host:4317" → (False, False, "host:4317")  # gRPC with TLS
-            "http://host:4318" → (True, False, "http://host:4318")  # HTTP
-            "https://host:4318" → (True, False, "https://host:4318")  # HTTP with TLS
+            "grpcs://host:4317" → (False, "host:4317")  # gRPC with TLS
+            "host:4317" → (True, "host:4317")  # Defaults to gRPC insecure
         """
-        if endpoint.startswith("https://"):
-            # HTTPS already includes the scheme, keep it
-            return True, False, f"{endpoint}/v1/metrics"
-        elif endpoint.startswith("http://"):
-            # HTTP already includes the scheme, keep it
-            return True, False, f"{endpoint}/v1/metrics"
-        elif endpoint.startswith("grpcs://"):
+        if endpoint.startswith("grpcs://"):
             # gRPC with TLS
-            return False, False, endpoint.replace("grpcs://", "")
-        elif endpoint.startswith("grpc://"):
-            # gRPC without TLS
-            return False, True, endpoint.replace("grpc://", "")
-        else:
-            # Plain host:port defaults to gRPC insecure (for dev)
-            return False, True, endpoint
+            return False, endpoint.replace("grpcs://", "")
+        # Plain host:port defaults to gRPC insecure (for dev)
+        return True, endpoint
 
     def register_flow(self, flow_name: str, *labels: str) -> None:
         if flow_name in self._flows:
@@ -140,76 +118,76 @@ class Dashfrog:
         self._flows.add(flow_name)
 
     @overload
-    def register_statistic(
+    def register_metric(
         self,
-        statistic_type: Literal["counter"],
-        statistic_name: str,
+        metric_type: Literal["counter"],
+        metric_name: str,
         pretty_name: str,
-        unit: StatisticUnitT,
+        unit: MetricUnitT,
         labels: list[str],
-        default_aggregation: str,
+        aggregation: str,
     ) -> Counter: ...
 
     @overload
-    def register_statistic(
+    def register_metric(
         self,
-        statistic_type: Literal["histogram"],
-        statistic_name: str,
+        metric_type: Literal["histogram"],
+        metric_name: str,
         pretty_name: str,
-        unit: StatisticUnitT,
+        unit: MetricUnitT,
         labels: list[str],
-        default_aggregation: str,
+        aggregation: str,
     ) -> Histogram: ...
 
     @overload
-    def register_statistic(
+    def register_metric(
         self,
-        statistic_type: Literal["counter", "histogram"],
-        statistic_name: str,
+        metric_type: Literal["counter", "histogram"],
+        metric_name: str,
         pretty_name: str,
-        unit: StatisticUnitT,
+        unit: MetricUnitT,
         labels: list[str],
-        default_aggregation: str,
+        aggregation: str,
     ) -> Instrument: ...
 
-    def register_statistic(
+    def register_metric(
         self,
-        statistic_type: Literal["counter", "histogram"],
-        statistic_name: str,
+        metric_type: Literal["counter", "histogram"],
+        metric_name: str,
         pretty_name: str,
-        unit: StatisticUnitT,
+        unit: MetricUnitT,
         labels: list[str],
-        default_aggregation: str,
+        aggregation: str,
     ) -> Instrument:
-        if statistic_name not in self._statistics:
+        if metric_name not in self._metrics:
             with self.db_engine.begin() as conn:
                 conn.execute(
-                    insert(Statistic)
+                    insert(MetricModel)
                     .values(
-                        name=statistic_name,
+                        name=metric_name,
                         pretty_name=pretty_name,
-                        type=statistic_type,
+                        type=metric_type,
                         unit=unit,
-                        default_aggregation=default_aggregation,
+                        aggregation=aggregation,
                         labels=list(labels),
                     )
                     .on_conflict_do_update(
-                        index_elements=[Statistic.name],
+                        index_elements=[MetricModel.name],
                         set_=dict(
                             pretty_name=pretty_name,
-                            type=statistic_type,
+                            type=metric_type,
                             unit=unit,
-                            default_aggregation=default_aggregation,
+                            aggregation=aggregation,
                             labels=list(labels),
                         ),
                     )
                 )
-            self._statistics.add(statistic_name)
+            self._metrics.add(metric_name)
 
-        if statistic_type == "counter":
-            return self.meter.create_counter(statistic_name, description=statistic_name, unit=unit or "")
+        if metric_type == "counter":
+            return self.meter.create_counter(metric_name, description=metric_name, unit=unit or "")
         else:
-            return self.meter.create_histogram(statistic_name, description=statistic_name, unit=unit or "")
+            return self.meter.create_histogram(metric_name, description=metric_name, unit=unit or "")
 
     @staticmethod
     def with_flask(flask_app: "Flask") -> None:

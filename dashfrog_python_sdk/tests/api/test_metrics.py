@@ -1,4 +1,4 @@
-"""Tests for Statistics API endpoints."""
+"""Tests for Metrics API endpoints."""
 
 from datetime import datetime, timedelta, timezone
 import time
@@ -7,16 +7,16 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from dashfrog_python_sdk.api import app
-from dashfrog_python_sdk.api.schemas import LabelFilter, StatisticRequest
-from dashfrog_python_sdk.api.statistics import get_instant_promql, get_range_promql, get_range_resolution
-from dashfrog_python_sdk.models import Statistic
-from dashfrog_python_sdk.statistics import Counter, Histogram
+from dashfrog_python_sdk.api.metrics import get_instant_metric_promql, get_range_metric_promql, get_range_resolution
+from dashfrog_python_sdk.api.schemas import LabelFilter, MetricRequest
+from dashfrog_python_sdk.metrics import Counter, Histogram
+from dashfrog_python_sdk.models import Metric
 
 from tests.utils import wait_for_metric_in_prometheus
 
 
-class TestStatisticsAPI:
-    """Tests for Statistics API endpoints."""
+class TestMetricsAPI:
+    """Tests for Metrics API endpoints."""
 
     def test_get_all_labels(self, setup_dashfrog):
         """Test that get_all_labels returns the correct label values from metrics."""
@@ -28,9 +28,9 @@ class TestStatisticsAPI:
         counter = Counter(
             name=counter_name,
             labels=["api_test_label"],
-            pretty_name="API Labels Test Counter",
+            pretty_name="API Labels Test Metric",
             unit="count",
-            default_aggregation="sum",
+            aggregation="increase",
         )
 
         # Record data with a unique label value
@@ -43,7 +43,7 @@ class TestStatisticsAPI:
 
         # Call the API endpoint
         client = TestClient(app)
-        response = client.get("/statistics/labels")
+        response = client.get("/metrics/labels")
 
         assert response.status_code == 200
         data = response.json()
@@ -53,7 +53,7 @@ class TestStatisticsAPI:
             {"label": "tenant", "values": ["api_test_tenant", "api_test_tenant_2"]},
         ]
 
-    def test_search_statistics(self, setup_dashfrog):
+    def test_search_metrics(self, setup_dashfrog):
         """Test that search_metrics returns metrics filtered by labels."""
 
         uuid = str(uuid4()).replace("-", "_")
@@ -62,30 +62,30 @@ class TestStatisticsAPI:
         counter1 = Counter(
             name=f"test_search_counter_1_{uuid}",
             labels=["tenant", "region"],
-            pretty_name="Counter 1",
+            pretty_name="Metric 1",
             unit="count",
-            default_aggregation="sum",
+            aggregation="increase",
         )
 
         counter2 = Counter(
             name=f"test_search_counter_2_{uuid}",
             labels=["tenant", "environment"],
-            pretty_name="Counter 2",
+            pretty_name="Metric 2",
             unit="requests",
-            default_aggregation="ratePerSecond",
+            aggregation="ratePerSecond",
         )
 
         counter3 = Counter(
             name=f"test_search_counter_3_{uuid}",
             labels=["tenant", "region", "environment"],
-            pretty_name="Counter 3",
+            pretty_name="Metric 3",
             unit="errors",
-            default_aggregation="sum",
+            aggregation="increase",
         )
 
         # Test 1: No filter - should return all metrics
         client = TestClient(app)
-        response = client.post("/statistics/search", json={"labels": []})
+        response = client.post("/metrics/search", json={"labels": []})
         assert response.status_code == 200
         data = response.json()
         metric_names = {m["name"] for m in data}
@@ -94,7 +94,7 @@ class TestStatisticsAPI:
         assert counter3.name in metric_names
 
         # Test 2: Filter by single label - should return metrics that have "region"
-        response = client.post("/statistics/search", json={"labels": ["region"]})
+        response = client.post("/metrics/search", json={"labels": ["region"]})
         assert response.status_code == 200
         data = response.json()
         filtered_names = [m["name"] for m in data if uuid in m["name"]]
@@ -103,7 +103,7 @@ class TestStatisticsAPI:
         assert counter3.name in filtered_names
 
         # Test 3: Filter by multiple labels - should return only metrics with ALL labels
-        response = client.post("/statistics/search", json={"labels": ["tenant", "region", "environment"]})
+        response = client.post("/metrics/search", json={"labels": ["tenant", "region", "environment"]})
         assert response.status_code == 200
         data = response.json()
         filtered_names = [m["name"] for m in data if uuid in m["name"]]
@@ -112,7 +112,7 @@ class TestStatisticsAPI:
         assert counter3.name in filtered_names  # Has all three
 
         # Test 4: Verify response structure
-        response = client.post("/statistics/search", json={"labels": []})
+        response = client.post("/metrics/search", json={"labels": []})
         data = response.json()
         test_metrics = [m for m in data if uuid in m["name"]]
         assert len(test_metrics) >= 3
@@ -133,47 +133,47 @@ class TestStatisticsAPI:
         start_time = now - timedelta(hours=1)
         end_time = now
 
-        # Test 1: Counter with sum aggregation, no labels
-        counter_sum = Statistic(
+        # Test 1: Metric with sum aggregation, no labels
+        counter_sum = Metric(
             name="test_counter",
-            pretty_name="Test Counter",
             type="counter",
+            pretty_name="Test Metric",
             unit="count",
-            default_aggregation="sum",
+            aggregation="increase",
             labels=[],
         )
-        request_no_labels = StatisticRequest(
-            statistic_name="test_counter",
+        request_no_labels = MetricRequest(
+            metric_name="test_counter",
             start_time=start_time,
             end_time=end_time,
             labels=[],
         )
-        query = get_instant_promql(counter_sum, request_no_labels)
+        query = get_instant_metric_promql(counter_sum, request_no_labels)
         assert query == "sum(increase(dashfrog_test_counter[3600s]))"
 
-        # Test 2: Counter with ratePerSecond aggregation, no labels
-        counter_rate = Statistic(
+        # Test 2: Metric with ratePerSecond aggregation, no labels
+        counter_rate = Metric(
             name="test_counter",
-            pretty_name="Test Counter",
+            pretty_name="Test Metric",
             type="counter",
             unit="count",
-            default_aggregation="ratePerSecond",
+            aggregation="ratePerSecond",
             labels=["tenant"],
         )
-        query = get_instant_promql(counter_rate, request_no_labels)
+        query = get_instant_metric_promql(counter_rate, request_no_labels)
         assert query == "avg_over_time(sum by (tenant)(rate(dashfrog_test_counter[300s]))[3600s:300s])"
 
-        # Test 3: Counter with ratePerMinute aggregation, with labels
-        counter_rate_minute = Statistic(
+        # Test 3: Metric with ratePerMinute aggregation, with labels
+        counter_rate_minute = Metric(
             name="test_counter",
-            pretty_name="Test Counter",
+            pretty_name="Test Metric",
             type="counter",
             unit="count",
-            default_aggregation="ratePerMinute",
+            aggregation="ratePerMinute",
             labels=["tenant", "region"],
         )
-        request_with_labels = StatisticRequest(
-            statistic_name="test_counter",
+        request_with_labels = MetricRequest(
+            metric_name="test_counter",
             start_time=start_time,
             end_time=end_time,
             labels=[
@@ -181,90 +181,90 @@ class TestStatisticsAPI:
                 LabelFilter(key="region", value="us-east-1"),
             ],
         )
-        query = get_instant_promql(counter_rate_minute, request_with_labels)
+        query = get_instant_metric_promql(counter_rate_minute, request_with_labels)
         assert (
             query
             == 'avg_over_time(sum by (tenant,region)(rate(dashfrog_test_counter{tenant="acme",region="us-east-1"}[300s]))[3600s:300s]) * 60'
         )
 
-        # Test 4: Histogram with p50 aggregation
-        histogram_p50 = Statistic(
+        # Test 4: Metric with p50 aggregation
+        histogram_p50 = Metric(
             name="test_histogram",
-            pretty_name="Test Histogram",
+            pretty_name="Test Metric",
             type="histogram",
             unit="ms",
-            default_aggregation="p50",
+            aggregation="p50",
             labels=["tenant"],
         )
-        request_histogram = StatisticRequest(
-            statistic_name="test_histogram",
+        request_histogram = MetricRequest(
+            metric_name="test_histogram",
             start_time=start_time,
             end_time=end_time,
             labels=[LabelFilter(key="tenant", value="test")],
         )
-        query = get_instant_promql(histogram_p50, request_histogram)
+        query = get_instant_metric_promql(histogram_p50, request_histogram)
         assert (
             query
             == 'avg_over_time(histogram_quantile(0.5, sum by (tenant)(rate(dashfrog_test_histogram{tenant="test"}[300s])))[3600s:300s])'
         )
 
-        # Test 5: Histogram with p99 aggregation
-        histogram_p99 = Statistic(
+        # Test 5: Metric with p99 aggregation
+        histogram_p99 = Metric(
             name="test_histogram",
-            pretty_name="Test Histogram",
+            pretty_name="Test Metric",
             type="histogram",
             unit="ms",
-            default_aggregation="p99",
+            aggregation="p99",
             labels=["tenant"],
         )
-        query = get_instant_promql(histogram_p99, request_histogram)
+        query = get_instant_metric_promql(histogram_p99, request_histogram)
         assert (
             query
             == 'avg_over_time(histogram_quantile(0.99, sum by (tenant)(rate(dashfrog_test_histogram{tenant="test"}[300s])))[3600s:300s])'
         )
 
-        # Test 6: Counter with ratePerHour aggregation
-        counter_rate_hour = Statistic(
+        # Test 6: Metric with ratePerHour aggregation
+        counter_rate_hour = Metric(
             name="test_counter",
-            pretty_name="Test Counter",
+            pretty_name="Test Metric",
             type="counter",
             unit="count",
-            default_aggregation="ratePerHour",
+            aggregation="ratePerHour",
             labels=[],
         )
-        query = get_instant_promql(counter_rate_hour, request_no_labels)
+        query = get_instant_metric_promql(counter_rate_hour, request_no_labels)
         assert query == "avg_over_time(sum(rate(dashfrog_test_counter[300s]))[3600s:300s]) * 3600"
 
-        # Test 7: Counter with ratePerDay aggregation
-        counter_rate_day = Statistic(
+        # Test 7: Metric with ratePerDay aggregation
+        counter_rate_day = Metric(
             name="test_counter",
-            pretty_name="Test Counter",
+            pretty_name="Test Metric",
             type="counter",
             unit="count",
-            default_aggregation="ratePerDay",
+            aggregation="ratePerDay",
             labels=[],
         )
-        query = get_instant_promql(counter_rate_day, request_no_labels)
+        query = get_instant_metric_promql(counter_rate_day, request_no_labels)
         assert query == "avg_over_time(sum(rate(dashfrog_test_counter[300s]))[3600s:300s]) * 86400"
 
         # Test 8: Different time ranges affect window and step
-        request_short = StatisticRequest(
-            statistic_name="test_counter",
+        request_short = MetricRequest(
+            metric_name="test_counter",
             start_time=now - timedelta(minutes=2),
             end_time=now,
             labels=[],
         )
-        query = get_instant_promql(counter_sum, request_short)
+        query = get_instant_metric_promql(counter_sum, request_short)
         # Window is 120s, step is min(120, 300) = 120s
         assert query == "sum(increase(dashfrog_test_counter[120s]))"
 
-        request_long = StatisticRequest(
-            statistic_name="test_counter",
+        request_long = MetricRequest(
+            metric_name="test_counter",
             start_time=now - timedelta(hours=24),
             end_time=now,
             labels=[],
         )
-        query = get_instant_promql(counter_rate, request_long)
+        query = get_instant_metric_promql(counter_rate, request_long)
         # Window is 86400s, step is min(86400, 300) = 300s
         assert query == "avg_over_time(sum by (tenant)(rate(dashfrog_test_counter[300s]))[86400s:300s])"
 
@@ -275,49 +275,49 @@ class TestStatisticsAPI:
         start_time = now - timedelta(hours=1)
         end_time = now
 
-        # Test 1: Counter with sum aggregation, no labels
-        counter_sum = Statistic(
+        # Test 1: Metric with sum aggregation, no labels
+        counter_sum = Metric(
             name="test_counter",
-            pretty_name="Test Counter",
+            pretty_name="Test Metric",
             type="counter",
             unit="count",
-            default_aggregation="sum",
+            aggregation="increase",
             labels=[],
         )
-        request_no_labels = StatisticRequest(
-            statistic_name="test_counter",
+        request_no_labels = MetricRequest(
+            metric_name="test_counter",
             start_time=start_time,
             end_time=end_time,
             labels=[],
         )
-        metric_name, vector_query = get_range_promql(counter_sum, request_no_labels)
+        metric_name, vector_query = get_range_metric_promql(counter_sum, request_no_labels)
         assert metric_name == "dashfrog_test_counter"
         assert vector_query == "sum(increase(dashfrog_test_counter[300s]))"
 
-        # Test 2: Counter with ratePerSecond aggregation, no labels
-        counter_rate = Statistic(
+        # Test 2: Metric with ratePerSecond aggregation, no labels
+        counter_rate = Metric(
             name="test_counter",
-            pretty_name="Test Counter",
+            pretty_name="Test Metric",
             type="counter",
             unit="count",
-            default_aggregation="ratePerSecond",
+            aggregation="ratePerSecond",
             labels=[],
         )
-        metric_name, vector_query = get_range_promql(counter_rate, request_no_labels)
+        metric_name, vector_query = get_range_metric_promql(counter_rate, request_no_labels)
         assert metric_name == "dashfrog_test_counter"
         assert vector_query == "sum(rate(dashfrog_test_counter[300s]))"
 
-        # Test 3: Counter with ratePerMinute aggregation, with labels
-        counter_rate_minute = Statistic(
+        # Test 3: Metric with ratePerMinute aggregation, with labels
+        counter_rate_minute = Metric(
             name="test_counter",
-            pretty_name="Test Counter",
+            pretty_name="Test Metric",
             type="counter",
             unit="count",
-            default_aggregation="ratePerMinute",
+            aggregation="ratePerMinute",
             labels=["tenant", "region"],
         )
-        request_with_labels = StatisticRequest(
-            statistic_name="test_counter",
+        request_with_labels = MetricRequest(
+            metric_name="test_counter",
             start_time=start_time,
             end_time=end_time,
             labels=[
@@ -325,61 +325,61 @@ class TestStatisticsAPI:
                 LabelFilter(key="region", value="us-east-1"),
             ],
         )
-        metric_name, vector_query = get_range_promql(counter_rate_minute, request_with_labels)
+        metric_name, vector_query = get_range_metric_promql(counter_rate_minute, request_with_labels)
         assert metric_name == 'dashfrog_test_counter{tenant="acme",region="us-east-1"}'
         assert (
             vector_query
             == 'sum by (tenant,region)(rate(dashfrog_test_counter{tenant="acme",region="us-east-1"}[300s]))'
         )
 
-        # Test 4: Histogram with p50 aggregation, with labels
-        histogram_p50 = Statistic(
+        # Test 4: Metric with p50 aggregation, with labels
+        histogram_p50 = Metric(
             name="test_histogram",
-            pretty_name="Test Histogram",
+            pretty_name="Test Metric",
             type="histogram",
             unit="ms",
-            default_aggregation="p50",
+            aggregation="p50",
             labels=["tenant"],
         )
-        request_histogram = StatisticRequest(
-            statistic_name="test_histogram",
+        request_histogram = MetricRequest(
+            metric_name="test_histogram",
             start_time=start_time,
             end_time=end_time,
             labels=[LabelFilter(key="tenant", value="test")],
         )
-        metric_name, vector_query = get_range_promql(histogram_p50, request_histogram)
+        metric_name, vector_query = get_range_metric_promql(histogram_p50, request_histogram)
         assert metric_name == 'dashfrog_test_histogram{tenant="test"}'
         assert (
             vector_query
             == 'histogram_quantile(0.5, sum by (tenant)(rate(dashfrog_test_histogram{tenant="test"}[300s])))'
         )
 
-        # Test 5: Histogram with p99 aggregation
-        histogram_p99 = Statistic(
+        # Test 5: Metric with p99 aggregation
+        histogram_p99 = Metric(
             name="test_histogram",
-            pretty_name="Test Histogram",
+            pretty_name="Test Metric",
             type="histogram",
             unit="ms",
-            default_aggregation="p99",
+            aggregation="p99",
             labels=["tenant"],
         )
-        metric_name, vector_query = get_range_promql(histogram_p99, request_histogram)
+        metric_name, vector_query = get_range_metric_promql(histogram_p99, request_histogram)
         assert metric_name == 'dashfrog_test_histogram{tenant="test"}'
         assert (
             vector_query
             == 'histogram_quantile(0.99, sum by (tenant)(rate(dashfrog_test_histogram{tenant="test"}[300s])))'
         )
 
-        # Test 6: Counter with ratePerHour, no labels
-        counter_rate_hour = Statistic(
+        # Test 6: Metric with ratePerHour, no labels
+        counter_rate_hour = Metric(
             name="orders",
             pretty_name="Orders",
             type="counter",
             unit="count",
-            default_aggregation="ratePerHour",
+            aggregation="ratePerHour",
             labels=[],
         )
-        metric_name, vector_query = get_range_promql(counter_rate_hour, request_no_labels)
+        metric_name, vector_query = get_range_metric_promql(counter_rate_hour, request_no_labels)
         assert metric_name == "dashfrog_orders"
         assert vector_query == "sum(rate(dashfrog_orders[300s]))"
 
@@ -392,9 +392,9 @@ class TestStatisticsAPI:
         counter = Counter(
             name=f"test_instant_counter_{uuid}",
             labels=["region"],
-            pretty_name="Test Instant Counter",
+            pretty_name="Test Instant Metric",
             unit="count",
-            default_aggregation="sum",
+            aggregation="increase",
         )
 
         # Insert data with specific label
@@ -415,9 +415,9 @@ class TestStatisticsAPI:
         start_time = now - timedelta(minutes=1)
 
         response = client.post(
-            "/statistics/instant",
+            "/metrics/instant",
             json={
-                "statistic_name": counter.name,
+                "metric_name": counter.name,
                 "start_time": start_time.isoformat(),
                 "end_time": now.isoformat(),
                 "labels": [{"key": "region", "value": "us-east"}],
@@ -429,7 +429,7 @@ class TestStatisticsAPI:
 
         # Verify response structure
         assert len(data) == 1
-        assert data[0]["statistic_name"] == counter.name
+        assert data[0]["metric_name"] == counter.name
         assert data[0]["labels"]["region"] == "us-east"
 
         # Value should be close to 10
@@ -439,9 +439,9 @@ class TestStatisticsAPI:
 
         # Test 2: Query for different region
         response = client.post(
-            "/statistics/instant",
+            "/metrics/instant",
             json={
-                "statistic_name": counter.name,
+                "metric_name": counter.name,
                 "start_time": start_time.isoformat(),
                 "end_time": now.isoformat(),
                 "labels": [{"key": "region", "value": "us-west"}],
@@ -457,9 +457,9 @@ class TestStatisticsAPI:
 
         # Test 3: Query without label filter - should return both regions
         response = client.post(
-            "/statistics/instant",
+            "/metrics/instant",
             json={
-                "statistic_name": counter.name,
+                "metric_name": counter.name,
                 "start_time": start_time.isoformat(),
                 "end_time": now.isoformat(),
                 "labels": [],
@@ -487,9 +487,9 @@ class TestStatisticsAPI:
         histogram = Histogram(
             name=f"test_range_histogram_{uuid}",
             labels=["tenant"],
-            pretty_name="Test Range Histogram",
+            pretty_name="Test Range Metric",
             unit="ms",
-            default_aggregation="p50",
+            aggregation="p50",
         )
 
         # Record some latency values
@@ -507,9 +507,9 @@ class TestStatisticsAPI:
         start_time = now - timedelta(minutes=60)
 
         response = client.post(
-            "/statistics/range",
+            "/metrics/range",
             json={
-                "statistic_name": histogram.name,
+                "metric_name": histogram.name,
                 "start_time": start_time.isoformat(),
                 "end_time": now.isoformat(),
                 "labels": [{"key": "tenant", "value": "range_test_tenant"}],
@@ -520,7 +520,7 @@ class TestStatisticsAPI:
         data = response.json()[0]
 
         # Verify response structure
-        assert data["statistic_name"] == histogram.name
+        assert data["metric_name"] == histogram.name
         assert data["labels"]["tenant"] == "range_test_tenant"
         assert 999 <= data["values"][0]["value"] <= 1001
         assert datetime.fromisoformat(data["values"][0]["timestamp"]).date() == now.date()

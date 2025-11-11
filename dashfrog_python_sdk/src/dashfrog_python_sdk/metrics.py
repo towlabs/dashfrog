@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Literal
 
-from .constants import StatisticUnitT
+from .constants import MetricUnitT
 from .dashfrog import get_dashfrog_instance
 
 from opentelemetry.metrics import (
@@ -19,25 +19,25 @@ class Counter:
         labels: The labels of the metric.
         pretty_name: The pretty name of the metric.
         unit: The unit of the metric.
-        default_aggregation: The default aggregation of the metric.
+        aggregation: The default aggregation of the metric.
     """
 
     name: str
     labels: list[str]
     pretty_name: str
-    unit: StatisticUnitT
-    default_aggregation: Literal["sum", "ratePerSecond", "ratePerMinute", "ratePerHour", "ratePerDay"]
+    unit: MetricUnitT
+    aggregation: Literal["increase", "ratePerSecond", "ratePerMinute", "ratePerHour", "ratePerDay"]
     _otel_counter: OTelCounter = field(init=False)
 
     def __post_init__(self):
         dashfrog = get_dashfrog_instance()
-        self._otel_counter = dashfrog.register_statistic(
-            statistic_type="counter",
-            statistic_name=self.name,
+        self._otel_counter = dashfrog.register_metric(
+            metric_type="counter",
+            metric_name=self.name,
             pretty_name=self.pretty_name,
             unit=self.unit,
             labels=self.labels,
-            default_aggregation=self.default_aggregation,
+            aggregation=self.aggregation,
         )
 
     def add(self, amount: int | float, tenant: str, **labels: str) -> None:
@@ -46,22 +46,32 @@ class Counter:
 
 @dataclass
 class Histogram:
+    """Create a histogram metric. Histogram metrics are used to record the distribution of values (for example, latencies).
+
+    Args:
+        name: The name of the metric.
+        labels: The labels of the metric.
+        pretty_name: The pretty name of the metric.
+        unit: The unit of the metric.
+        aggregation: The default aggregation of the metric.
+    """
+
     name: str
     labels: list[str]
     pretty_name: str
-    unit: StatisticUnitT
-    default_aggregation: Literal["p50", "p90", "p95", "p99"]
+    unit: MetricUnitT
+    aggregation: Literal["p50", "p90", "p95", "p99"]
     _otel_histogram: OTelHistogram = field(init=False)
 
     def __post_init__(self):
         dashfrog = get_dashfrog_instance()
-        self._otel_histogram = dashfrog.register_statistic(
-            statistic_type="histogram",
-            statistic_name=self.name,
+        self._otel_histogram = dashfrog.register_metric(
+            metric_type="histogram",
+            metric_name=self.name,
             pretty_name=self.pretty_name,
             unit=self.unit,
             labels=self.labels,
-            default_aggregation=self.default_aggregation,
+            aggregation=self.aggregation,
         )
 
     def record(self, value: int | float, tenant: str, **labels: str) -> None:

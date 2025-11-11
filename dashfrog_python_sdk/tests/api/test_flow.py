@@ -23,7 +23,7 @@ class TestFlowAPI:
     """Tests for Flow API endpoints."""
 
     def test_list_flows(self, setup_dashfrog):
-        """Test that list_flows returns the correct flow statistics with multiple runs per flow."""
+        """Test that list_flows returns the correct flow metrics with multiple runs per flow."""
 
         dashfrog = get_dashfrog_instance()
         now = datetime.now()
@@ -74,7 +74,11 @@ class TestFlowAPI:
                             flow_id=run["flow_id"],
                             event_name=EVENT_FLOW_SUCCESS,
                             event_dt=run["event_dt"] + timedelta(seconds=45),
-                            labels={"flow_name": failed_flow_name, "tenant": "test_tenant", "environment": "production"},
+                            labels={
+                                "flow_name": failed_flow_name,
+                                "tenant": "test_tenant",
+                                "environment": "production",
+                            },
                         )
                     )
                 elif run["status"] == "failed":
@@ -83,7 +87,11 @@ class TestFlowAPI:
                             flow_id=run["flow_id"],
                             event_name=EVENT_FLOW_FAIL,
                             event_dt=run["event_dt"] + timedelta(seconds=30),
-                            labels={"flow_name": failed_flow_name, "tenant": "test_tenant", "environment": "production"},
+                            labels={
+                                "flow_name": failed_flow_name,
+                                "tenant": "test_tenant",
+                                "environment": "production",
+                            },
                         )
                     )
 

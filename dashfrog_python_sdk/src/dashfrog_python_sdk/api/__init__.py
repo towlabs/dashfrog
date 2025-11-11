@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 
-from . import flow, statistics, timeline
+from . import flow, metrics, timeline
 
 app = FastAPI(
     title="DashFrog API",
@@ -12,5 +12,5 @@ app = FastAPI(
 
 # Include routers
 app.include_router(flow.router)
-app.include_router(statistics.router)
+app.include_router(metrics.router)
 app.include_router(timeline.router)

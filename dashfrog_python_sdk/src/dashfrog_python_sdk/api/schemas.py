@@ -76,8 +76,8 @@ class FlowDetailResponse(BaseModel):
     history: list[FlowHistory]
 
 
-class StatisticResponse(BaseModel):
-    """Response for listing statistics."""
+class MetricResponse(BaseModel):
+    """Response for listing metrics."""
 
     name: str
     prettyName: str
@@ -87,10 +87,10 @@ class StatisticResponse(BaseModel):
     labels: list[str]
 
 
-class StatisticRequest(BaseModel):
-    """Request body for getting instant statistic value."""
+class MetricRequest(BaseModel):
+    """Request body for getting instant metric value."""
 
-    statistic_name: str
+    metric_name: str
     start_time: datetime
     end_time: datetime
     labels: list[LabelFilter] = Field(default_factory=list)
@@ -99,14 +99,14 @@ class StatisticRequest(BaseModel):
 class PrometheusDataPoint(BaseModel):
     """A single Prometheus data point."""
 
-    statistic: dict[str, str]
+    metric: dict[str, str]
     value: list  # [timestamp, value_string]
 
 
-class InstantStatistic(BaseModel):
-    """Response for instant statistic query."""
+class InstantMetric(BaseModel):
+    """Response for instant metric query."""
 
-    statistic_name: str
+    metric_name: str
     labels: dict[str, str]
     value: float
 
@@ -118,9 +118,9 @@ class DataPoint(BaseModel):
     value: float
 
 
-class RangeStatistic(BaseModel):
-    """Response for range statistic query."""
+class RangeMetric(BaseModel):
+    """Response for range metric query."""
 
-    statistic_name: str
+    metric_name: str
     labels: dict[str, str]
     values: list[DataPoint]

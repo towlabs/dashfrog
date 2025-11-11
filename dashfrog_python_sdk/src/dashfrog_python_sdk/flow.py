@@ -95,8 +95,10 @@ def _end_flow(event_name: str):
 
 
 def success():
+    """Manually mark a flow as successful. Use this when end_on_exit=False in flow.start()."""
     _end_flow(EVENT_FLOW_SUCCESS)
 
 
 def fail():
+    """Manually mark a flow as failed. Use this when end_on_exit=False in flow.start()."""
     _end_flow(EVENT_FLOW_FAIL)

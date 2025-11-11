@@ -1,4 +1,4 @@
-"""Metric API routes."""
+"""Metrics API routes."""
 
 from datetime import datetime
 from typing import Callable
@@ -11,18 +11,18 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from dashfrog_python_sdk import get_dashfrog_instance
-from dashfrog_python_sdk.models import Statistic
+from dashfrog_python_sdk.models import Metric as MetricModel
 
 from .schemas import (
     DataPoint,
-    InstantStatistic,
+    InstantMetric,
     Label,
-    RangeStatistic,
-    StatisticRequest,
-    StatisticResponse,
+    MetricRequest,
+    MetricResponse,
+    RangeMetric,
 )
 
-router = APIRouter(prefix="/statistics", tags=["statistics"])
+router = APIRouter(prefix="/metrics", tags=["metrics"])
 
 _STEP = "300s"
 
@@ -82,15 +82,15 @@ def get_range_resolution(start_time: datetime, end_time: datetime) -> str:
         return "1d"  # Maximum step for very long ranges
 
 
-class StatisticSearchRequest(BaseModel):
-    """Request body for searching/listing statistics."""
+class MetricSearchRequest(BaseModel):
+    """Request body for searching/listing metrics."""
 
-    labels: list[str] = Field(default_factory=list, description="Filter statistics by label names")
+    labels: list[str] = Field(default_factory=list, description="Filter metrics by label names")
 
 
-@router.post("/search", response_model=list[StatisticResponse])
-async def search_statistics(request: StatisticSearchRequest) -> list[StatisticResponse]:
-    """Search/list statistics with optional label filters.
+@router.post("/search", response_model=list[MetricResponse])
+async def search_metrics(request: MetricSearchRequest) -> list[MetricResponse]:
+    """Search/list metrics with optional label filters.
 
     Args:
         request: Search request containing optional label filters
@@ -100,75 +100,70 @@ async def search_statistics(request: StatisticSearchRequest) -> list[StatisticRe
             "labels": ["tenant", "region"]
         }
 
-    Returns only statistics that have ALL the specified labels.
-    If labels is empty, returns all statistics.
+    Returns only metrics that have ALL the specified labels.
+    If labels is empty, returns all metrics.
     """
     dashfrog = get_dashfrog_instance()
 
     with dashfrog.db_engine.connect() as conn:
-        query = select(Statistic)
+        query = select(MetricModel)
 
         # Add filter conditions for each required label
         for label in request.labels:
             # Use PostgreSQL array contains operator (@>) to check if label exists
-            query = query.where(Statistic.labels.contains([label]))
+            query = query.where(MetricModel.labels.contains([label]))
 
         result = conn.execute(query).fetchall()
 
         return [
-            StatisticResponse(
-                name=statistic.name,
-                prettyName=statistic.pretty_name,
-                type=statistic.type,
-                unit=statistic.unit,
-                defaultAggregation=statistic.default_aggregation,
-                labels=statistic.labels,
+            MetricResponse(
+                name=metric.name,
+                prettyName=metric.pretty_name,
+                type=metric.type,
+                unit=metric.unit,
+                defaultAggregation=metric.aggregation,
+                labels=metric.labels,
             )
-            for statistic in result
+            for metric in result
         ]
 
 
-def get_range_promql(statistic: Statistic, request: StatisticRequest) -> tuple[str, str]:
-    label_filters = [f'{label.key}="{label.value}"' for label in request.labels if label.key in statistic.labels]
-    statistic_name = (
-        f"dashfrog_{statistic.name}"
-        if not request.labels
-        else f"dashfrog_{statistic.name}{{{','.join(label_filters)}}}"
+def get_range_metric_promql(metric: MetricModel, request: MetricRequest) -> tuple[str, str]:
+    label_filters = [f'{label.key}="{label.value}"' for label in request.labels if label.key in metric.labels]
+    metric_name = (
+        f"dashfrog_{metric.name}" if not request.labels else f"dashfrog_{metric.name}{{{','.join(label_filters)}}}"
     )
-    if statistic.type == "counter":
-        if statistic.default_aggregation.startswith("rate"):
-            return statistic_name, spatial_agg(statistic, f"rate({statistic_name}[{_STEP}])")
+    if metric.type == "counter":
+        if metric.aggregation.startswith("rate"):
+            return metric_name, spatial_agg(metric, f"rate({metric_name}[{_STEP}])")
         else:
-            return statistic_name, spatial_agg(statistic, f"increase({statistic_name}[{_STEP}])")
+            return metric_name, spatial_agg(metric, f"increase({metric_name}[{_STEP}])")
     else:
-        percentile = int(statistic.default_aggregation.replace("p", "")) / 100
-        rate_statistic = f"rate({statistic_name}[{_STEP}])"
-        return statistic_name, f"histogram_quantile({percentile}, {spatial_agg(statistic, rate_statistic)})"
+        percentile = int(metric.aggregation.replace("p", "")) / 100
+        rate_metric = f"rate({metric_name}[{_STEP}])"
+        return metric_name, f"histogram_quantile({percentile}, {spatial_agg(metric, rate_metric)})"
 
 
-def get_instant_promql(statistic: Statistic, request: StatisticRequest) -> str:
+def get_instant_metric_promql(metric: MetricModel, request: MetricRequest) -> str:
     window_in_seconds = int((request.end_time - request.start_time).total_seconds())
     window = f"{window_in_seconds}s"
-    statistic_name, vector_promql = get_range_promql(statistic, request)
+    metric_name, vector_promql = get_range_metric_promql(metric, request)
 
-    if statistic.type == "counter":
-        if statistic.default_aggregation.startswith("rate"):
-            return temporal_agg(statistic, _STEP, window)(vector_promql)
+    if metric.type == "counter":
+        if metric.aggregation.startswith("rate"):
+            return temporal_agg(metric, _STEP, window)(vector_promql)
         else:
-            # Use increase() which handles counter semantics properly
-            # Note: With remote write at 1s intervals, we get frequent data points
-            # but increase() still extrapolates to window boundaries, leading to non-integer values
-            return spatial_agg(statistic, f"increase({statistic_name}[{window}])")
+            return spatial_agg(metric, f"increase({metric_name}[{window}])")
     else:
-        return temporal_agg(statistic, _STEP, window)(vector_promql)
+        return temporal_agg(metric, _STEP, window)(vector_promql)
 
 
-def spatial_agg(statistic: Statistic, prom_expr: str) -> str:
-    return f"sum({prom_expr})" if not statistic.labels else f"sum by ({','.join(statistic.labels)})({prom_expr})"
+def spatial_agg(metric: MetricModel, prom_expr: str) -> str:
+    return f"sum({prom_expr})" if not metric.labels else f"sum by ({','.join(metric.labels)})({prom_expr})"
 
 
-def temporal_agg(statistic: Statistic, step: str, window: str) -> Callable[[str], str]:
-    match statistic.default_aggregation:
+def temporal_agg(metric: MetricModel, step: str, window: str) -> Callable[[str], str]:
+    match metric.aggregation:
         case "ratePerSecond":
             return lambda prom_expr: f"avg_over_time({prom_expr}[{window}:{step}])"
         case "ratePerMinute":
@@ -181,19 +176,19 @@ def temporal_agg(statistic: Statistic, step: str, window: str) -> Callable[[str]
             return lambda prom_expr: f"avg_over_time({prom_expr}[{window}:{step}])"
 
 
-@router.post("/instant", response_model=list[InstantStatistic])
-async def get_instant_statistic(request: StatisticRequest) -> list[InstantStatistic]:
-    """Query Prometheus for instant statistic value over a time range.
+@router.post("/instant", response_model=list[InstantMetric])
+async def get_instant_metric(request: MetricRequest) -> list[InstantMetric]:
+    """Query Prometheus for instant metric value over a time range.
 
     This endpoint generates an instant query that aggregates data over the time window
     using temporal aggregation (avg_over_time with subqueries).
 
     Args:
-        request: Request containing statistic name, time range, and label filters
+        request: Request containing metric name, time range, and label filters
 
     Example request body:
         {
-            "statistic_name": "orders",
+            "metric_name": "orders",
             "start_time": "2024-01-01T00:00:00Z",
             "end_time": "2024-01-01T01:00:00Z",
             "labels": [
@@ -202,19 +197,19 @@ async def get_instant_statistic(request: StatisticRequest) -> list[InstantStatis
         }
 
     Returns:
-        list[InstantStatistic]
+        list[InstantMetric]
     """
     dashfrog = get_dashfrog_instance()
 
     # Fetch metric from database
     with Session(dashfrog.db_engine) as session:
         try:
-            statistic = session.execute(select(Statistic).where(Statistic.name == request.statistic_name)).scalar_one()
+            metric = session.execute(select(MetricModel).where(MetricModel.name == request.metric_name)).scalar_one()
         except NoResultFound:
-            raise HTTPException(status_code=404, detail=f"Statistic {request.statistic_name} not found")
+            raise HTTPException(status_code=404, detail=f"Metric {request.metric_name} not found")
 
         # Generate PromQL query
-        promql = get_instant_promql(statistic, request)
+        promql = get_instant_metric_promql(metric, request)
 
         response = requests.get(
             f"{dashfrog.config.prometheus_endpoint}/api/v1/query",
@@ -228,9 +223,9 @@ async def get_instant_statistic(request: StatisticRequest) -> list[InstantStatis
         prom_data = response.json()["data"]["result"]
 
         return [
-            InstantStatistic(
-                statistic_name=request.statistic_name,
-                labels={label: item["metric"][label] for label in statistic.labels},
+            InstantMetric(
+                metric_name=request.metric_name,
+                labels={label: item["metric"][label] for label in metric.labels},
                 value=float(item["value"][1]),
             )
             for item in prom_data
@@ -238,37 +233,37 @@ async def get_instant_statistic(request: StatisticRequest) -> list[InstantStatis
         ]
 
 
-@router.post("/range", response_model=list[RangeStatistic])
-async def get_range_statistic(request: StatisticRequest) -> list[RangeStatistic]:
-    """Query Prometheus for range statistic value.
+@router.post("/range", response_model=list[RangeMetric])
+async def get_range_metric(request: MetricRequest) -> list[RangeMetric]:
+    """Query Prometheus for range metric value.
 
     This endpoint generates a range query that returns the value over a time range.
 
     Args:
-        request: Request containing statistic name and label filters
+        request: Request containing metric name and label filters
 
     Example request body:
         {
-            "statistic_name": "orders",
+            "metric_name": "orders",
             "labels": [
                 {"key": "tenant", "value": "acme-corp"}
             ]
         }
 
     Returns:
-        list[RangeStatistic]
+        list[RangeMetric]
     """
     dashfrog = get_dashfrog_instance()
 
     # Fetch metric from database
     with Session(dashfrog.db_engine) as session:
         try:
-            statistic = session.execute(select(Statistic).where(Statistic.name == request.statistic_name)).scalar_one()
+            metric = session.execute(select(MetricModel).where(MetricModel.name == request.metric_name)).scalar_one()
         except NoResultFound:
-            raise HTTPException(status_code=404, detail=f"Statistic {request.statistic_name} not found")
+            raise HTTPException(status_code=404, detail=f"Metric {request.metric_name} not found")
 
         # Generate PromQL query
-        _statistic_name, promql = get_range_promql(statistic, request)
+        _metric_name, promql = get_range_metric_promql(metric, request)
 
         response = requests.get(
             f"{dashfrog.config.prometheus_endpoint}/api/v1/query_range",
@@ -286,9 +281,9 @@ async def get_range_statistic(request: StatisticRequest) -> list[RangeStatistic]
 
         prom_data = response.json()["data"]["result"]
         return [
-            RangeStatistic(
-                statistic_name=request.statistic_name,
-                labels={label: item["metric"][label] for label in statistic.labels},
+            RangeMetric(
+                metric_name=request.metric_name,
+                labels={label: item["metric"][label] for label in metric.labels},
                 values=[
                     DataPoint(timestamp=timestamp, value=float(value))
                     for timestamp, value in item["values"]
@@ -300,20 +295,20 @@ async def get_range_statistic(request: StatisticRequest) -> list[RangeStatistic]
 
 
 @router.get("/labels", response_model=list[Label])
-async def get_all_statistic_labels() -> list[Label]:
+async def get_all_metric_labels() -> list[Label]:
     """Fetch all labels and their values from Prometheus."""
     dashfrog = get_dashfrog_instance()
 
     # Step 1: Get registered labels from database
     with dashfrog.db_engine.connect() as conn:
-        statistics = conn.execute(select(Statistic)).fetchall()
-        statistic_labels = {label for statistic in statistics for label in statistic.labels} | {"tenant"}
-        statistic_names = {statistic.name for statistic in statistics}
+        metrics = conn.execute(select(MetricModel)).fetchall()
+        metric_labels = {label for metric in metrics for label in metric.labels} | {"tenant"}
+        metric_names = {metric.name for metric in metrics}
 
     # Step 2: Fetch all series from Prometheus
     try:
         # Use POST with explicit metric names to avoid URL length limits
-        matchers = [("match[]", f"dashfrog_{name}") for name in sorted(statistic_names)]
+        matchers = [("match[]", f"dashfrog_{name}") for name in sorted(metric_names)]
 
         response = requests.post(
             f"{dashfrog.config.prometheus_endpoint}/api/v1/series",
@@ -330,9 +325,9 @@ async def get_all_statistic_labels() -> list[Label]:
         raise HTTPException(status_code=502, detail=f"Failed to connect to Prometheus: {e}")
 
     # Step 3: Extract label values for registered labels only
-    label_values = {label: set() for label in statistic_labels}
+    label_values = {label: set() for label in metric_labels}
     for series in series_data:
-        for label in statistic_labels:
+        for label in metric_labels:
             if label in series:
                 label_values[label].add(series[label])
 

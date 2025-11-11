@@ -34,7 +34,7 @@ def setup_dashfrog(test_engine):
         postgres_dbname="dashfrog_test",
         postgres_user="postgres",
         postgres_password="postgres",
-        otlp_endpoint="http://otel-collector:4318",
+        otlp_endpoint="grpc://otel-collector:4317",
         prometheus_endpoint="http://prometheus:9090",
     )
     setup(config)
@@ -44,11 +44,11 @@ def setup_dashfrog(test_engine):
     with dashfrog.db_engine.begin() as conn:
         conn.execute(Base.metadata.tables["flow_event"].delete())
         conn.execute(Base.metadata.tables["flow"].delete())
-        conn.execute(Base.metadata.tables["statistic"].delete())
+        conn.execute(Base.metadata.tables["metric"].delete())
         conn.execute(Base.metadata.tables["timeline_event"].delete())
 
     # Clear in-memory caches
     dashfrog._flows.clear()
-    dashfrog._statistics.clear()
+    dashfrog._metrics.clear()
 
     yield

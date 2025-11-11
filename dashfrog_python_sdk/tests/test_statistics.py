@@ -5,8 +5,8 @@ import time
 from sqlalchemy import select
 
 from dashfrog_python_sdk import get_dashfrog_instance
-from dashfrog_python_sdk.models import Statistic
-from dashfrog_python_sdk.statistics import Counter, Histogram
+from dashfrog_python_sdk.metrics import Counter, Histogram
+from dashfrog_python_sdk.models import Metric
 
 from tests.utils import wait_for_metric_in_prometheus
 
@@ -22,7 +22,7 @@ class TestCounter:
             labels=["environment", "status"],
             pretty_name="Test Counter",
             unit="count",
-            default_aggregation="sum",
+            aggregation="increase",
         )
 
         # Increment the counter
@@ -33,14 +33,14 @@ class TestCounter:
         # Verify the metric was registered in the database
         dashfrog = get_dashfrog_instance()
         with dashfrog.db_engine.connect() as conn:
-            result = conn.execute(select(Statistic).where(Statistic.name == "test_counter")).fetchone()
+            result = conn.execute(select(Metric).where(Metric.name == "test_counter")).fetchone()
 
             assert result is not None
             assert result.name == "test_counter"
             assert result.type == "counter"
             assert result.pretty_name == "Test Counter"
             assert result.unit == "count"
-            assert result.default_aggregation == "sum"
+            assert result.aggregation == "increase"
             assert set(result.labels) == {"environment", "status"}
 
     def test_counter_data_in_prometheus(self, setup_dashfrog):
@@ -51,7 +51,7 @@ class TestCounter:
             labels=["status"],
             pretty_name="Prometheus Test Counter",
             unit="requests",
-            default_aggregation="sum",
+            aggregation="increase",
         )
 
         # Increment the counter
@@ -97,7 +97,7 @@ class TestHistogram:
             labels=["endpoint", "method"],
             pretty_name="Test Histogram",
             unit="milliseconds",
-            default_aggregation="p95",
+            aggregation="p95",
         )
 
         # Record some values
@@ -108,14 +108,14 @@ class TestHistogram:
         # Verify the metric was registered in the database
         dashfrog = get_dashfrog_instance()
         with dashfrog.db_engine.connect() as conn:
-            result = conn.execute(select(Statistic).where(Statistic.name == "test_histogram")).fetchone()
+            result = conn.execute(select(Metric).where(Metric.name == "test_histogram")).fetchone()
 
             assert result is not None
             assert result.name == "test_histogram"
             assert result.type == "histogram"
             assert result.pretty_name == "Test Histogram"
             assert result.unit == "milliseconds"
-            assert result.default_aggregation == "p95"
+            assert result.aggregation == "p95"
             assert set(result.labels) == {"endpoint", "method"}
 
     def test_histogram_data_in_prometheus(self, setup_dashfrog):
@@ -126,7 +126,7 @@ class TestHistogram:
             labels=["endpoint"],
             pretty_name="Prometheus Test Histogram",
             unit="milliseconds",
-            default_aggregation="p99",
+            aggregation="p99",
         )
 
         # Record values to create a distribution
