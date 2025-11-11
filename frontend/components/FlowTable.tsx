@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import {
+	ChartNoAxesGantt,
 	CircleDot,
 	Clock,
 	Hash,
@@ -72,7 +73,7 @@ export function FlowTable({ flows, onAddFilter }: Props) {
 						<TableRow>
 							<TableHead>
 								<div className="flex items-center gap-2">
-									<PlayCircle className="h-4 w-4" />
+									<ChartNoAxesGantt className="h-4 w-4" />
 									<span>Name</span>
 								</div>
 							</TableHead>

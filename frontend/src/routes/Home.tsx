@@ -22,12 +22,11 @@ export default function HomePage() {
 	};
 
 	return (
-		<div className="flex-1 space-y-6 p-8">
+		<div className="flex-1 space-y-6 px-8 py-4">
 			{/* Breadcrumb */}
 			<nav className="flex items-center space-x-2 text-sm text-muted-foreground">
-				<HomeIcon className="h-4 w-4" />
-				<ChevronRight className="h-4 w-4" />
-				<span className="font-medium text-foreground">Tenants</span>
+				<HomeIcon className="h-4 w-4 mr-2" />
+				Tenants
 			</nav>
 
 			{/* Page Header */}

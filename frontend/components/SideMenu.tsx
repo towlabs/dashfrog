@@ -2,8 +2,13 @@ import {
 	Building2,
 	ChevronLeft,
 	ChevronRight,
+	History,
 	CornerDownRight,
 	Home,
+	ChartScatter,
+	Workflow,
+	ChartNoAxesGantt,
+	Database,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -54,6 +59,22 @@ export default function SideMenu({
 		}
 	};
 
+	// Detect selected tenant from URL
+	const selectedTenant = pathname.startsWith("/tenants/")
+		? decodeURIComponent(pathname.split("/")[2])
+		: null;
+
+	const tenantMenuItems = selectedTenant
+		? [
+				{
+					id: "data",
+					label: "Data",
+					icon: Database,
+					href: `/tenants/${encodeURIComponent(selectedTenant)}`,
+				},
+			]
+		: [];
+
 	return (
 		<aside
 			className={cn(
@@ -69,7 +90,7 @@ export default function SideMenu({
 						<img
 							src="/assets/logo.svg"
 							alt="DashFrog"
-							className={cn("transition-all", "w-6")}
+							className={cn("transition-all", "w-12")}
 						/>
 					)}
 					{!isCollapsed && <span className="font-semibold">DashFrog</span>}
@@ -150,50 +171,28 @@ export default function SideMenu({
 						);
 					})}
 
-					{/* Separator */}
-					{!isCollapsed && tenants.length > 0 && (
-						<div className="px-3 py-2">
-							<Separator />
-						</div>
-					)}
-
-					{/* Tenant List */}
-					{!isCollapsed && tenants.length > 0 && (
+					{/* Tenant Navigation */}
+					{!isCollapsed && selectedTenant && (
 						<div className="space-y-1">
-							{tenants.slice(0, MAX_VISIBLE_TENANTS).map((tenant) => {
-								const tenantPath = `/tenants/${encodeURIComponent(tenant)}`;
-								const isActive = pathname === tenantPath;
+							{tenantMenuItems.map((item) => {
+								const Icon = item.icon;
+								const isActive = pathname === item.href;
 
 								return (
 									<Link
-										key={tenant}
-										to={tenantPath}
+										key={item.id}
+										to={item.href}
 										className={cn(
 											"flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent",
 											isActive && "bg-accent text-accent-foreground",
 										)}
 										style={{ color: isActive ? undefined : "#5f5e5b" }}
 									>
-										<Building2 className="h-4 w-4 shrink-0" />
-										<span className="flex-1 truncate">{tenant}</span>
+										<Icon className="h-4 w-4 shrink-0" />
+										<span className="flex-1">{item.label}</span>
 									</Link>
 								);
 							})}
-
-							{/* "and x more" button */}
-							{tenants.length > MAX_VISIBLE_TENANTS && (
-								<button
-									type="button"
-									onClick={() => setSearchOpen(true)}
-									className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent w-full text-left"
-									style={{ color: "#5f5e5b" }}
-								>
-									<div className="h-4 w-4 shrink-0" />
-									<span className="flex-1 text-xs text-muted-foreground">
-										and {tenants.length - MAX_VISIBLE_TENANTS} more...
-									</span>
-								</button>
-							)}
 						</div>
 					)}
 				</nav>

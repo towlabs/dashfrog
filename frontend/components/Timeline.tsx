@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Sparkles, Tag } from "lucide-react";
+import { History, Sparkles, Tag } from "lucide-react";
 import { useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import {
@@ -59,11 +59,10 @@ export function Timeline({ events }: TimelineProps) {
 					<TableRow>
 						<TableHead className="w-32">
 							<div className="flex items-center gap-2">
-								<Clock className="h-4 w-4" />
+								<History className="h-4 w-4" />
 								Time
 							</div>
 						</TableHead>
-						<TableHead className="w-12"></TableHead>
 						<TableHead>
 							<div className="flex items-center gap-2">
 								<Sparkles className="h-4 w-4" />
@@ -84,8 +83,9 @@ export function Timeline({ events }: TimelineProps) {
 							<TableCell className="text-xs text-muted-foreground">
 								{formatTimeAgo(event.eventDt)}
 							</TableCell>
-							<TableCell className="text-xl">{event.emoji}</TableCell>
-							<TableCell className="text-sm">{event.name}</TableCell>
+							<TableCell className="text-sm">
+								<span className="mr-2 text-xl">{event.emoji}</span> {event.name}
+							</TableCell>
 							<TableCell>
 								<div className="flex flex-wrap gap-1 justify-end">
 									{Object.entries(event.labels).map(([key, value]) => (

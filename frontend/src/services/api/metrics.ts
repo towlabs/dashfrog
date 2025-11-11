@@ -125,8 +125,8 @@ const Metrics = {
 		// TIP: To test empty state, change dummyData to []
 		const dummyData: MetricApiResponse[] = [
 			{
-				name: "Request Rate",
-				prometheusName: "http_requests_rate",
+				name: "HTTP Requests",
+				prometheusName: "http_requests",
 				description: "HTTP requests per second",
 				unit: "requests",
 				aggregation: "ratePerSecond",
@@ -141,11 +141,11 @@ const Metrics = {
 				],
 			},
 			{
-				name: "Error Rate",
+				name: "Errors",
 				prometheusName: "error_rate",
 				description: "Error percentage (0-1 range)",
 				unit: "percent",
-				aggregation: "avg",
+				aggregation: "increase",
 				values: [
 					{
 						labels: {
@@ -175,7 +175,7 @@ const Metrics = {
 				prometheusName: "cpu_usage_percent",
 				description: "CPU utilization percentage",
 				unit: "percent",
-				aggregation: "avg",
+				aggregation: "increase",
 				values: [
 					{
 						labels: {
@@ -191,7 +191,7 @@ const Metrics = {
 				prometheusName: "memory_usage_bytes",
 				description: "Memory usage in bytes",
 				unit: "bytes",
-				aggregation: "avg",
+				aggregation: "increase",
 				values: [
 					{
 						labels: {
@@ -240,7 +240,7 @@ const Metrics = {
 				],
 			},
 			{
-				name: "Events Per Minute",
+				name: "Events",
 				prometheusName: "events_rate",
 				description: "Event processing rate",
 				unit: "events",
@@ -256,11 +256,11 @@ const Metrics = {
 				],
 			},
 			{
-				name: "Total Requests",
+				name: "Requests",
 				prometheusName: "http_requests_total",
 				description: "Total number of HTTP requests",
 				unit: "count",
-				aggregation: "sum",
+				aggregation: "increase",
 				values: [
 					{
 						labels: {
@@ -279,7 +279,7 @@ const Metrics = {
 				],
 			},
 			{
-				name: "Daily Active Users",
+				name: "Active Users",
 				prometheusName: "active_users_daily",
 				description: "Active users per day",
 				unit: "users",

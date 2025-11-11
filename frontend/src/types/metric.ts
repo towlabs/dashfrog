@@ -4,10 +4,7 @@ export interface MetricValue {
 }
 
 export type MetricAggregation =
-	| "sum"
-	| "avg"
-	| "min"
-	| "max"
+	| "increase"
 	| "p50"
 	| "p90"
 	| "p95"
@@ -18,10 +15,7 @@ export type MetricAggregation =
 	| "ratePerDay";
 
 export const MetricAggregationLabel: Record<MetricAggregation, string> = {
-	sum: "Total",
-	avg: "Average",
-	min: "Minimum",
-	max: "Maximum",
+	increase: "Increase",
 	p50: "50th Percentile",
 	p90: "90th Percentile",
 	p95: "95th Percentile",

@@ -8,7 +8,10 @@
 @source "../node_modules/@blocknote/shadcn";
 
 @theme {
-	--font-family-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+	--font-family-sans:
+		ui-sans-serif, -apple-system, BlinkMacSystemFont,
+		"Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji",
+		Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
 	--color-background: oklch(100% 0 0);
 	--color-foreground: oklch(3.9% 0 0);
 	--color-card: oklch(100% 0 0);
@@ -18,7 +21,7 @@
 	--color-primary: oklch(9% 0 0);
 	--color-primary-foreground: oklch(98% 0 0);
 	--color-secondary: oklch(96.1% 0 0);
-	--color-secondary-foreground: oklch(9% 0 0);
+	--color-secondary-foreground: #7d7a75;
 	--color-muted: oklch(96.1% 0 0);
 	--color-muted-foreground: oklch(45.1% 0 0);
 	--color-accent: oklch(96.1% 0 0);
@@ -39,6 +42,8 @@
 	--color-chart-3: oklch(33.59% 0.051 214.57);
 	--color-chart-4: oklch(76.94% 0.135 85.24);
 	--color-chart-5: oklch(79.18% 0.118 56.38);
+
+	--text-xl: 18px;
 }
 
 .dark {
@@ -73,9 +78,17 @@
 	@apply border-border;
 }
 
+html {
+	font-size: 15px;
+}
+
 body {
 	@apply bg-background text-foreground;
-	font-family: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+	font-weight: 500;
+	line-height: 1.5;
+	letter-spacing: -0.03em;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 /* Override ProseMirror table styles that conflict with shadcn/ui tables */

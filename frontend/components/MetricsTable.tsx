@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BarChart3, Hash, Tag } from "lucide-react";
+import { BarChart3, Hash, ScatterChart, Tag } from "lucide-react";
 import {
 	Card,
 	CardContent,
@@ -54,8 +54,8 @@ export function MetricsTable({ metrics }: MetricsTableProps) {
 					<TableRow>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<BarChart3 className="h-4 w-4" />
-								<span>Metric</span>
+								<ScatterChart className="h-4 w-4" />
+								<span>Statistic</span>
 							</div>
 						</TableHead>
 						<TableHead>
@@ -94,11 +94,9 @@ export function MetricsTable({ metrics }: MetricsTableProps) {
 								>
 									<TableCell>
 										{isFirstRow ? (
-											<div className="space-y-1">
-												<div className="font-medium">{metric.name}</div>
-												<div className="text-xs text-muted-foreground">
-													{MetricAggregationLabel[metric.aggregation]}
-												</div>
+											<div className="space-y-1font-medium">
+												{MetricAggregationLabel[metric.aggregation]} of{" "}
+												{metric.name}
 											</div>
 										) : (
 											<div className="text-xs text-muted-foreground"></div>
