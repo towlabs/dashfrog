@@ -12,12 +12,6 @@ import {
 	CommandList,
 } from "@/components/ui/command";
 import {
-	ContextMenu,
-	ContextMenuContent,
-	ContextMenuItem,
-	ContextMenuTrigger,
-} from "@/components/ui/context-menu";
-import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
@@ -26,7 +20,6 @@ import {
 type LabelBadgeProps = {
 	labelKey: string;
 	labelValue: string;
-	onAddFilter?: (key: string, value: string) => void;
 	readonly?: boolean;
 	availableValues?: string[];
 	onValueChange?: (value: string) => void;
@@ -36,7 +29,6 @@ type LabelBadgeProps = {
 export function LabelBadge({
 	labelKey,
 	labelValue,
-	onAddFilter,
 	readonly = true,
 	availableValues,
 	onValueChange,
@@ -104,22 +96,11 @@ export function LabelBadge({
 
 	// Read-only mode with context menu
 	return (
-		<ContextMenu>
-			<ContextMenuTrigger>
-				<Badge
-					variant="secondary"
-					className="h-5 px-2 text-xs font-normal border-0 text-muted-foreground"
-				>
-					{labelKey}={labelValue}
-				</Badge>
-			</ContextMenuTrigger>
-			{onAddFilter && (
-				<ContextMenuContent>
-					<ContextMenuItem onClick={() => onAddFilter(labelKey, labelValue)}>
-						Add to filters
-					</ContextMenuItem>
-				</ContextMenuContent>
-			)}
-		</ContextMenu>
+		<Badge
+			variant="secondary"
+			className="h-5 px-2 font-normal h-6 border-0 text-muted-foreground"
+		>
+			{labelKey}={labelValue}
+		</Badge>
 	);
 }

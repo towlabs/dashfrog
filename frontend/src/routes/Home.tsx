@@ -1,4 +1,4 @@
-import { Building2, ChevronRight, Home as HomeIcon } from "lucide-react";
+import { Building2, Home as HomeIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";

@@ -1,6 +1,6 @@
+import { CheckCircle2, Loader, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, Loader, XCircle } from "lucide-react";
 import type { FlowStatus as FlowStatusType } from "@/src/types/flow";
 
 interface FlowStatusProps {

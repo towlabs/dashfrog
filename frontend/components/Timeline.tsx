@@ -1,15 +1,21 @@
 "use client";
 
-import { History, Sparkles, Tag } from "lucide-react";
-import { useState } from "react";
-import { LabelBadge } from "@/components/LabelBadge";
 import {
-	Pagination,
-	PaginationContent,
-	PaginationItem,
-	PaginationNext,
-	PaginationPrevious,
-} from "@/components/ui/pagination";
+	Calendar,
+	CaseSensitive,
+	CaseUpper,
+	ChevronRight,
+	History,
+	PanelRight,
+	Sparkles,
+	Tag,
+	Tags,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { LabelBadge } from "@/components/LabelBadge";
+import { SimplePagination } from "@/components/SimplePagination";
+import { TableSkeleton } from "@/components/TableSkeleton";
+import { TimelineEventSheet } from "@/components/TimelineEventSheet";
 import {
 	Table,
 	TableBody,
@@ -18,17 +24,71 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatTimeAgo } from "@/src/lib/formatters";
+import {
+	processTimelineEvents,
+	Timeline as TimelineAPI,
+} from "@/src/services/api/timeline";
+import type { Filter } from "@/src/types/filter";
 import type { TimelineEvent } from "@/src/types/timeline";
+import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 14;
 
 type TimelineProps = {
-	events: TimelineEvent[];
+	tenant: string;
+	timeWindow: TimeWindow;
+	filters: Filter[];
 };
 
-export function Timeline({ events }: TimelineProps) {
+export function Timeline({ tenant, timeWindow, filters }: TimelineProps) {
+	const [events, setEvents] = useState<TimelineEvent[]>([]);
+	const [loading, setLoading] = useState(true);
 	const [currentPage, setCurrentPage] = useState(1);
+	const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(
+		null,
+	);
+	const [sheetOpen, setSheetOpen] = useState(false);
+
+	useEffect(() => {
+		const fetchTimeline = async () => {
+			setLoading(true);
+			try {
+				const { start, end } = resolveTimeWindow(timeWindow);
+				const response = await TimelineAPI.getByTenant(
+					tenant,
+					start,
+					end,
+					filters,
+				);
+				const timelineEvents = processTimelineEvents(response.data);
+				setEvents(timelineEvents);
+			} catch (error) {
+				console.error("Failed to fetch timeline:", error);
+				setEvents([]);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		if (tenant) {
+			void fetchTimeline();
+		}
+	}, [tenant, timeWindow, filters]);
+
+	const handleEventClick = (event: TimelineEvent) => {
+		setSelectedEvent(event);
+		setSheetOpen(true);
+	};
+
+	if (loading) {
+		return <TableSkeleton columns={4} rows={10} />;
+	}
 
 	if (events.length === 0) {
 		return (
@@ -53,95 +113,84 @@ export function Timeline({ events }: TimelineProps) {
 	};
 
 	return (
-		<div className="space-y-4">
-			<Table>
-				<TableHeader>
-					<TableRow>
-						<TableHead className="w-32">
-							<div className="flex items-center gap-2">
-								<History className="h-4 w-4" />
-								Time
-							</div>
-						</TableHead>
-						<TableHead>
-							<div className="flex items-center gap-2">
-								<Sparkles className="h-4 w-4" />
-								Event
-							</div>
-						</TableHead>
-						<TableHead className="text-right">
-							<div className="flex items-center gap-2 justify-end">
-								<Tag className="h-4 w-4" />
-								Labels
-							</div>
-						</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody>
-					{paginatedEvents.map((event, index) => (
-						<TableRow key={startIndex + index}>
-							<TableCell className="text-xs text-muted-foreground">
-								{formatTimeAgo(event.eventDt)}
-							</TableCell>
-							<TableCell className="text-sm">
-								<span className="mr-2 text-xl">{event.emoji}</span> {event.name}
-							</TableCell>
-							<TableCell>
-								<div className="flex flex-wrap gap-1 justify-end">
-									{Object.entries(event.labels).map(([key, value]) => (
-										<LabelBadge key={key} labelKey={key} labelValue={value} />
-									))}
+		<div className="space-y-2">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<CaseUpper className="h-4 w-4" strokeWidth={2.5} />
+									Event
 								</div>
-							</TableCell>
+							</TableHead>
+							<TableHead className="text-right">
+								<div className="flex items-center gap-2">
+									<Tags className="h-4 w-4" strokeWidth={2.5} />
+									Labels
+								</div>
+							</TableHead>
+							<TableHead className="w-64">
+								<div className="flex items-center gap-2">
+									<Calendar className="h-4 w-4" strokeWidth={2.5} />
+									Time
+								</div>
+							</TableHead>
 						</TableRow>
-					))}
-				</TableBody>
-			</Table>
+					</TableHeader>
+					<TableBody>
+						{paginatedEvents.map((event, index) => (
+							<TableRow key={startIndex + index} className="group">
+								<TableCell className="text-sm">
+									<div className="relative flex items-center">
+										<span className="mr-2 text-xl">{event.emoji}</span>
+										<span>{event.name}</span>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<div
+													className="absolute right-0 p-1 rounded border shadow-sm bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+													onClick={(e) => {
+														e.stopPropagation();
+														handleEventClick(event);
+													}}
+												>
+													<PanelRight className="h-5 w-5 text-muted-foreground" />
+												</div>
+											</TooltipTrigger>
+											<TooltipContent>
+												<p>View event details</p>
+											</TooltipContent>
+										</Tooltip>
+									</div>
+								</TableCell>
+								<TableCell>
+									<div className="flex gap-1 justify-end">
+										{Object.entries(event.labels).map(([key, value]) => (
+											<LabelBadge key={key} labelKey={key} labelValue={value} />
+										))}
+									</div>
+								</TableCell>
+								<TableCell className="text-muted-foreground">
+									{formatTimeAgo(event.eventDt)}
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
 
-			{/* Pagination */}
-			{totalPages > 1 && (
-				<div className="flex items-center justify-end">
-					<Pagination>
-						<PaginationContent>
-							<PaginationItem>
-								<PaginationPrevious
-									href="#"
-									size="default"
-									onClick={(e) => {
-										e.preventDefault();
-										handlePreviousPage();
-									}}
-									className={
-										currentPage === 1
-											? "pointer-events-none opacity-50"
-											: "cursor-pointer"
-									}
-								/>
-							</PaginationItem>
-							<PaginationItem>
-								<div className="text-sm px-4">
-									Page {currentPage} of {totalPages}
-								</div>
-							</PaginationItem>
-							<PaginationItem>
-								<PaginationNext
-									href="#"
-									size="default"
-									onClick={(e) => {
-										e.preventDefault();
-										handleNextPage();
-									}}
-									className={
-										currentPage === totalPages
-											? "pointer-events-none opacity-50"
-											: "cursor-pointer"
-									}
-								/>
-							</PaginationItem>
-						</PaginationContent>
-					</Pagination>
-				</div>
-			)}
-		</div>
+				{/* Timeline Event Sheet */}
+				<TimelineEventSheet
+					event={selectedEvent}
+					open={sheetOpen}
+					onOpenChange={setSheetOpen}
+				/>
+
+				{/* Pagination */}
+				<SimplePagination
+					currentPage={currentPage}
+					totalPages={totalPages}
+					onPreviousPage={handlePreviousPage}
+					onNextPage={handleNextPage}
+				/>
+			</div>
 	);
 }

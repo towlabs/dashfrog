@@ -1,39 +1,29 @@
 import {
-	ChevronRight,
-	Home,
 	BarChart3,
-	Workflow,
+	ChevronRight,
 	Clock,
 	Database,
+	Home,
+	Workflow,
 } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { FlowTable } from "@/components/FlowTable";
 import { MetricsTable } from "@/components/MetricsTable";
-import { TableSkeleton } from "@/components/TableSkeleton";
 import { TenantControls } from "@/components/TenantControls";
 import { Timeline } from "@/components/Timeline";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useTenantStore } from "@/src/stores/tenant";
 
 export default function TenantPage() {
 	const { tenant } = useParams<{ tenant: string }>();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const fetchTimeline = useTenantStore((state) => state.fetchTimeline);
-	const fetchFlows = useTenantStore((state) => state.fetchFlows);
-	const fetchMetrics = useTenantStore((state) => state.fetchMetrics);
-	const timeline = useTenantStore((state) => state.timeline);
-	const timelineLoading = useTenantStore((state) => state.timelineLoading);
-	const flows = useTenantStore((state) => state.flows);
-	const flowsLoading = useTenantStore((state) => state.flowsLoading);
-	const metrics = useTenantStore((state) => state.metrics);
-	const metricsLoading = useTenantStore((state) => state.metricsLoading);
 	const timeWindow = useTenantStore((state) => state.timeWindow);
 	const filters = useTenantStore((state) => state.filters);
 	const setTimeWindow = useTenantStore((state) => state.setTimeWindow);
 	const setFilters = useTenantStore((state) => state.setFilters);
-	const addFilter = useTenantStore((state) => state.addFilter);
+	const setCurrentTenant = useTenantStore((state) => state.setCurrentTenant);
 
 	// Get labels for filter dropdown
 	const labels = useLabelsStore((state) => state.labels);
@@ -41,24 +31,19 @@ export default function TenantPage() {
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
 
-	// Get active tab from URL or default to statistics
-	const activeTab = searchParams.get("tab") || "statistics";
-
-	// Fetch data when tenant or tab changes
-	useEffect(() => {
-		if (tenantName) {
-			void fetchMetrics(tenantName);
-			void fetchFlows(tenantName);
-			void fetchTimeline(tenantName);
-		}
-	}, [tenantName, fetchMetrics, fetchFlows, fetchTimeline]);
+	// Get active tab from URL or default to timeline
+	const activeTab = searchParams.get("tab") || "timeline";
 
 	const handleTabChange = (value: string) => {
 		setSearchParams({ tab: value });
 	};
 
+	useEffect(() => {
+		setCurrentTenant(tenantName);
+	}, [tenantName, setCurrentTenant]);
+
 	return (
-		<div className="flex-1 space-y-6 px-8 py-2">
+		<div className="flex-1 min-w-0 space-y-6 px-8 py-3">
 			{/* Breadcrumb and Toolbar */}
 			<div className="flex items-center justify-between gap-4">
 				{/* Breadcrumb */}
@@ -67,7 +52,11 @@ export default function TenantPage() {
 						<Home className="h-4 w-4" />
 					</Link>
 					<ChevronRight className="h-4 w-4" />
-					<span className="font-medium text-foreground">{tenantName}</span>
+					<span className="font-medium">{tenantName}</span>
+					<ChevronRight className="h-4 w-4" />
+					<span className="font-medium text-foreground">
+						{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+					</span>
 				</nav>
 
 				{/* Time Window and Filters */}
@@ -87,7 +76,7 @@ export default function TenantPage() {
 					{tenantName}
 				</h1>
 				<p className="text-sm text-secondary-foreground">
-					{activeTab === "statistics" &&
+					{activeTab === "metrics" &&
 						"Overview of key metrics and performance indicators"}
 					{activeTab === "flows" && "View and analyze workflow executions"}
 					{activeTab === "timeline" && "Track events and activities over time"}
@@ -97,42 +86,42 @@ export default function TenantPage() {
 			{/* Tabs */}
 			<Tabs value={activeTab} onValueChange={handleTabChange}>
 				<TabsList>
-					<TabsTrigger value="statistics" className="flex items-center gap-2">
+					<TabsTrigger value="timeline" className="flex items-center gap-2">
+						<Clock className="h-4 w-4" />
+						Timeline
+					</TabsTrigger>
+					<TabsTrigger value="metrics" className="flex items-center gap-2">
 						<BarChart3 className="h-4 w-4" />
-						Statistics
+						Metrics
 					</TabsTrigger>
 					<TabsTrigger value="flows" className="flex items-center gap-2">
 						<Workflow className="h-4 w-4" />
 						Flows
 					</TabsTrigger>
-					<TabsTrigger value="timeline" className="flex items-center gap-2">
-						<Clock className="h-4 w-4" />
-						Timeline
-					</TabsTrigger>
 				</TabsList>
 
-				<TabsContent value="statistics" className="space-y-4">
-					{metricsLoading ? (
-						<TableSkeleton columns={3} rows={5} />
-					) : (
-						<MetricsTable metrics={metrics} />
-					)}
+				<TabsContent value="metrics" className="space-y-4">
+					<MetricsTable
+						tenant={tenantName}
+						timeWindow={timeWindow}
+						filters={filters}
+					/>
 				</TabsContent>
 
 				<TabsContent value="flows" className="space-y-4">
-					{flowsLoading ? (
-						<TableSkeleton columns={6} rows={5} />
-					) : (
-						<FlowTable flows={flows} onAddFilter={addFilter} />
-					)}
+					<FlowTable
+						tenant={tenantName}
+						timeWindow={timeWindow}
+						filters={filters}
+					/>
 				</TabsContent>
 
 				<TabsContent value="timeline" className="space-y-4">
-					{timelineLoading ? (
-						<TableSkeleton columns={4} rows={10} />
-					) : (
-						<Timeline events={timeline} />
-					)}
+					<Timeline
+						tenant={tenantName}
+						timeWindow={timeWindow}
+						filters={filters}
+					/>
 				</TabsContent>
 			</Tabs>
 		</div>

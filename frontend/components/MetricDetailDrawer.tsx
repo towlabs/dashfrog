@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { LabelBadge } from "@/components/LabelBadge";
 import { Button } from "@/components/ui/button";
+import {
+	type ChartConfig,
+	ChartContainer,
+	ChartTooltip,
+	ChartTooltipContent,
+} from "@/components/ui/chart";
 import {
 	Drawer,
 	DrawerClose,
@@ -13,19 +20,12 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from "@/components/ui/drawer";
-import {
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-	type ChartConfig,
-} from "@/components/ui/chart";
+import { type MetricHistoryPoint, Metrics } from "@/src/services/api/metrics";
+import { useTenantStore } from "@/src/stores/tenant";
 import type { Metric } from "@/src/types/metric";
 import { MetricAggregationLabel } from "@/src/types/metric";
-import { LabelBadge } from "@/components/LabelBadge";
-import { Metrics, type MetricHistoryPoint } from "@/src/services/api/metrics";
-import { useTenantStore } from "@/src/stores/tenant";
+import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
-import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 type MetricDetailDrawerProps = {
 	open: boolean;

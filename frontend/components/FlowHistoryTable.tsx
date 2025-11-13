@@ -1,19 +1,21 @@
 "use client";
 
 import { format } from "date-fns";
-import { ChevronDown, ChevronRight, History, Tag } from "lucide-react";
+import {
+	ChevronDown,
+	ChevronRight,
+	CircleDot,
+	Clock,
+	History,
+	Timer,
+	Tags,
+} from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { FlowStatus } from "@/components/FlowStatus";
 import type { StatusFilter } from "@/components/FlowStatusButtons";
 import { LabelBadge } from "@/components/LabelBadge";
-import {
-	Pagination,
-	PaginationContent,
-	PaginationItem,
-	PaginationNext,
-	PaginationPrevious,
-} from "@/components/ui/pagination";
+import { SimplePagination } from "@/components/SimplePagination";
 import {
 	Table,
 	TableBody,
@@ -70,12 +72,6 @@ export function FlowHistoryTable({
 		setCurrentPage(1);
 	}, [statusFilter]);
 
-	const handleAddFilter = (label: string, value: string) => {
-		if (onAddFilter) {
-			onAddFilter({ label, value });
-		}
-	};
-
 	const handlePreviousPage = () => {
 		setCurrentPage((prev) => Math.max(1, prev - 1));
 	};
@@ -113,17 +109,36 @@ export function FlowHistoryTable({
 					<TableHeader>
 						<TableRow>
 							<TableHead className="w-8"></TableHead>
-							<TableHead>Name</TableHead>
 							<TableHead>
 								<div className="flex items-center gap-2">
-									<Tag className="h-4 w-4" />
+									<Tags className="h-4 w-4" strokeWidth={2.5} />
 									<span>Labels</span>
 								</div>
 							</TableHead>
-							<TableHead>Start</TableHead>
-							<TableHead>End</TableHead>
-							<TableHead>Duration</TableHead>
-							<TableHead>Status</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Clock className="h-4 w-4" strokeWidth={2.5} />
+									<span>Start</span>
+								</div>
+							</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Clock className="h-4 w-4" strokeWidth={2.5} />
+									<span>End</span>
+								</div>
+							</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Timer className="h-4 w-4" strokeWidth={2.5} />
+									<span>Duration</span>
+								</div>
+							</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<CircleDot className="h-4 w-4" strokeWidth={2.5} />
+									<span>Status</span>
+								</div>
+							</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -147,9 +162,6 @@ export function FlowHistoryTable({
 											)}
 										</TableCell>
 										<TableCell>
-											<div className="font-medium">{detailedFlow.name}</div>
-										</TableCell>
-										<TableCell>
 											<div
 												className="flex flex-wrap gap-1"
 												onClick={(e) => e.stopPropagation()}
@@ -159,7 +171,6 @@ export function FlowHistoryTable({
 														key={key}
 														labelKey={key}
 														labelValue={value}
-														onAddFilter={handleAddFilter}
 													/>
 												))}
 											</div>
@@ -214,51 +225,12 @@ export function FlowHistoryTable({
 						})}
 					</TableBody>
 				</Table>
-
-				{/* Pagination Controls */}
-				{totalPages > 1 && (
-					<div className="flex items-center justify-end">
-						<Pagination>
-							<PaginationContent>
-								<PaginationItem>
-									<PaginationPrevious
-										href="#"
-										size="default"
-										onClick={(e) => {
-											e.preventDefault();
-											handlePreviousPage();
-										}}
-										className={
-											currentPage === 1
-												? "pointer-events-none opacity-50"
-												: "cursor-pointer"
-										}
-									/>
-								</PaginationItem>
-								<PaginationItem>
-									<div className="text-sm px-4">
-										Page {currentPage} of {totalPages}
-									</div>
-								</PaginationItem>
-								<PaginationItem>
-									<PaginationNext
-										href="#"
-										size="default"
-										onClick={(e) => {
-											e.preventDefault();
-											handleNextPage();
-										}}
-										className={
-											currentPage === totalPages
-												? "pointer-events-none opacity-50"
-												: "cursor-pointer"
-										}
-									/>
-								</PaginationItem>
-							</PaginationContent>
-						</Pagination>
-					</div>
-				)}
+				<SimplePagination
+					currentPage={currentPage}
+					totalPages={totalPages}
+					onPreviousPage={handlePreviousPage}
+					onNextPage={handleNextPage}
+				/>
 			</div>
 		</TooltipProvider>
 	);

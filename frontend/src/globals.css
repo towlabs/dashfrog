@@ -98,3 +98,22 @@ body {
 	box-sizing: border-box;
 	position: static;
 }
+
+.bn-default-styles {
+	font-size: 15px;
+}
+
+/* Customize BlockNote block selection styling */
+.bn-block-outer.bn-block-selected {
+	outline: 1px solid rgba(0, 0, 0, 0.1) !important;
+	border-radius: 4px;
+}
+
+.ProseMirror-selectednode > .bn-block-content > * {
+	outline: none !important;
+}
+
+/* Remove border from last table cell in each row */
+tbody tr td:last-child {
+	border-right: none !important;
+}
