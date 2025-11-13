@@ -185,7 +185,7 @@ export default function NotebookPage() {
 					</div>
 
 					{/* BlockNote Editor */}
-					<div className="m-19">
+					<div className="mx-19">
 						<BlockNoteView
 							editor={editor}
 							theme="light"
