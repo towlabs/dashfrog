@@ -122,19 +122,19 @@ export function MetricsTable({
 					<TableRow>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<CaseUpper className="h-4 w-4" strokeWidth={2.5} />
+								<CaseUpper className="size-4" strokeWidth={2.5} />
 								<span>Name</span>
 							</div>
 						</TableHead>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<Tags className="h-4 w-4" strokeWidth={2.5} />
+								<Tags className="size-4" strokeWidth={2.5} />
 								<span>Labels</span>
 							</div>
 						</TableHead>
 						<TableHead className="text-right">
 							<div className="flex items-center gap-2">
-								<Hash className="h-4 w-4" strokeWidth={2.5} />
+								<Hash className="size-4" strokeWidth={2.5} />
 								<span>Value</span>
 							</div>
 						</TableHead>
@@ -167,7 +167,7 @@ export function MetricsTable({
 														handleRowClick(row.metric, row.metricValue.labels);
 													}}
 												>
-													<ChartLine className="h-5 w-5 text-muted-foreground" />
+													<ChartLine className="size-5 text-muted-foreground" />
 												</div>
 											</TooltipTrigger>
 											<TooltipContent>

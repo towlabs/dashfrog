@@ -114,43 +114,43 @@ export function FlowTable({ tenant, timeWindow, filters }: Props) {
 					<TableRow>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<CaseUpper className="h-4 w-4" strokeWidth={2.5} />
+								<CaseUpper className="size-4" strokeWidth={2.5} />
 								<span>Name</span>
 							</div>
 						</TableHead>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<Tags className="h-4 w-4" strokeWidth={2.5} />
+								<Tags className="size-4" strokeWidth={2.5} />
 								<span>Labels</span>
 							</div>
 						</TableHead>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<CircleDot className="h-4 w-4" strokeWidth={2.5} />
+								<CircleDot className="size-4" strokeWidth={2.5} />
 								<span>Last Status</span>
 							</div>
 						</TableHead>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<Clock className="h-4 w-4" strokeWidth={2.5} />
+								<Clock className="size-4" strokeWidth={2.5} />
 								<span>Last Start</span>
 							</div>
 						</TableHead>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<Clock className="h-4 w-4" strokeWidth={2.5} />
+								<Clock className="size-4" strokeWidth={2.5} />
 								<span>Last End</span>
 							</div>
 						</TableHead>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<Timer className="h-4 w-4" strokeWidth={2.5} />
+								<Timer className="size-4" strokeWidth={2.5} />
 								<span>Last Duration</span>
 							</div>
 						</TableHead>
 						<TableHead>
 							<div className="flex items-center gap-2">
-								<Hash className="h-4 w-4" strokeWidth={2.5} />
+								<Hash className="size-4" strokeWidth={2.5} />
 								<span>Run Counts</span>
 							</div>
 						</TableHead>
@@ -169,7 +169,7 @@ export function FlowTable({ tenant, timeWindow, filters }: Props) {
 													className="absolute right-0 p-1 rounded border shadow-sm bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
 													onClick={() => handleFlowClick(flow)}
 												>
-													<ChartNoAxesGantt className="h-5 w-5 text-muted-foreground" />
+													<ChartNoAxesGantt className="size-5 text-muted-foreground" />
 												</div>
 											</TooltipTrigger>
 											<TooltipContent>

@@ -8,6 +8,8 @@ import { Clock } from "lucide-react";
 import { useEffect } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { Separator } from "@/components/ui/separator";
+import * as locales from "@blocknote/core/locales";
+
 import {
 	Sheet,
 	SheetContent,
@@ -32,7 +34,11 @@ export function TimelineEventSheet({
 	// Create BlockNote editor instance
 	const editor = useCreateBlockNote({
 		initialContent: undefined,
-		default: "Write or press '/' for commands",
+		placeholders: {
+			...locales.en.placeholders,
+			emptyDocument: "Write or press '/' for commands",
+			default: "Write or press '/' for commands",
+		},
 	});
 
 	useEffect(() => {

@@ -43,6 +43,25 @@ function generateMockNotebooks(_tenant: string): Notebook[] {
 					content: [],
 					children: [],
 				},
+				{
+					id: "6fefea9b-5c7f-4b6e-851b-67789d2de4c1",
+					type: "timeline",
+					props: {
+						limit: 10,
+					},
+					children: [],
+				},
+				{
+					id: "5c8f5fa8-0096-4f57-9855-f6f549fb9870",
+					type: "paragraph",
+					props: {
+						backgroundColor: "default",
+						textColor: "default",
+						textAlignment: "left",
+					},
+					content: [],
+					children: [],
+				},
 			],
 		},
 		{

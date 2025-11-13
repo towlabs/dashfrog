@@ -114,83 +114,83 @@ export function Timeline({ tenant, timeWindow, filters }: TimelineProps) {
 
 	return (
 		<div className="space-y-2">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>
-								<div className="flex items-center gap-2">
-									<CaseUpper className="h-4 w-4" strokeWidth={2.5} />
-									Event
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead>
+							<div className="flex items-center gap-2">
+								<CaseUpper className="size-4" strokeWidth={2.5} />
+								Event
+							</div>
+						</TableHead>
+						<TableHead className="text-right">
+							<div className="flex items-center gap-2">
+								<Tags className="size-4" strokeWidth={2.5} />
+								Labels
+							</div>
+						</TableHead>
+						<TableHead className="w-64">
+							<div className="flex items-center gap-2">
+								<Calendar className="size-4" strokeWidth={2.5} />
+								Time
+							</div>
+						</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{paginatedEvents.map((event, index) => (
+						<TableRow key={startIndex + index} className="group">
+							<TableCell className="text-sm">
+								<div className="relative flex items-center">
+									<span className="mr-2 text-xl">{event.emoji}</span>
+									<span>{event.name}</span>
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<div
+												className="absolute right-0 p-1 rounded border shadow-sm bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+												onClick={(e) => {
+													e.stopPropagation();
+													handleEventClick(event);
+												}}
+											>
+												<PanelRight className="size-5 text-muted-foreground" />
+											</div>
+										</TooltipTrigger>
+										<TooltipContent>
+											<p>View event details</p>
+										</TooltipContent>
+									</Tooltip>
 								</div>
-							</TableHead>
-							<TableHead className="text-right">
-								<div className="flex items-center gap-2">
-									<Tags className="h-4 w-4" strokeWidth={2.5} />
-									Labels
+							</TableCell>
+							<TableCell>
+								<div className="flex gap-1 justify-end">
+									{Object.entries(event.labels).map(([key, value]) => (
+										<LabelBadge key={key} labelKey={key} labelValue={value} />
+									))}
 								</div>
-							</TableHead>
-							<TableHead className="w-64">
-								<div className="flex items-center gap-2">
-									<Calendar className="h-4 w-4" strokeWidth={2.5} />
-									Time
-								</div>
-							</TableHead>
+							</TableCell>
+							<TableCell className="text-muted-foreground">
+								{formatTimeAgo(event.eventDt)}
+							</TableCell>
 						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{paginatedEvents.map((event, index) => (
-							<TableRow key={startIndex + index} className="group">
-								<TableCell className="text-sm">
-									<div className="relative flex items-center">
-										<span className="mr-2 text-xl">{event.emoji}</span>
-										<span>{event.name}</span>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<div
-													className="absolute right-0 p-1 rounded border shadow-sm bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
-													onClick={(e) => {
-														e.stopPropagation();
-														handleEventClick(event);
-													}}
-												>
-													<PanelRight className="h-5 w-5 text-muted-foreground" />
-												</div>
-											</TooltipTrigger>
-											<TooltipContent>
-												<p>View event details</p>
-											</TooltipContent>
-										</Tooltip>
-									</div>
-								</TableCell>
-								<TableCell>
-									<div className="flex gap-1 justify-end">
-										{Object.entries(event.labels).map(([key, value]) => (
-											<LabelBadge key={key} labelKey={key} labelValue={value} />
-										))}
-									</div>
-								</TableCell>
-								<TableCell className="text-muted-foreground">
-									{formatTimeAgo(event.eventDt)}
-								</TableCell>
-							</TableRow>
-						))}
-					</TableBody>
-				</Table>
+					))}
+				</TableBody>
+			</Table>
 
-				{/* Timeline Event Sheet */}
-				<TimelineEventSheet
-					event={selectedEvent}
-					open={sheetOpen}
-					onOpenChange={setSheetOpen}
-				/>
+			{/* Timeline Event Sheet */}
+			<TimelineEventSheet
+				event={selectedEvent}
+				open={sheetOpen}
+				onOpenChange={setSheetOpen}
+			/>
 
-				{/* Pagination */}
-				<SimplePagination
-					currentPage={currentPage}
-					totalPages={totalPages}
-					onPreviousPage={handlePreviousPage}
-					onNextPage={handleNextPage}
-				/>
-			</div>
+			{/* Pagination */}
+			<SimplePagination
+				currentPage={currentPage}
+				totalPages={totalPages}
+				onPreviousPage={handlePreviousPage}
+				onNextPage={handleNextPage}
+			/>
+		</div>
 	);
 }

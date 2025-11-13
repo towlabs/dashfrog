@@ -91,22 +91,8 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 }
 
-/* Override ProseMirror table styles that conflict with shadcn/ui tables */
-.ProseMirror td:not(.ProseMirror-table-cell),
-.ProseMirror th:not(.ProseMirror-table-cell) {
-	vertical-align: inherit;
-	box-sizing: border-box;
-	position: static;
-}
-
 .bn-default-styles {
 	font-size: 15px;
-}
-
-/* Customize BlockNote block selection styling */
-.bn-block-outer.bn-block-selected {
-	outline: 1px solid rgba(0, 0, 0, 0.1) !important;
-	border-radius: 4px;
 }
 
 .ProseMirror-selectednode > .bn-block-content > * {
@@ -116,4 +102,8 @@ body {
 /* Remove border from last table cell in each row */
 tbody tr td:last-child {
 	border-right: none !important;
+}
+
+.bn-container[data-color-scheme] {
+	--bn-font-family: var(--font-family-sans);
 }

@@ -10,6 +10,7 @@ import {
 	getDefaultReactSlashMenuItems,
 	SuggestionMenuController,
 	useCreateBlockNote,
+	useEditorChange,
 } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import {
@@ -63,6 +64,11 @@ export default function NotebookPage() {
 			...locales.en,
 			multi_column: multiColumnLocales.en,
 		},
+		placeholders: {
+			...locales.en.placeholders,
+			emptyDocument: "Write or press '/' for commands",
+			default: "Write or press '/' for commands",
+		},
 	});
 
 	useEffect(() => {
@@ -78,6 +84,10 @@ export default function NotebookPage() {
 			clearTimeout(timeoutId);
 		};
 	}, [notebookId, tenant, setCurrentNotebook, editor, notebooksAreLoading]);
+
+	useEditorChange((editor) => {
+		console.log(JSON.stringify(editor.document, null, 2));
+	}, editor);
 
 	if (!currentNotebook || !notebookId) {
 		return (
