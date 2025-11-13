@@ -115,7 +115,7 @@ export function Timeline({ tenant, timeWindow, filters }: TimelineProps) {
 	return (
 		<div className="space-y-2">
 			<Table>
-				<TableHeader>
+					<TableHeader>
 					<TableRow>
 						<TableHead>
 							<div className="flex items-center gap-2">

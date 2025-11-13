@@ -127,28 +127,32 @@ export default function NotebookPage() {
 			<div className="flex-1 overflow-y-auto">
 				<div className="mx-auto py-12">
 					{/* Title - Editable */}
-					<input
-						type="text"
-						value={currentNotebook.title}
-						onChange={(e) =>
-							updateNotebook(tenantName, notebookId, { title: e.target.value })
-						}
-						placeholder="Untitled"
-						className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground mx-32"
-					/>
+					<div className="mx-32">
+						<input
+							type="text"
+							value={currentNotebook.title}
+							onChange={(e) =>
+								updateNotebook(tenantName, notebookId, {
+									title: e.target.value,
+								})
+							}
+							placeholder="Untitled"
+							className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground"
+						/>
 
-					{/* Description - Editable */}
-					<input
-						type="text"
-						value={currentNotebook.description}
-						onChange={(e) =>
-							updateNotebook(tenantName, notebookId, {
-								description: e.target.value,
-							})
-						}
-						placeholder="Add a description..."
-						className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground mx-32"
-					/>
+						{/* Description - Editable */}
+						<input
+							type="text"
+							value={currentNotebook.description}
+							onChange={(e) =>
+								updateNotebook(tenantName, notebookId, {
+									description: e.target.value,
+								})
+							}
+							placeholder="Add a description..."
+							className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground"
+						/>
+					</div>
 
 					{/* BlockNote Editor */}
 					<div className="m-19">

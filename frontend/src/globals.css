@@ -119,3 +119,7 @@ tbody tr td:last-child {
 .ProseMirror table {
 	table-layout: auto !important;
 }
+
+.bn-suggestion-menu {
+	min-width: 20rem !important;
+}
