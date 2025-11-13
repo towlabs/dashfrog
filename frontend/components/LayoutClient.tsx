@@ -40,7 +40,9 @@ export default function LayoutClient({
 					className={`flex flex-1 flex-col transition-all duration-300 overflow-hidden ${sidebarCollapsed ? "md:ml-16" : "md:ml-64"}`}
 				>
 					<header className="border-b bg-background"></header>
-					<main className="flex-1 overflow-y-auto overflow-x-hidden">{children}</main>
+					<main className="flex-1 overflow-y-auto overflow-x-hidden">
+						{children}
+					</main>
 				</div>
 			</div>
 		</>

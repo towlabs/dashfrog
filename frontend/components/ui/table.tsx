@@ -85,17 +85,13 @@ TableHead.displayName = "TableHead";
 const TableCell = React.forwardRef<
 	HTMLTableCellElement,
 	React.TdHTMLAttributes<HTMLTableCellElement>
->(({ className, style, ...props }, ref) => (
+>(({ className, ...props }, ref) => (
 	<td
 		ref={ref}
 		className={cn(
-			"py-2 px-4 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] whitespace-nowrap",
+			"py-2 px-4 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] whitespace-nowrap border-r",
 			className,
 		)}
-		style={{
-			borderRight: "1px solid rgba(42, 28, 0, 0.07)",
-			...style,
-		}}
 		{...props}
 	/>
 ));

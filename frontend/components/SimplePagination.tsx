@@ -14,10 +14,7 @@ export function SimplePagination({
 	if (totalPages <= 1) return null;
 
 	return (
-		<div
-			className="flex items-center justify-end py-1"
-			style={{ borderBottom: "1px solid rgba(42, 28, 0, 0.07)" }}
-		>
+		<div className="flex items-center justify-end py-1 border-b">
 			<div className="flex items-center gap-2 text-xs text-muted-foreground">
 				<button
 					type="button"

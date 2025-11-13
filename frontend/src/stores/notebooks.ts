@@ -8,7 +8,10 @@ interface NotebooksState {
 	currentNotebook: Notebook | null;
 	loading: boolean;
 	error: string | null;
+	settingsOpenBlockId: string | null;
 	setCurrentNotebook: (tenant: string, notebookId: string) => Notebook | null;
+	openBlockSettings: (blockId: string) => void;
+	closeBlockSettings: () => void;
 	fetchNotebooks: (tenant: string) => Promise<void>;
 	fetchNotebook: (tenant: string, notebookId: string) => Promise<void>;
 	updateNotebook: (
@@ -30,6 +33,13 @@ export const useNotebooksStore = create<NotebooksState>()(
 			currentNotebook: null,
 			loading: true,
 			error: null,
+			settingsOpenBlockId: null,
+			openBlockSettings: (blockId: string) => {
+				set({ settingsOpenBlockId: blockId });
+			},
+			closeBlockSettings: () => {
+				set({ settingsOpenBlockId: null });
+			},
 			setCurrentNotebook: (tenant: string, notebookId: string) => {
 				const currentNotebook =
 					(get().notebooks[tenant] || []).find((nb) => nb.id === notebookId) ||

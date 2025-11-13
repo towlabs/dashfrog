@@ -7,8 +7,8 @@ import {
 	CircleDot,
 	Clock,
 	History,
-	Timer,
 	Tags,
+	Timer,
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";

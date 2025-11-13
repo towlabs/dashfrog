@@ -1,16 +1,6 @@
 "use client";
 
-import {
-	Calendar,
-	CaseSensitive,
-	CaseUpper,
-	ChevronRight,
-	History,
-	PanelRight,
-	Sparkles,
-	Tag,
-	Tags,
-} from "lucide-react";
+import { Calendar, CaseUpper, PanelRight, Tags } from "lucide-react";
 import { useEffect, useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { SimplePagination } from "@/components/SimplePagination";
@@ -44,9 +34,19 @@ type TimelineProps = {
 	tenant: string;
 	timeWindow: TimeWindow;
 	filters: Filter[];
+	visibleColumns?: {
+		event?: boolean;
+		labels?: boolean;
+		time?: boolean;
+	};
 };
 
-export function Timeline({ tenant, timeWindow, filters }: TimelineProps) {
+export function Timeline({
+	tenant,
+	timeWindow,
+	filters,
+	visibleColumns = { event: true, labels: true, time: true },
+}: TimelineProps) {
 	const [events, setEvents] = useState<TimelineEvent[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [currentPage, setCurrentPage] = useState(1);
@@ -115,63 +115,81 @@ export function Timeline({ tenant, timeWindow, filters }: TimelineProps) {
 	return (
 		<div className="space-y-2">
 			<Table>
-					<TableHeader>
+				<TableHeader>
 					<TableRow>
-						<TableHead>
-							<div className="flex items-center gap-2">
-								<CaseUpper className="size-4" strokeWidth={2.5} />
-								Event
-							</div>
-						</TableHead>
-						<TableHead className="text-right">
-							<div className="flex items-center gap-2">
-								<Tags className="size-4" strokeWidth={2.5} />
-								Labels
-							</div>
-						</TableHead>
-						<TableHead className="w-64">
-							<div className="flex items-center gap-2">
-								<Calendar className="size-4" strokeWidth={2.5} />
-								Time
-							</div>
-						</TableHead>
+						{visibleColumns.event && (
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<CaseUpper className="size-4" strokeWidth={2.5} />
+									Event
+								</div>
+							</TableHead>
+						)}
+						{visibleColumns.labels && (
+							<TableHead className="text-right">
+								<div className="flex items-center gap-2">
+									<Tags className="size-4" strokeWidth={2.5} />
+									Labels
+								</div>
+							</TableHead>
+						)}
+						{visibleColumns.time && (
+							<TableHead className="w-64">
+								<div className="flex items-center gap-2">
+									<Calendar className="size-4" strokeWidth={2.5} />
+									Time
+								</div>
+							</TableHead>
+						)}
 					</TableRow>
 				</TableHeader>
 				<TableBody>
 					{paginatedEvents.map((event, index) => (
 						<TableRow key={startIndex + index} className="group">
-							<TableCell className="text-sm">
-								<div className="relative flex items-center">
-									<span className="mr-2 text-xl">{event.emoji}</span>
-									<span>{event.name}</span>
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<div
-												className="absolute right-0 p-1 rounded border shadow-sm bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
-												onClick={(e) => {
-													e.stopPropagation();
-													handleEventClick(event);
-												}}
-											>
-												<PanelRight className="size-5 text-muted-foreground" />
-											</div>
-										</TooltipTrigger>
-										<TooltipContent>
-											<p>View event details</p>
-										</TooltipContent>
-									</Tooltip>
-								</div>
-							</TableCell>
-							<TableCell>
-								<div className="flex gap-1 justify-end">
-									{Object.entries(event.labels).map(([key, value]) => (
-										<LabelBadge key={key} labelKey={key} labelValue={value} />
-									))}
-								</div>
-							</TableCell>
-							<TableCell className="text-muted-foreground">
-								{formatTimeAgo(event.eventDt)}
-							</TableCell>
+							{visibleColumns.event && (
+								<TableCell className="text-sm">
+									<div className="relative flex items-center">
+										<span className="mr-2 text-xl">{event.emoji}</span>
+										<span>{event.name}</span>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<div
+													className="absolute right-0 p-1 rounded border bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10 shadow-xs flex items-center gap-1"
+													onClick={(e) => {
+														e.stopPropagation();
+														handleEventClick(event);
+													}}
+												>
+													<PanelRight
+														className="size-4 text-secondary-foreground"
+														strokeWidth={2.5}
+													/>
+													<span className="text-xs text-secondary-foreground ">
+														Details
+													</span>
+												</div>
+											</TooltipTrigger>
+											<TooltipContent>
+												<p>View event details</p>
+											</TooltipContent>
+										</Tooltip>
+									</div>
+								</TableCell>
+							)}
+							{visibleColumns.labels && (
+								<TableCell>
+									<div className="flex gap-1 justify-end">
+										{Object.entries(event.labels).map(([key, value]) => (
+											<LabelBadge key={key} labelKey={key} labelValue={value} />
+										))}
+									</div>
+								</TableCell>
+							)}
+							{visibleColumns.time && (
+								<TableCell className="text-muted-foreground">
+									{formatTimeAgo(event.eventDt)}
+								</TableCell>
+							)}
 						</TableRow>
 					))}
 				</TableBody>

@@ -2,13 +2,13 @@
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
+import * as locales from "@blocknote/core/locales";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { Clock } from "lucide-react";
 import { useEffect } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { Separator } from "@/components/ui/separator";
-import * as locales from "@blocknote/core/locales";
 
 import {
 	Sheet,

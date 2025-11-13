@@ -4,10 +4,16 @@ import {
 	BlockNoteSchema,
 	combineByGroup,
 	defaultBlockSpecs,
+	insertOrUpdateBlock,
 } from "@blocknote/core";
 import * as locales from "@blocknote/core/locales";
 import {
+	DragHandleMenu,
+	type DragHandleMenuProps,
 	getDefaultReactSlashMenuItems,
+	RemoveBlockItem,
+	SideMenu,
+	SideMenuController,
 	SuggestionMenuController,
 	useCreateBlockNote,
 	useEditorChange,
@@ -23,10 +29,34 @@ import { ChevronRight, History, Home } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { TenantControls } from "@/components/TenantControls";
+import { AddBlockButton } from "@/components/ui/add-block";
+import { DragHandleButton } from "@/components/ui/drag-block";
 import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+
+const customDragHandleMenu = (menuProps: DragHandleMenuProps) => {
+	const blockType = menuProps.block.type as string;
+	if (blockType === "timeline") {
+		return (
+			<DragHandleMenu {...menuProps}>
+				<DropdownMenuItem
+					className={"bn-menu-item"}
+					onClick={() =>
+						useNotebooksStore.getState().openBlockSettings(menuProps.block.id)
+					}
+				>
+					Settings
+				</DropdownMenuItem>
+				<RemoveBlockItem {...menuProps}>Delete</RemoveBlockItem>
+			</DragHandleMenu>
+		);
+	} else {
+		return <DragHandleMenu {...menuProps} />;
+	}
+};
 
 export default function NotebookPage() {
 	const { tenant, notebookId } = useParams<{
@@ -156,7 +186,12 @@ export default function NotebookPage() {
 
 					{/* BlockNote Editor */}
 					<div className="m-19">
-						<BlockNoteView editor={editor} theme="light" slashMenu={false}>
+						<BlockNoteView
+							editor={editor}
+							theme="light"
+							slashMenu={false}
+							sideMenu={false}
+						>
 							<SuggestionMenuController
 								triggerCharacter="/"
 								getItems={async (query: string) => {
@@ -169,16 +204,10 @@ export default function NotebookPage() {
 										{
 											title: "events",
 											onItemClick: () => {
-												editor.insertBlocks(
-													[
-														{
-															type: "timeline",
-															props: { limit: 10 },
-														},
-													],
-													editor.getTextCursorPosition().block,
-													"after",
-												);
+												insertOrUpdateBlock(editor, {
+													type: "timeline",
+													props: { limit: 10 },
+												});
 											},
 											group: "Timeline",
 											subtext: "Table listing of timeline events",
@@ -194,6 +223,17 @@ export default function NotebookPage() {
 											)
 										: all;
 								}}
+							/>
+							<SideMenuController
+								sideMenu={(props) => (
+									<SideMenu {...props}>
+										<AddBlockButton {...props} />
+										<DragHandleButton
+											{...props}
+											dragHandleMenu={customDragHandleMenu}
+										/>
+									</SideMenu>
+								)}
 							/>
 						</BlockNoteView>
 					</div>

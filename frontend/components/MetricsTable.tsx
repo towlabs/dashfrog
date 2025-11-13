@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	CaseUpper,
-	ChartLine,
-	Hash,
-	ScatterChart,
-	Tag,
-	Tags,
-} from "lucide-react";
+import { CaseUpper, ChartLine, Hash, Tags } from "lucide-react";
 import { useEffect, useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
@@ -161,13 +154,19 @@ export function MetricsTable({
 										<Tooltip>
 											<TooltipTrigger asChild>
 												<div
-													className="absolute right-0 p-1 rounded border shadow-sm bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+													className="absolute right-0 p-1 rounded border bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10 shadow-xs flex items-center gap-1"
 													onClick={(e) => {
 														e.stopPropagation();
 														handleRowClick(row.metric, row.metricValue.labels);
 													}}
 												>
-													<ChartLine className="size-5 text-muted-foreground" />
+													<ChartLine
+														className="size-4 text-secondary-foreground"
+														strokeWidth={2.5}
+													/>
+													<span className="text-xs text-secondary-foreground ">
+														History
+													</span>
 												</div>
 											</TooltipTrigger>
 											<TooltipContent>

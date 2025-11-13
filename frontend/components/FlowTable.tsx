@@ -7,7 +7,6 @@ import {
 	CircleDot,
 	Clock,
 	Hash,
-	Tag,
 	Tags,
 	Timer,
 	Workflow,
@@ -21,11 +20,6 @@ import { SimplePagination } from "@/components/SimplePagination";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { Badge } from "@/components/ui/badge";
 import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
 	Table,
 	TableBody,
 	TableCell,
@@ -33,6 +27,11 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
 import { Flows, toFlow } from "@/src/services/api/flows";
 import type { Filter } from "@/src/types/filter";
@@ -166,10 +165,16 @@ export function FlowTable({ tenant, timeWindow, filters }: Props) {
 										<Tooltip>
 											<TooltipTrigger asChild>
 												<div
-													className="absolute right-0 p-1 rounded border shadow-sm bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+													className="absolute right-0 p-1 rounded border bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10 shadow-xs flex items-center gap-1"
 													onClick={() => handleFlowClick(flow)}
 												>
-													<ChartNoAxesGantt className="size-5 text-muted-foreground" />
+													<ChartNoAxesGantt
+														className="size-4 text-secondary-foreground"
+														strokeWidth={2.5}
+													/>
+													<span className="text-xs text-secondary-foreground ">
+														Details
+													</span>
 												</div>
 											</TooltipTrigger>
 											<TooltipContent>
