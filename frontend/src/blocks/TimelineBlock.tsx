@@ -33,7 +33,7 @@ export const TimelineBlock = createReactBlockSpec(
 			}
 
 			return (
-				<div className="my-4 outline-none overflow-auto">
+				<div className="my-4 outline-none min-w-0">
 					<Timeline
 						tenant={tenantName}
 						timeWindow={timeWindow}

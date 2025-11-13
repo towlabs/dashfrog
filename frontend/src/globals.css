@@ -1,9 +1,5 @@
 @import "tailwindcss";
 @import "react-day-picker/style.css";
-@import "@fontsource/geist-sans/400.css";
-@import "@fontsource/geist-sans/500.css";
-@import "@fontsource/geist-sans/600.css";
-@import "@fontsource/geist-sans/700.css";
 @plugin "tailwindcss-animate";
 @source "../node_modules/@blocknote/shadcn";
 
@@ -106,4 +102,20 @@ tbody tr td:last-child {
 
 .bn-container[data-color-scheme] {
 	--bn-font-family: var(--font-family-sans);
+	font-weight: 500;
+}
+
+.bn-default-styles {
+	font-size: 15px !important;
+	font-weight: 500 !important;
+	font-family: var(--font-family-sans) !important;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+	vertical-align: middle !important;
+}
+
+.ProseMirror table {
+	table-layout: auto !important;
 }

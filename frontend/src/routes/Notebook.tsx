@@ -124,7 +124,7 @@ export default function NotebookPage() {
 			</div>
 
 			{/* Notebook Content */}
-			<div className="flex-1 overflow-y-auto ml-32">
+			<div className="flex-1 overflow-y-auto">
 				<div className="mx-auto py-12">
 					{/* Title - Editable */}
 					<input
@@ -134,7 +134,7 @@ export default function NotebookPage() {
 							updateNotebook(tenantName, notebookId, { title: e.target.value })
 						}
 						placeholder="Untitled"
-						className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground"
+						className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground mx-32"
 					/>
 
 					{/* Description - Editable */}
@@ -147,11 +147,11 @@ export default function NotebookPage() {
 							})
 						}
 						placeholder="Add a description..."
-						className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground"
+						className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground mx-32"
 					/>
 
 					{/* BlockNote Editor */}
-					<div className="-ml-12">
+					<div className="m-19">
 						<BlockNoteView editor={editor} theme="light" slashMenu={false}>
 							<SuggestionMenuController
 								triggerCharacter="/"
