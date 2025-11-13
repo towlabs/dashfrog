@@ -42,11 +42,28 @@ type Props = {
 	tenant: string;
 	timeWindow: TimeWindow;
 	filters: Filter[];
+	visibleColumns?: {
+		name?: boolean;
+		labels?: boolean;
+		lastStatus?: boolean;
+		lastStart?: boolean;
+		lastEnd?: boolean;
+		lastDuration?: boolean;
+		runCounts?: boolean;
+	};
 };
 
 const ITEMS_PER_PAGE = 14;
 
-export function FlowTable({ tenant, timeWindow, filters }: Props) {
+export function FlowTable({ tenant, timeWindow, filters, visibleColumns = {
+	name: true,
+	labels: true,
+	lastStatus: true,
+	lastStart: true,
+	lastEnd: true,
+	lastDuration: true,
+	runCounts: true,
+} }: Props) {
 	const [flows, setFlows] = useState<Flow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [currentPage, setCurrentPage] = useState(1);
@@ -111,146 +128,174 @@ export function FlowTable({ tenant, timeWindow, filters }: Props) {
 			<Table>
 				<TableHeader>
 					<TableRow>
-						<TableHead>
-							<div className="flex items-center gap-2">
-								<CaseUpper className="size-4" strokeWidth={2.5} />
-								<span>Name</span>
-							</div>
-						</TableHead>
-						<TableHead>
-							<div className="flex items-center gap-2">
-								<Tags className="size-4" strokeWidth={2.5} />
-								<span>Labels</span>
-							</div>
-						</TableHead>
-						<TableHead>
-							<div className="flex items-center gap-2">
-								<CircleDot className="size-4" strokeWidth={2.5} />
-								<span>Last Status</span>
-							</div>
-						</TableHead>
-						<TableHead>
-							<div className="flex items-center gap-2">
-								<Clock className="size-4" strokeWidth={2.5} />
-								<span>Last Start</span>
-							</div>
-						</TableHead>
-						<TableHead>
-							<div className="flex items-center gap-2">
-								<Clock className="size-4" strokeWidth={2.5} />
-								<span>Last End</span>
-							</div>
-						</TableHead>
-						<TableHead>
-							<div className="flex items-center gap-2">
-								<Timer className="size-4" strokeWidth={2.5} />
-								<span>Last Duration</span>
-							</div>
-						</TableHead>
-						<TableHead>
-							<div className="flex items-center gap-2">
-								<Hash className="size-4" strokeWidth={2.5} />
-								<span>Run Counts</span>
-							</div>
-						</TableHead>
+						{visibleColumns.name && (
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<CaseUpper className="size-4" strokeWidth={2.5} />
+									<span>Name</span>
+								</div>
+							</TableHead>
+						)}
+						{visibleColumns.labels && (
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Tags className="size-4" strokeWidth={2.5} />
+									<span>Labels</span>
+								</div>
+							</TableHead>
+						)}
+						{visibleColumns.lastStatus && (
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<CircleDot className="size-4" strokeWidth={2.5} />
+									<span>Last Status</span>
+								</div>
+							</TableHead>
+						)}
+						{visibleColumns.lastStart && (
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Clock className="size-4" strokeWidth={2.5} />
+									<span>Last Start</span>
+								</div>
+							</TableHead>
+						)}
+						{visibleColumns.lastEnd && (
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Clock className="size-4" strokeWidth={2.5} />
+									<span>Last End</span>
+								</div>
+							</TableHead>
+						)}
+						{visibleColumns.lastDuration && (
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Timer className="size-4" strokeWidth={2.5} />
+									<span>Last Duration</span>
+								</div>
+							</TableHead>
+						)}
+						{visibleColumns.runCounts && (
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Hash className="size-4" strokeWidth={2.5} />
+									<span>Run Counts</span>
+								</div>
+							</TableHead>
+						)}
 					</TableRow>
 				</TableHeader>
 				<TableBody>
 					{paginatedFlows.map((flow, index) => {
 						return (
 							<TableRow key={`${flow.name}-${index}`} className="group">
-								<TableCell>
-									<div className="relative flex items-center">
-										<span className="font-medium">{flow.name}</span>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<div
-													className="absolute right-0 p-1 rounded border bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10 shadow-xs flex items-center gap-1"
-													onClick={() => handleFlowClick(flow)}
-												>
-													<ChartNoAxesGantt
-														className="size-4 text-secondary-foreground"
-														strokeWidth={2.5}
+								{visibleColumns.name && (
+									<TableCell>
+										<div className="relative flex items-center">
+											<span className="font-medium">{flow.name}</span>
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<div
+														className="absolute right-0 p-1 rounded border bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10 shadow-xs flex items-center gap-1"
+														onClick={() => handleFlowClick(flow)}
+													>
+														<ChartNoAxesGantt
+															className="size-4 text-secondary-foreground"
+															strokeWidth={2.5}
+														/>
+														<span className="text-xs text-secondary-foreground ">
+															Details
+														</span>
+													</div>
+												</TooltipTrigger>
+												<TooltipContent>
+													<p>View flow details</p>
+												</TooltipContent>
+											</Tooltip>
+										</div>
+									</TableCell>
+								)}
+								{visibleColumns.labels && (
+									<TableCell>
+										<div
+											className="flex gap-1"
+											onClick={(e) => e.stopPropagation()}
+										>
+											{Object.entries(flow.labels).map(([key, value]) => (
+												<div key={key} className="cursor-pointer">
+													<LabelBadge
+														labelKey={key}
+														labelValue={value}
+														readonly
 													/>
-													<span className="text-xs text-secondary-foreground ">
-														Details
-													</span>
 												</div>
-											</TooltipTrigger>
-											<TooltipContent>
-												<p>View flow details</p>
-											</TooltipContent>
-										</Tooltip>
-									</div>
-								</TableCell>
-								<TableCell>
-									<div
-										className="flex gap-1"
-										onClick={(e) => e.stopPropagation()}
-									>
-										{Object.entries(flow.labels).map(([key, value]) => (
-											<div key={key} className="cursor-pointer">
-												<LabelBadge
-													labelKey={key}
-													labelValue={value}
-													readonly
-												/>
-											</div>
-										))}
-									</div>
-								</TableCell>
-								<TableCell>
-									<FlowStatus status={flow.lastRunStatus} />
-								</TableCell>
-								<TableCell className="text-muted-foreground text-sm">
-									<Tooltip>
-										<TooltipTrigger className="cursor-default">
-											{formatTimeAgo(flow.lastRunStartedAt)}
-										</TooltipTrigger>
-										<TooltipContent>
-											{format(flow.lastRunStartedAt, "PPpp")}
-										</TooltipContent>
-									</Tooltip>
-								</TableCell>
-								<TableCell className="text-muted-foreground text-sm">
-									{flow.lastRunEndedAt ? (
+											))}
+										</div>
+									</TableCell>
+								)}
+								{visibleColumns.lastStatus && (
+									<TableCell>
+										<FlowStatus status={flow.lastRunStatus} />
+									</TableCell>
+								)}
+								{visibleColumns.lastStart && (
+									<TableCell className="text-muted-foreground text-sm">
 										<Tooltip>
 											<TooltipTrigger className="cursor-default">
-												{formatTimeAgo(flow.lastRunEndedAt)}
+												{formatTimeAgo(flow.lastRunStartedAt)}
 											</TooltipTrigger>
 											<TooltipContent>
-												{format(flow.lastRunEndedAt, "PPpp")}
+												{format(flow.lastRunStartedAt, "PPpp")}
 											</TooltipContent>
 										</Tooltip>
-									) : (
-										"-"
-									)}
-								</TableCell>
-								<TableCell className="text-muted-foreground text-sm">
-									{formatDuration(flow.lastRunStartedAt, flow.lastRunEndedAt)}
-								</TableCell>
-								<TableCell>
-									<div className="flex items-center gap-1.5">
-										<Badge
-											variant="outline"
-											className="border-0 bg-[#dbe6dd] text-green-700 h-6 px-2 text-xs font-medium"
-										>
-											{flow.successCount}
-										</Badge>
-										<Badge
-											variant="outline"
-											className="border-0 bg-[#d2e4f8] text-blue-700 h-6 px-2 text-xs font-medium"
-										>
-											{flow.pendingCount}
-										</Badge>
-										<Badge
-											variant="outline"
-											className="border-0 bg-[#f9dcd9] text-red-700 h-6 px-2 text-xs font-medium"
-										>
-											{flow.failedCount}
-										</Badge>
-									</div>
-								</TableCell>
+									</TableCell>
+								)}
+								{visibleColumns.lastEnd && (
+									<TableCell className="text-muted-foreground text-sm">
+										{flow.lastRunEndedAt ? (
+											<Tooltip>
+												<TooltipTrigger className="cursor-default">
+													{formatTimeAgo(flow.lastRunEndedAt)}
+												</TooltipTrigger>
+												<TooltipContent>
+													{format(flow.lastRunEndedAt, "PPpp")}
+												</TooltipContent>
+											</Tooltip>
+										) : (
+											"-"
+										)}
+									</TableCell>
+								)}
+								{visibleColumns.lastDuration && (
+									<TableCell className="text-muted-foreground text-sm">
+										{formatDuration(flow.lastRunStartedAt, flow.lastRunEndedAt)}
+									</TableCell>
+								)}
+								{visibleColumns.runCounts && (
+									<TableCell>
+										<div className="flex items-center gap-1.5">
+											<Badge
+												variant="outline"
+												className="border-0 bg-[#dbe6dd] text-green-700 h-6 px-2 text-xs font-medium"
+											>
+												{flow.successCount}
+											</Badge>
+											<Badge
+												variant="outline"
+												className="border-0 bg-[#d2e4f8] text-blue-700 h-6 px-2 text-xs font-medium"
+											>
+												{flow.pendingCount}
+											</Badge>
+											<Badge
+												variant="outline"
+												className="border-0 bg-[#f9dcd9] text-red-700 h-6 px-2 text-xs font-medium"
+											>
+												{flow.failedCount}
+											</Badge>
+										</div>
+									</TableCell>
+								)}
 							</TableRow>
 						);
 					})}

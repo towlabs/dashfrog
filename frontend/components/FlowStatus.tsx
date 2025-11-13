@@ -32,9 +32,9 @@ export function FlowStatus({ status, className }: FlowStatusProps) {
 	return (
 		<Badge
 			variant="outline"
-			className={cn("text-muted-foreground px-1.5 gap-1.5", className)}
+			className={cn("text-muted-foreground px-1.5 gap-1.5 border-0", className)}
 		>
-			<config.Icon className={cn("h-4 w-4", config.iconClass)} />
+			<config.Icon className={cn("size-4", config.iconClass)} />
 			{config.label}
 		</Badge>
 	);

@@ -38,16 +38,11 @@ import type { DetailedFlow } from "@/src/types/flow";
 type Props = {
 	detailedFlow: DetailedFlow;
 	statusFilter: StatusFilter;
-	onAddFilter?: (filter: Filter) => void;
 };
 
 const ITEMS_PER_PAGE = 10;
 
-export function FlowHistoryTable({
-	detailedFlow,
-	statusFilter,
-	onAddFilter,
-}: Props) {
+export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
@@ -111,31 +106,31 @@ export function FlowHistoryTable({
 							<TableHead className="w-8"></TableHead>
 							<TableHead>
 								<div className="flex items-center gap-2">
-									<Tags className="h-4 w-4" strokeWidth={2.5} />
+									<Tags className="size-4" strokeWidth={2.5} />
 									<span>Labels</span>
 								</div>
 							</TableHead>
 							<TableHead>
 								<div className="flex items-center gap-2">
-									<Clock className="h-4 w-4" strokeWidth={2.5} />
+									<Clock className="size-4" strokeWidth={2.5} />
 									<span>Start</span>
 								</div>
 							</TableHead>
 							<TableHead>
 								<div className="flex items-center gap-2">
-									<Clock className="h-4 w-4" strokeWidth={2.5} />
+									<Clock className="size-4" strokeWidth={2.5} />
 									<span>End</span>
 								</div>
 							</TableHead>
 							<TableHead>
 								<div className="flex items-center gap-2">
-									<Timer className="h-4 w-4" strokeWidth={2.5} />
+									<Timer className="size-4" strokeWidth={2.5} />
 									<span>Duration</span>
 								</div>
 							</TableHead>
 							<TableHead>
 								<div className="flex items-center gap-2">
-									<CircleDot className="h-4 w-4" strokeWidth={2.5} />
+									<CircleDot className="size-4" strokeWidth={2.5} />
 									<span>Status</span>
 								</div>
 							</TableHead>
@@ -156,9 +151,9 @@ export function FlowHistoryTable({
 									>
 										<TableCell className="w-8">
 											{isExpanded ? (
-												<ChevronDown className="h-4 w-4 text-muted-foreground" />
+												<ChevronDown className="size-4 text-muted-foreground" />
 											) : (
-												<ChevronRight className="h-4 w-4 text-muted-foreground" />
+												<ChevronRight className="size-4 text-muted-foreground" />
 											)}
 										</TableCell>
 										<TableCell>

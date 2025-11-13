@@ -47,12 +47,23 @@ function generateMockNotebooks(_tenant: string): Notebook[] {
 					id: "6fefea9b-5c7f-4b6e-851b-67789d2de4c1",
 					type: "timeline",
 					props: {
-						limit: 10,
+						showEvent: true,
+						showLabels: true,
+						showTime: true,
 					},
 					children: [],
 				},
 				{
 					id: "5c8f5fa8-0096-4f57-9855-f6f549fb9870",
+					type: "flowHistory",
+					props: {
+						flowName: "",
+						statusFilter: "all",
+					},
+					children: [],
+				},
+				{
+					id: "003d27f3-58d3-4417-b776-b81fb252a593",
 					type: "paragraph",
 					props: {
 						backgroundColor: "default",

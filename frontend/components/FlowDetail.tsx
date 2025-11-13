@@ -158,7 +158,6 @@ export function FlowDetail({
 								<FlowHistoryTable
 									detailedFlow={flowDetail}
 									statusFilter={statusFilter}
-									onAddFilter={handleAddFilter}
 								/>
 							)}
 						</div>

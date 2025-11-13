@@ -25,12 +25,14 @@ import {
 	locales as multiColumnLocales,
 	withMultiColumn,
 } from "@blocknote/xl-multi-column";
-import { ChevronRight, History, Home } from "lucide-react";
+import { ChevronRight, History, Home, Workflow } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { TenantControls } from "@/components/TenantControls";
 import { AddBlockButton } from "@/components/ui/add-block";
 import { DragHandleButton } from "@/components/ui/drag-block";
+import { FlowBlock } from "../blocks/FlowBlock";
+import { FlowHistoryBlock } from "../blocks/FlowHistoryBlock";
 import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
@@ -39,7 +41,11 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 const customDragHandleMenu = (menuProps: DragHandleMenuProps) => {
 	const blockType = menuProps.block.type as string;
-	if (blockType === "timeline") {
+	if (
+		blockType === "timeline" ||
+		blockType === "flow" ||
+		blockType === "flowHistory"
+	) {
 		return (
 			<DragHandleMenu {...menuProps}>
 				<DropdownMenuItem
@@ -66,6 +72,7 @@ export default function NotebookPage() {
 
 	const timeWindow = useTenantStore((state) => state.timeWindow);
 	const filters = useTenantStore((state) => state.filters);
+	const setCurrentTenant = useTenantStore((state) => state.setCurrentTenant);
 	const setTimeWindow = useTenantStore((state) => state.setTimeWindow);
 	const setFilters = useTenantStore((state) => state.setFilters);
 	const labels = useLabelsStore((state) => state.labels);
@@ -86,6 +93,8 @@ export default function NotebookPage() {
 				blockSpecs: {
 					...defaultBlockSpecs,
 					timeline: TimelineBlock,
+					flow: FlowBlock,
+					flowHistory: FlowHistoryBlock,
 				},
 			}),
 		),
@@ -103,6 +112,7 @@ export default function NotebookPage() {
 
 	useEffect(() => {
 		if (!tenant || !notebookId || notebooksAreLoading) return;
+		setCurrentTenant(tenant);
 		const notebook = setCurrentNotebook(tenant, notebookId);
 		if (!notebook) return;
 
@@ -113,7 +123,14 @@ export default function NotebookPage() {
 		return () => {
 			clearTimeout(timeoutId);
 		};
-	}, [notebookId, tenant, setCurrentNotebook, editor, notebooksAreLoading]);
+	}, [
+		notebookId,
+		tenant,
+		setCurrentNotebook,
+		editor,
+		notebooksAreLoading,
+		setCurrentTenant,
+	]);
 
 	useEditorChange((editor) => {
 		console.log(JSON.stringify(editor.document, null, 2));
@@ -202,15 +219,39 @@ export default function NotebookPage() {
 											getMultiColumnSlashMenuItems(editor),
 										),
 										{
-											title: "events",
+											title: "Timeline events",
 											onItemClick: () => {
 												insertOrUpdateBlock(editor, {
 													type: "timeline",
-													props: { limit: 10 },
 												});
 											},
-											group: "Timeline",
+											group: "Data",
 											subtext: "Table listing of timeline events",
+											icon: <History className="h-4 w-4" />,
+										},
+										{
+											title: "Flows",
+											onItemClick: () => {
+												insertOrUpdateBlock(editor, {
+													type: "flow",
+												});
+											},
+											group: "Data",
+											subtext: "Table listing of flows",
+											icon: <Workflow className="h-4 w-4" />,
+										},
+										{
+											title: "Flow history",
+											onItemClick: () => {
+												const block = insertOrUpdateBlock(editor, {
+													type: "flowHistory",
+												});
+												useNotebooksStore
+													.getState()
+													.openBlockSettings(block.id);
+											},
+											group: "Data",
+											subtext: "Execution history for a specific flow",
 											icon: <History className="h-4 w-4" />,
 										},
 									];

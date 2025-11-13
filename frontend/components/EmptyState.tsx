@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -6,6 +7,8 @@ type EmptyStateProps = {
 	title: string;
 	description: string;
 	action?: ReactNode;
+	onClick?: () => void;
+	className?: string;
 };
 
 export function EmptyState({
@@ -13,9 +16,17 @@ export function EmptyState({
 	title,
 	description,
 	action,
+	onClick,
+	className,
 }: EmptyStateProps) {
 	return (
-		<div className="flex flex-col items-center justify-center py-12 px-4">
+		<div
+			className={cn(
+				"flex flex-col items-center justify-center py-12 px-4",
+				className,
+			)}
+			onClick={onClick}
+		>
 			<div className="rounded-full bg-muted p-4 mb-4">
 				<Icon className="h-8 w-8 text-muted-foreground" />
 			</div>
