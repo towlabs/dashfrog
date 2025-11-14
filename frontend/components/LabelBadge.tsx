@@ -19,7 +19,7 @@ import {
 
 type LabelBadgeProps = {
 	labelKey: string;
-	labelValue: string;
+	labelValue?: string;
 	readonly?: boolean;
 	availableValues?: string[];
 	onValueChange?: (value: string) => void;
@@ -100,7 +100,8 @@ export function LabelBadge({
 			variant="secondary"
 			className="h-5 px-2 font-normal h-6 border-0 text-muted-foreground"
 		>
-			{labelKey}={labelValue}
+			{labelKey}
+			{labelValue && `=${labelValue}`}
 		</Badge>
 	);
 }

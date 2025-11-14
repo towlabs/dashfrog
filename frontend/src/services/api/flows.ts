@@ -433,21 +433,20 @@ const Flows = {
 		_start: Date,
 		_end: Date,
 		_filters?: Filter[],
-	): Promise<FlowHistory> => {
-		return new Promise((resolve) =>
-			setTimeout(
-				() =>
-					resolve({
-						startTime: new Date(),
-						endTime: new Date(),
-						status: "success",
-						events: [],
-						steps: [],
-						labels: {},
-					}),
-				1500,
-			),
-		);
+	): Promise<FlowHistory[]> => {
+		const base: FlowHistory = {
+			startTime: new Date(),
+			endTime: new Date(),
+			status: "success",
+			events: [],
+			steps: [],
+			labels: {
+				environment: "production",
+				service: "api",
+				region: "us-east-1",
+			},
+		};
+		return new Promise((resolve) => setTimeout(() => resolve([base]), 1500));
 	},
 };
 

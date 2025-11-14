@@ -29,8 +29,8 @@ export const MetricAggregationLabel: Record<MetricAggregation, string> = {
 export interface Metric {
 	name: string;
 	prometheusName: string;
+	labels: string[];
 	unit: string | null;
-	values: MetricValue[];
 	aggregation: MetricAggregation;
 }
 

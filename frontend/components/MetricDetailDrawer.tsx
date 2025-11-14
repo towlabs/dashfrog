@@ -2,12 +2,13 @@
 
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { LabelBadge } from "@/components/LabelBadge";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import {
 	type ChartConfig,
 	ChartContainer,
+	ChartLegend,
+	ChartLegendContent,
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@/components/ui/chart";
@@ -20,7 +21,10 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from "@/components/ui/drawer";
-import { type MetricHistoryPoint, Metrics } from "@/src/services/api/metrics";
+import {
+	type MetricHistoryResponse,
+	Metrics,
+} from "@/src/services/api/metrics";
 import { useTenantStore } from "@/src/stores/tenant";
 import type { Metric } from "@/src/types/metric";
 import { MetricAggregationLabel } from "@/src/types/metric";
@@ -31,16 +35,16 @@ type MetricDetailDrawerProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	metric: Metric;
-	labels: Record<string, string>;
 };
 
 export function MetricDetailDrawer({
 	open,
 	onOpenChange,
 	metric,
-	labels,
 }: MetricDetailDrawerProps) {
-	const [historyData, setHistoryData] = useState<MetricHistoryPoint[]>([]);
+	const [historyData, setHistoryData] = useState<MetricHistoryResponse | null>(
+		null,
+	);
 	const [loading, setLoading] = useState(false);
 	const currentTenant = useTenantStore((state) => state.currentTenant);
 	const timeWindow = useTenantStore((state) => state.timeWindow);
@@ -59,10 +63,9 @@ export function MetricDetailDrawer({
 					metric.unit,
 					start,
 					end,
-					labels,
 					filters,
 				);
-				setHistoryData(response.data);
+				setHistoryData(response);
 			} catch (error) {
 				console.error("Failed to fetch metric history:", error);
 			} finally {
@@ -71,17 +74,27 @@ export function MetricDetailDrawer({
 		};
 
 		void fetchHistory();
-	}, [metric, open, currentTenant, labels, filters, timeWindow]);
+	}, [metric, open, currentTenant, filters, timeWindow]);
 
 	if (!metric) return null;
 
+	// Get all unique timestamps across all series
+	const allTimestamps = new Set<number>();
+	if (historyData) {
+		for (const series of historyData.series) {
+			for (const point of series.data) {
+				allTimestamps.add(point.timestamp.getTime());
+			}
+		}
+	}
+	const sortedTimestamps = Array.from(allTimestamps).sort((a, b) => a - b);
+
 	// Calculate time window duration to determine appropriate date format
 	const getTimeFormat = () => {
-		if (historyData.length < 2) return "time";
+		if (sortedTimestamps.length < 2) return "time";
 
 		const duration =
-			historyData[historyData.length - 1].timestamp.getTime() -
-			historyData[0].timestamp.getTime();
+			sortedTimestamps[sortedTimestamps.length - 1] - sortedTimestamps[0];
 		const hours = duration / (1000 * 60 * 60);
 
 		if (hours <= 1) {
@@ -99,48 +112,85 @@ export function MetricDetailDrawer({
 
 	const timeFormat = getTimeFormat();
 
-	// Transform data for chart
-	const chartData = historyData.map((point) => {
-		const { formattedValue } = formatMetricValue(
-			point.value,
-			metric.unit || undefined,
-			metric.aggregation,
-		);
-		// Parse back to number for chart (removes commas)
-		const numericValue = Number.parseFloat(formattedValue.replace(/,/g, ""));
+	// Create a label for each series based on its labels
+	const getSeriesLabel = (labels: Record<string, string>) => {
+		return Object.entries(labels)
+			.map(([key, value]) => `${key}=${value}`)
+			.join(", ");
+	};
 
-		let timestamp: string;
+	// Transform data for chart - merge all series by timestamp
+	const chartData = sortedTimestamps.map((timestampMs) => {
+		const timestamp = new Date(timestampMs);
+		let timestampStr: string;
 		if (timeFormat === "time") {
-			timestamp = point.timestamp.toLocaleTimeString("en-US", {
+			timestampStr = timestamp.toLocaleTimeString("en-US", {
 				hour: "2-digit",
 				minute: "2-digit",
 			});
 		} else if (timeFormat === "datetime") {
-			timestamp = point.timestamp.toLocaleString("en-US", {
+			timestampStr = timestamp.toLocaleString("en-US", {
 				month: "short",
 				day: "numeric",
 				hour: "2-digit",
 				minute: "2-digit",
 			});
 		} else {
-			timestamp = point.timestamp.toLocaleDateString("en-US", {
+			timestampStr = timestamp.toLocaleDateString("en-US", {
 				month: "short",
 				day: "numeric",
 			});
 		}
 
-		return {
-			timestamp,
-			value: numericValue,
+		const dataPoint: Record<string, string | number> = {
+			timestamp: timestampStr,
 		};
+
+		// Add value for each series at this timestamp
+		if (historyData) {
+			for (let i = 0; i < historyData.series.length; i++) {
+				const series = historyData.series[i];
+				const seriesLabel = getSeriesLabel(series.labels);
+				const point = series.data.find(
+					(p) => p.timestamp.getTime() === timestampMs,
+				);
+				if (point) {
+					const { formattedValue } = formatMetricValue(
+						point.value,
+						metric.unit ?? undefined,
+						metric.aggregation,
+					);
+					// Parse back to number for chart (removes commas)
+					dataPoint[seriesLabel] = Number.parseFloat(
+						formattedValue.replace(/,/g, ""),
+					);
+				}
+			}
+		}
+
+		return dataPoint;
 	});
 
-	const chartConfig = {
-		value: {
-			label: metric.name,
-			color: "var(--color-blue-300)",
-		},
-	} satisfies ChartConfig;
+	// Build chart config for all series
+	const chartConfig: ChartConfig = {};
+	const chartColors = [
+		"var(--color-blue-300)",
+		"var(--color-blue-500)",
+		"var(--color-blue-700)",
+		"var(--color-blue-800)",
+		"var(--color-blue-900)",
+	];
+
+	if (historyData) {
+		for (let i = 0; i < historyData.series.length; i++) {
+			const series = historyData.series[i];
+			const seriesLabel = getSeriesLabel(series.labels);
+			chartConfig[seriesLabel] = {
+				label: seriesLabel,
+				color: chartColors[i % chartColors.length],
+			};
+		}
+	}
 
 	const { displayUnit } = formatMetricValue(
 		0,
@@ -154,9 +204,8 @@ export function MetricDetailDrawer({
 				<DrawerHeader>
 					<DrawerTitle className="flex items-center justify-between">
 						<div className="space-y-2">
-							<div className="text-2xl font-bold">{metric.name}</div>
-							<div className="text-sm text-muted-foreground">
-								{MetricAggregationLabel[metric.aggregation]}
+							<div className="text-2xl font-bold">
+								{MetricAggregationLabel[metric.aggregation]} Of {metric.name}
 							</div>
 						</div>
 						<DrawerClose asChild>
@@ -165,42 +214,16 @@ export function MetricDetailDrawer({
 							</Button>
 						</DrawerClose>
 					</DrawerTitle>
-					<DrawerDescription>
-						<div className="flex gap-1 flex-wrap pt-2">
-							{Object.entries(labels).map(([key, value]) => (
-								<LabelBadge
-									key={`${key}-${value}`}
-									labelKey={key}
-									labelValue={value}
-									readonly
-								/>
-							))}
-						</div>
-					</DrawerDescription>
 				</DrawerHeader>
 
-				<div className="px-4 pb-4">
+				<div className="px-4 pb-10">
 					{loading ? (
 						<div className="rounded-lg border p-8 text-center text-muted-foreground">
 							<p>Loading metric history...</p>
 						</div>
 					) : chartData.length > 0 ? (
-						<ChartContainer config={chartConfig} className="h-[300px] w-full">
-							<AreaChart data={chartData}>
-								<defs>
-									<linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
-										<stop
-											offset="5%"
-											stopColor="hsl(var(--chart-1))"
-											stopOpacity={0.8}
-										/>
-										<stop
-											offset="95%"
-											stopColor="hsl(var(--chart-1))"
-											stopOpacity={0.1}
-										/>
-									</linearGradient>
-								</defs>
+						<ChartContainer config={chartConfig} className="h-[400px] w-full">
+							<LineChart data={chartData}>
 								<CartesianGrid vertical={false} />
 								<XAxis
 									dataKey="timestamp"
@@ -229,14 +252,21 @@ export function MetricDetailDrawer({
 										/>
 									}
 								/>
-								<Area
-									dataKey="value"
-									type="monotone"
-									fillOpacity={0.4}
-									stroke="var(--color-blue-300))"
-									strokeWidth={2}
-								/>
-							</AreaChart>
+								<ChartLegend content={<ChartLegendContent />} />
+								{historyData?.series.map((series, i) => {
+									const seriesLabel = getSeriesLabel(series.labels);
+									return (
+										<Line
+											key={seriesLabel}
+											dataKey={seriesLabel}
+											type="monotone"
+											stroke={chartColors[i % chartColors.length]}
+											strokeWidth={2}
+											dot={false}
+										/>
+									);
+								})}
+							</LineChart>
 						</ChartContainer>
 					) : (
 						<div className="rounded-lg border p-8 text-center text-muted-foreground">
@@ -244,12 +274,6 @@ export function MetricDetailDrawer({
 						</div>
 					)}
 				</div>
-
-				<DrawerFooter>
-					<DrawerClose asChild>
-						<Button variant="outline">Close</Button>
-					</DrawerClose>
-				</DrawerFooter>
 			</DrawerContent>
 		</Drawer>
 	);

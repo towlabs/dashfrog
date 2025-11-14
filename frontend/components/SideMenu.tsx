@@ -102,12 +102,12 @@ export default function SideMenu({
 			style={{ backgroundColor: "#f9f8f7" }}
 		>
 			<div className="flex h-14 items-center border-b px-3">
-				<div className={cn("flex transition-all items-center")}>
+				<div className={cn("flex transition-all items-center gap-1")}>
 					{!isCollapsed && (
 						<img
 							src="/assets/logo.svg"
 							alt="DashFrog"
-							className={cn("transition-all", "w-12")}
+							className={cn("transition-all", "w-6")}
 						/>
 					)}
 					{!isCollapsed && <span className="font-semibold">DashFrog</span>}

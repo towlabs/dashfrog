@@ -1,7 +1,14 @@
 "use client";
 
-import { CaseUpper, ChartLine, Hash, Tags } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+	CaseUpper,
+	ChartLine,
+	ChevronDown,
+	ChevronRight,
+	Hash,
+	Tags,
+} from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
 import { SimplePagination } from "@/components/SimplePagination";
@@ -19,9 +26,9 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Metrics, toMetric } from "@/src/services/api/metrics";
+import { Metrics } from "@/src/services/api/metrics";
 import type { Filter } from "@/src/types/filter";
-import type { Metric } from "@/src/types/metric";
+import type { Metric, MetricValue } from "@/src/types/metric";
 import { MetricAggregationLabel } from "@/src/types/metric";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
@@ -44,7 +51,6 @@ export function MetricsTable({
 	const [currentPage, setCurrentPage] = useState(1);
 	const [selectedMetric, setSelectedMetric] = useState<{
 		metric: Metric;
-		labels: Record<string, string>;
 	} | null>(null);
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -54,8 +60,7 @@ export function MetricsTable({
 			try {
 				const { start, end } = resolveTimeWindow(timeWindow);
 				const response = await Metrics.getByTenant(tenant, start, end, filters);
-				const fetchedMetrics = response.data.map(toMetric);
-				setMetrics(fetchedMetrics);
+				setMetrics(response.data);
 			} catch (error) {
 				console.error("Failed to fetch metrics:", error);
 				setMetrics([]);
@@ -69,24 +74,15 @@ export function MetricsTable({
 		}
 	}, [tenant, timeWindow, filters]);
 
-	const handleRowClick = (metric: Metric, labels: Record<string, string>) => {
-		setSelectedMetric({ metric, labels });
+	const handleRowClick = (metric: Metric) => {
+		setSelectedMetric({ metric });
 		setDrawerOpen(true);
 	};
 
-	// Flatten all metric rows for pagination
-	const allRows = metrics.flatMap((metric) =>
-		metric.values.map((metricValue, valueIndex) => ({
-			metric,
-			metricValue,
-			valueIndex,
-		})),
-	);
-
-	const totalPages = Math.ceil(allRows.length / ITEMS_PER_PAGE);
+	const totalPages = Math.ceil(metrics.length / ITEMS_PER_PAGE);
 	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 	const endIndex = startIndex + ITEMS_PER_PAGE;
-	const paginatedRows = allRows.slice(startIndex, endIndex);
+	const paginatedRows = metrics.slice(startIndex, endIndex);
 
 	const handlePreviousPage = () => {
 		setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -97,7 +93,7 @@ export function MetricsTable({
 	};
 
 	if (loading) {
-		return <TableSkeleton columns={3} rows={5} />;
+		return <TableSkeleton columns={2} rows={5} />;
 	}
 
 	return (
@@ -107,7 +103,6 @@ export function MetricsTable({
 					open={drawerOpen}
 					onOpenChange={setDrawerOpen}
 					metric={selectedMetric.metric}
-					labels={selectedMetric.labels}
 				/>
 			)}
 			<Table>
@@ -125,83 +120,54 @@ export function MetricsTable({
 								<span>Labels</span>
 							</div>
 						</TableHead>
-						<TableHead className="text-right">
-							<div className="flex items-center gap-2">
-								<Hash className="size-4" strokeWidth={2.5} />
-								<span>Value</span>
-							</div>
-						</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{paginatedRows.map((row, index) => {
-						const { formattedValue, displayUnit } = formatMetricValue(
-							row.metricValue.value,
-							row.metric.unit || undefined,
-							row.metric.aggregation,
-						);
+					{paginatedRows.map((metric, index) => {
+						const rowIndex = startIndex + index;
+
 						return (
-							<TableRow
-								key={`${row.metric.name}-${row.valueIndex}-${startIndex + index}`}
-								className="group"
-							>
-								<TableCell>
-									<div className="relative flex items-center">
-										<span>
-											{MetricAggregationLabel[row.metric.aggregation]} of{" "}
-											{row.metric.name}
-										</span>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<div
-													className="absolute right-0 p-1 rounded border bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10 shadow-xs flex items-center gap-1"
-													onClick={(e) => {
-														e.stopPropagation();
-														handleRowClick(row.metric, row.metricValue.labels);
-													}}
-												>
-													<ChartLine
-														className="size-4 text-secondary-foreground"
-														strokeWidth={2.5}
-													/>
-													<span className="text-xs text-secondary-foreground ">
-														History
-													</span>
-												</div>
-											</TooltipTrigger>
-											<TooltipContent>
-												<p>View metric history</p>
-											</TooltipContent>
-										</Tooltip>
-									</div>
-								</TableCell>
-								<TableCell>
-									<div className="flex gap-1">
-										{Object.entries(row.metricValue.labels).length > 0 ? (
-											Object.entries(row.metricValue.labels).map(
-												([key, value]) => (
-													<LabelBadge
-														key={`${key}-${value}`}
-														labelKey={key}
-														labelValue={value}
-														readonly
-													/>
-												),
-											)
-										) : (
-											<span className="text-sm text-muted-foreground">-</span>
-										)}
-									</div>
-								</TableCell>
-								<TableCell className="text-right font-semibold tabular-nums">
-									{formattedValue}
-									{displayUnit && (
-										<span className="text-sm text-muted-foreground font-normal ml-1">
-											{displayUnit}
-										</span>
-									)}
-								</TableCell>
-							</TableRow>
+							<React.Fragment key={`${metric.name}-${rowIndex}-fragment`}>
+								<TableRow className="group cursor-pointer hover:bg-muted/50">
+									<TableCell>
+										<div className="relative flex items-center gap-2">
+											<span>
+												{MetricAggregationLabel[metric.aggregation]} of{" "}
+												{metric.name}
+											</span>
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<div
+														className="absolute right-0 p-1 rounded border bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10 shadow-xs flex items-center gap-1"
+														onClick={(e) => {
+															e.stopPropagation();
+															handleRowClick(metric);
+														}}
+													>
+														<ChartLine
+															className="size-4 text-secondary-foreground"
+															strokeWidth={2.5}
+														/>
+														<span className="text-xs text-secondary-foreground ">
+															Values
+														</span>
+													</div>
+												</TooltipTrigger>
+												<TooltipContent>
+													<p>View metric history</p>
+												</TooltipContent>
+											</Tooltip>
+										</div>
+									</TableCell>
+									<TableCell>
+										<div className="flex gap-1">
+											{metric.labels.map((label) => (
+												<LabelBadge key={label} labelKey={label} readonly />
+											))}
+										</div>
+									</TableCell>
+								</TableRow>
+							</React.Fragment>
 						);
 					})}
 				</TableBody>

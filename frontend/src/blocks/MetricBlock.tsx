@@ -1,21 +1,13 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import {
-	Check,
-	CheckCircle2,
-	ChevronsUpDown,
-	CircleCheck,
-	Workflow,
-} from "lucide-react";
+import { Check, ChevronsUpDown, TrendingUp } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
-import { FlowStatus } from "@/components/FlowStatus";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
-	CardContent,
 	CardDescription,
 	CardFooter,
 	CardHeader,
@@ -43,26 +35,15 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
-import { Flows, toFlow } from "@/src/services/api/flows";
-import { useNotebooksStore } from "@/src/stores/notebooks";
-import { useTenantStore } from "@/src/stores/tenant";
-import type { Flow, FlowHistory } from "@/src/types/flow";
-import { resolveTimeWindow } from "@/src/types/timewindow";
 import { cn } from "@/lib/utils";
-import { LabelBadge } from "@/components/LabelBadge";
+import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Metric } from "@/src/types/metric";
 
-const flowStatusColors = {
-	success: "bg-green-700",
-	failure: "bg-red-700",
-	running: "bg-blue-700",
-};
-
-export const FlowStatusBlock = createReactBlockSpec(
+export const MetricBlock = createReactBlockSpec(
 	{
-		type: "flowStatus" as const,
+		type: "metric" as const,
 		propSchema: {
-			flowName: {
+			metricName: {
 				default: "",
 			},
 			title: {
@@ -75,47 +56,31 @@ export const FlowStatusBlock = createReactBlockSpec(
 		render: (props) => {
 			const { tenant } = useParams<{ tenant: string }>();
 			const tenantName = tenant ? decodeURIComponent(tenant) : "";
-			const timeWindow = useTenantStore((state) => state.timeWindow);
-			const filters = useTenantStore((state) => state.filters);
 			const settingsOpenBlockId = useNotebooksStore(
 				(state) => state.settingsOpenBlockId,
 			);
 			const closeBlockSettings = useNotebooksStore(
 				(state) => state.closeBlockSettings,
 			);
-			const flows = useNotebooksStore((state) => state.flows);
-			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
+			const metrics = useNotebooksStore((state) => state.metrics);
+			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
 
-			const [flowHistories, setFlowHistories] = useState<FlowHistory[]>([]);
-			const [loadingHistory, setLoadingHistory] = useState(false);
+			const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
 			const [comboboxOpen, setComboboxOpen] = useState(false);
 
-			const flowName = props.block.props.flowName as string;
+			const metricName = props.block.props.metricName as string;
 			const title = props.block.props.title as string;
 
-			// Fetch selected flow details when flowName is set
+			// Update selected metric when metricName or available metrics change
 			useEffect(() => {
-				const fetchFlowHistory = async () => {
-					if (!tenantName || !flowName) {
-						setFlowHistories([]);
-						return;
-					}
+				if (!metricName || metrics.length === 0) {
+					setSelectedMetric(null);
+					return;
+				}
 
-					setLoadingHistory(true);
-					const { start, end } = resolveTimeWindow(timeWindow);
-					const flowHistories = await Flows.getLastFlow(
-						tenantName,
-						flowName,
-						start,
-						end,
-						filters,
-					);
-					setFlowHistories(flowHistories);
-					setLoadingHistory(false);
-				};
-
-				void fetchFlowHistory();
-			}, [tenantName, flowName, timeWindow, filters]);
+				const metric = metrics.find((m) => m.name === metricName);
+				setSelectedMetric(metric || null);
+			}, [metricName, metrics]);
 
 			if (!tenantName) {
 				return (
@@ -129,91 +94,94 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleFlowSelect = (selectedFlowName: string) => {
+			const handleMetricSelect = (selectedMetricName: string) => {
 				props.editor.updateBlock(props.block, {
 					props: {
 						...props.block.props,
-						flowName: selectedFlowName,
+						metricName: selectedMetricName,
 					},
 				});
 			};
 
+			const formatValue = (value: number, unit: string | null): string => {
+				if (unit === "percent") {
+					return `${(value * 100).toFixed(1)}%`;
+				}
+				if (unit === "ms" || unit === "milliseconds") {
+					return `${value.toFixed(1)}ms`;
+				}
+				if (unit === "bytes") {
+					if (value >= 1024 * 1024 * 1024) {
+						return `${(value / (1024 * 1024 * 1024)).toFixed(2)}GB`;
+					}
+					if (value >= 1024 * 1024) {
+						return `${(value / (1024 * 1024)).toFixed(2)}MB`;
+					}
+					if (value >= 1024) {
+						return `${(value / 1024).toFixed(2)}KB`;
+					}
+					return `${value.toFixed(0)}B`;
+				}
+				// Default: show number with appropriate precision
+				if (value >= 1000) {
+					return value.toFixed(0);
+				}
+				return value.toFixed(2);
+			};
+
 			// Render content based on state
 			const renderContent = () => {
-				if (!flowName) {
+				if (!metricName) {
 					return (
 						<EmptyState
-							icon={Workflow}
-							title="No flow selected"
-							description="Select a flow in the settings to view its status."
+							icon={TrendingUp}
+							title="No metric selected"
+							description="Select a metric in the settings to view its value."
 						/>
 					);
 				}
 
-				if (loadingHistory) {
+				if (metricsLoading) {
 					return (
-						<Card>
+						<Card className="@container/card">
 							<CardHeader>
-								<Skeleton className="h-4 w-64" />
+								<Skeleton className="h-4 w-32" />
+								<Skeleton className="h-8 w-24" />
 							</CardHeader>
-							<CardContent className="space-y-4">
-								<Skeleton className="h-4 w-48" />
-							</CardContent>
+							<CardFooter className="flex-col items-start gap-1.5">
+								<Skeleton className="h-3 w-48" />
+							</CardFooter>
 						</Card>
 					);
 				}
 
-				if (flowHistories.length === 0) {
+				if (!selectedMetric) {
 					return (
 						<EmptyState
-							icon={Workflow}
-							title="Flow not found"
-							description="No flow found for the selected time window."
+							icon={TrendingUp}
+							title="Metric not found"
+							description="The selected metric could not be loaded."
 						/>
 					);
 				}
 
-				return (
-					<div className="outline-none flex flex-col gap-1">
-						{flowHistories.map((flowHistory) =>
-							renderFlowHistory(flowHistory, flowHistories.length > 1),
-						)}
-					</div>
-				);
-			};
+				// Get the first value (for multi-label metrics, we show the first one)
+				const metricValue =
+					selectedMetric.values.length > 0 ? selectedMetric.values[0] : null;
 
-			const renderFlowHistory = (
-				flowHistory: FlowHistory,
-				displayLabels: boolean,
-			) => {
 				return (
-					<Card className="@container/card shadow-none">
+					<Card className="@container/card">
 						<CardHeader>
-							<CardDescription className="text-xl font-semibold flex items-baseline gap-2">
-								<div
-									className={cn(
-										"w-2.5 h-2.5 rounded-full",
-										flowStatusColors[flowHistory.status],
-									)}
-								/>
-								{title || flowName}
-							</CardDescription>
+							<CardDescription>{title || selectedMetric.name}</CardDescription>
+							<CardTitle className="text-2xl font-semibold @[250px]/card:text-3xl">
+								{metricValue
+									? formatValue(metricValue.value, selectedMetric.unit)
+									: "N/A"}
+							</CardTitle>
 						</CardHeader>
 						<CardFooter className="flex-col items-start gap-1.5 text-sm">
-							<div className="text-secondary-foreground">
-								Duration:{" "}
-								{formatDuration(flowHistory.startTime, flowHistory.endTime)}
-								{flowHistory.endTime && (
-									<> - {formatTimeAgo(flowHistory.endTime)}</>
-								)}
-							</div>
-							<div className="flex gap-1">
-								{displayLabels &&
-									Object.entries(flowHistory.labels).map(([key, value]) => (
-										<div key={key}>
-											<LabelBadge labelKey={key} labelValue={value} readonly />
-										</div>
-									))}
+							<div className="text-muted-foreground">
+								{selectedMetric.unit || "value"}
 							</div>
 						</CardFooter>
 					</Card>
@@ -232,7 +200,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 					>
 						<SheetContent>
 							<SheetHeader>
-								<SheetTitle>Flow Status Settings</SheetTitle>
+								<SheetTitle>Metric Settings</SheetTitle>
 							</SheetHeader>
 
 							<div className="mt-6 space-y-6">
@@ -253,14 +221,14 @@ export const FlowStatusBlock = createReactBlockSpec(
 								</div>
 
 								<div className="space-y-3">
-									<Label className="text-sm font-medium">Flow</Label>
-									{flowsLoading ? (
+									<Label className="text-sm font-medium">Metric</Label>
+									{metricsLoading ? (
 										<div className="text-sm text-muted-foreground">
-											Loading flows...
+											Loading metrics...
 										</div>
-									) : flows.length === 0 ? (
+									) : metrics.length === 0 ? (
 										<div className="text-sm text-muted-foreground">
-											No flows available
+											No metrics available
 										</div>
 									) : (
 										<Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
@@ -271,25 +239,25 @@ export const FlowStatusBlock = createReactBlockSpec(
 													aria-expanded={comboboxOpen}
 													className="w-full justify-between"
 												>
-													{flowName
-														? flows.find((flow) => flow.name === flowName)?.name
-														: "Select a flow..."}
+													{metricName
+														? metrics.find((m) => m.name === metricName)?.name
+														: "Select a metric..."}
 													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 												</Button>
 											</PopoverTrigger>
 											<PopoverContent className="w-[400px] p-0">
 												<Command>
-													<CommandInput placeholder="Search flows..." />
+													<CommandInput placeholder="Search metrics..." />
 													<CommandList>
-														<CommandEmpty>No flow found.</CommandEmpty>
+														<CommandEmpty>No metric found.</CommandEmpty>
 														<CommandGroup>
-															{flows.map((flow) => (
+															{metrics.map((metric) => (
 																<CommandItem
-																	key={flow.name}
-																	value={flow.name}
+																	key={metric.name}
+																	value={metric.name}
 																	onSelect={(currentValue) => {
-																		handleFlowSelect(
-																			currentValue === flowName
+																		handleMetricSelect(
+																			currentValue === metricName
 																				? ""
 																				: currentValue,
 																		);
@@ -299,12 +267,12 @@ export const FlowStatusBlock = createReactBlockSpec(
 																	<Check
 																		className={cn(
 																			"mr-2 h-4 w-4",
-																			flowName === flow.name
+																			metricName === metric.name
 																				? "opacity-100"
 																				: "opacity-0",
 																		)}
 																	/>
-																	{flow.name}
+																	{metric.name}
 																</CommandItem>
 															))}
 														</CommandGroup>

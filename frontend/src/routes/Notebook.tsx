@@ -25,7 +25,13 @@ import {
 	locales as multiColumnLocales,
 	withMultiColumn,
 } from "@blocknote/xl-multi-column";
-import { ChevronRight, History, Home, Workflow } from "lucide-react";
+import {
+	ChevronRight,
+	History,
+	Home,
+	TrendingUp,
+	Workflow,
+} from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { TenantControls } from "@/components/TenantControls";
@@ -34,6 +40,7 @@ import { DragHandleButton } from "@/components/ui/drag-block";
 import { FlowBlock } from "../blocks/FlowBlock";
 import { FlowHistoryBlock } from "../blocks/FlowHistoryBlock";
 import { FlowStatusBlock } from "../blocks/FlowStatusBlock";
+import { MetricBlock } from "../blocks/MetricBlock";
 import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
@@ -47,7 +54,8 @@ const customDragHandleMenu = (menuProps: DragHandleMenuProps) => {
 		blockType === "timeline" ||
 		blockType === "flow" ||
 		blockType === "flowHistory" ||
-		blockType === "flowStatus"
+		blockType === "flowStatus" ||
+		blockType === "metric"
 	) {
 		return (
 			<DragHandleMenu {...menuProps}>
@@ -89,6 +97,7 @@ export default function NotebookPage() {
 		(state) => state.openBlockSettings,
 	);
 	const fetchFlows = useNotebooksStore((state) => state.fetchFlows);
+	const fetchMetrics = useNotebooksStore((state) => state.fetchMetrics);
 
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
@@ -103,6 +112,7 @@ export default function NotebookPage() {
 					flow: FlowBlock,
 					flowHistory: FlowHistoryBlock,
 					flowStatus: FlowStatusBlock,
+					metric: MetricBlock,
 				},
 			}),
 		),
@@ -144,7 +154,8 @@ export default function NotebookPage() {
 		if (!tenant) return;
 		const { start, end } = resolveTimeWindow(timeWindow);
 		void fetchFlows(tenant, start, end);
-	}, [tenant, timeWindow, fetchFlows]);
+		void fetchMetrics(tenant, start, end);
+	}, [tenant, timeWindow, fetchFlows, fetchMetrics]);
 
 	useEditorChange((editor) => {
 		console.log(JSON.stringify(editor.document, null, 2));
@@ -269,14 +280,24 @@ export default function NotebookPage() {
 										{
 											title: "Flow status",
 											onItemClick: () => {
-												const block = insertOrUpdateBlock(editor, {
+												insertOrUpdateBlock(editor, {
 													type: "flowStatus",
 												});
-												setOpenBlockSettings(block.id);
 											},
 											group: "Data",
 											subtext: "Status card for a specific flow",
 											icon: <Workflow className="h-4 w-4" />,
+										},
+										{
+											title: "Metric",
+											onItemClick: () => {
+												insertOrUpdateBlock(editor, {
+													type: "metric",
+												});
+											},
+											group: "Data",
+											subtext: "Display a metric value",
+											icon: <TrendingUp className="h-4 w-4" />,
 										},
 									];
 									const q = query.trim().toLowerCase();

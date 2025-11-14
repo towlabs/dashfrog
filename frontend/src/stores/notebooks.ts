@@ -2,14 +2,19 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { Notebooks } from "@/src/services/api/notebooks";
 import { Flows, toFlow } from "@/src/services/api/flows";
+import { Metrics } from "@/src/services/api/metrics";
 import type { Notebook } from "@/src/types/notebook";
 import type { Flow } from "@/src/types/flow";
+import type { Metric } from "@/src/types/metric";
+import type { Filter } from "@/src/types/filter";
 
 interface NotebooksState {
 	notebooks: Record<string, Notebook[]>; // Keyed by tenant
 	currentNotebook: Notebook | null;
 	flows: Flow[];
 	flowsLoading: boolean;
+	metrics: Metric[];
+	metricsLoading: boolean;
 	loading: boolean;
 	error: string | null;
 	settingsOpenBlockId: string | null;
@@ -19,6 +24,7 @@ interface NotebooksState {
 	fetchNotebooks: (tenant: string) => Promise<void>;
 	fetchNotebook: (tenant: string, notebookId: string) => Promise<void>;
 	fetchFlows: (tenant: string, start: Date, end: Date) => Promise<void>;
+	fetchMetrics: (tenant: string, start: Date, end: Date) => Promise<void>;
 	updateNotebook: (
 		tenant: string,
 		notebookId: string,
@@ -38,6 +44,8 @@ export const useNotebooksStore = create<NotebooksState>()(
 			currentNotebook: null,
 			flows: [],
 			flowsLoading: false,
+			metrics: [],
+			metricsLoading: false,
 			loading: true,
 			error: null,
 			settingsOpenBlockId: null,
@@ -56,6 +64,26 @@ export const useNotebooksStore = create<NotebooksState>()(
 				} catch (error) {
 					console.error("Failed to fetch flows:", error);
 					set({ flows: [], flowsLoading: false });
+				}
+			},
+			fetchMetrics: async (
+				tenant: string,
+				start: Date,
+				end: Date,
+				filters: Filter[],
+			) => {
+				set({ metricsLoading: true });
+				try {
+					const response = await Metrics.getByTenant(
+						tenant,
+						start,
+						end,
+						filters,
+					);
+					set({ metrics: response.data, metricsLoading: false });
+				} catch (error) {
+					console.error("Failed to fetch metrics:", error);
+					set({ metrics: [], metricsLoading: false });
 				}
 			},
 			setCurrentNotebook: (tenant: string, notebookId: string) => {

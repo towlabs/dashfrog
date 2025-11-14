@@ -17,51 +17,11 @@ export type MetricHistoryPoint = {
 };
 
 export type MetricHistoryResponse = {
-	data: MetricHistoryPoint[];
+	series: {
+		labels: Record<string, string>;
+		data: MetricHistoryPoint[];
+	}[];
 };
-
-/**
- * Raw metric value response from backend API (snake_case)
- */
-interface MetricValueApiResponse {
-	labels: Record<string, string>;
-	value: number;
-}
-
-/**
- * Raw metric response from backend API (snake_case)
- */
-interface MetricApiResponse {
-	name: string;
-	prometheusName: string;
-	description: string;
-	unit: string | null;
-	values: MetricValueApiResponse[];
-	aggregation: MetricAggregation;
-}
-
-/**
- * Convert backend API response to frontend MetricValue type
- */
-function toMetricValue(apiValue: MetricValueApiResponse): MetricValue {
-	return {
-		labels: apiValue.labels,
-		value: apiValue.value,
-	};
-}
-
-/**
- * Convert backend API response to frontend Metric type
- */
-function toMetric(apiMetric: MetricApiResponse): Metric {
-	return {
-		name: apiMetric.name,
-		prometheusName: apiMetric.prometheusName,
-		unit: apiMetric.unit,
-		values: apiMetric.values.map(toMetricValue),
-		aggregation: apiMetric.aggregation,
-	};
-}
 
 /**
  * Generate mock metric history data
@@ -71,6 +31,7 @@ function generateMockHistory(
 	unit: string | null,
 	startTime: Date,
 	endTime: Date,
+	factor: number = 1,
 ): MetricHistoryPoint[] {
 	const points: MetricHistoryPoint[] = [];
 	const duration = endTime.getTime() - startTime.getTime();
@@ -96,7 +57,7 @@ function generateMockHistory(
 		const timestamp = new Date(startTime.getTime() + i * interval);
 		// Add some realistic variation
 		const variation = (Math.sin(i / 5) + Math.random() * 0.4 - 0.2) * 0.1;
-		const value = baseValue * (1 + variation);
+		const value = baseValue * (1 + variation) * factor;
 
 		points.push({
 			timestamp,
@@ -123,175 +84,62 @@ const Metrics = {
 
 		// Return dummy data
 		// TIP: To test empty state, change dummyData to []
-		const dummyData: MetricApiResponse[] = [
+		const dummyData: Metric[] = [
 			{
 				name: "HTTP Requests",
 				prometheusName: "http_requests",
-				description: "HTTP requests per second",
 				unit: "requests",
 				aggregation: "ratePerSecond",
-				values: [
-					{
-						labels: {
-							service: "api",
-							environment: "production",
-						},
-						value: 145.7,
-					},
-				],
+				labels: ["service", "environment"],
 			},
 			{
 				name: "Errors",
 				prometheusName: "error_rate",
-				description: "Error percentage (0-1 range)",
-				unit: "percent",
+				unit: "",
 				aggregation: "increase",
-				values: [
-					{
-						labels: {
-							service: "api",
-							environment: "production",
-						},
-						value: 0.023, // 2.3%
-					},
-					{
-						labels: {
-							service: "worker",
-							environment: "production",
-						},
-						value: 0.008, // 0.8%
-					},
-					{
-						labels: {
-							service: "database",
-							environment: "production",
-						},
-						value: 0.001, // 0.1%
-					},
-				],
+				labels: ["service", "environment"],
 			},
 			{
 				name: "CPU Usage",
 				prometheusName: "cpu_usage_percent",
-				description: "CPU utilization percentage",
 				unit: "percent",
 				aggregation: "increase",
-				values: [
-					{
-						labels: {
-							service: "api",
-							instance: "api-1",
-						},
-						value: 0.67, // 67%
-					},
-				],
+				labels: ["service", "instance"],
 			},
 			{
 				name: "Memory Usage",
 				prometheusName: "memory_usage_bytes",
-				description: "Memory usage in bytes",
 				unit: "bytes",
 				aggregation: "increase",
-				values: [
-					{
-						labels: {
-							service: "api",
-							instance: "api-1",
-						},
-						value: 524288000, // ~0.49 GB
-					},
-					{
-						labels: {
-							service: "api",
-							instance: "api-2",
-						},
-						value: 612368384, // ~0.57 GB
-					},
-					{
-						labels: {
-							service: "worker",
-							instance: "worker-1",
-						},
-						value: 314572800, // ~0.29 GB
-					},
-				],
+				labels: ["service", "instance"],
 			},
 			{
 				name: "Response Time",
 				prometheusName: "http_request_duration_seconds",
-				description: "Average HTTP request duration",
 				unit: "seconds",
 				aggregation: "p95",
-				values: [
-					{
-						labels: {
-							method: "GET",
-							endpoint: "/api/users",
-						},
-						value: 0.234,
-					},
-					{
-						labels: {
-							method: "POST",
-							endpoint: "/api/users",
-						},
-						value: 0.456,
-					},
-				],
+				labels: ["method", "endpoint"],
 			},
 			{
 				name: "Events",
 				prometheusName: "events_rate",
-				description: "Event processing rate",
 				unit: "events",
 				aggregation: "ratePerMinute",
-				values: [
-					{
-						labels: {
-							service: "worker",
-							type: "background",
-						},
-						value: 8734,
-					},
-				],
+				labels: ["service", "type"],
 			},
 			{
 				name: "Requests",
 				prometheusName: "http_requests_total",
-				description: "Total number of HTTP requests",
 				unit: "count",
 				aggregation: "increase",
-				values: [
-					{
-						labels: {
-							method: "GET",
-							status: "200",
-						},
-						value: 15234,
-					},
-					{
-						labels: {
-							method: "POST",
-							status: "201",
-						},
-						value: 3421,
-					},
-				],
+				labels: ["method", "status"],
 			},
 			{
 				name: "Active Users",
 				prometheusName: "active_users_daily",
-				description: "Active users per day",
 				unit: "users",
 				aggregation: "ratePerDay",
-				values: [
-					{
-						labels: {
-							platform: "web",
-						},
-						value: 12567,
-					},
-				],
+				labels: ["platform"],
 			},
 		];
 
@@ -328,16 +176,30 @@ const Metrics = {
 		unit: string | null,
 		startTime: Date,
 		endTime: Date,
-		_labels: Record<string, string>,
 		_filters?: Filter[],
 	): Promise<MetricHistoryResponse> => {
 		// TODO: Remove dummy data when backend is ready
 		// Simulate API delay
 		await new Promise((resolve) => setTimeout(resolve, 300));
 
-		const data = generateMockHistory(metricName, unit, startTime, endTime);
-
-		return { data };
+		return {
+			series: [
+				{
+					labels: {
+						service: "api",
+						environment: "production",
+					},
+					data: generateMockHistory(metricName, unit, startTime, endTime, 1),
+				},
+				{
+					labels: {
+						service: "api",
+						environment: "staging",
+					},
+					data: generateMockHistory(metricName, unit, startTime, endTime, 2),
+				},
+			],
+		};
 
 		/* Uncomment when backend is ready
 		const params: Record<string, string> = {};
@@ -368,4 +230,4 @@ const Metrics = {
 	},
 };
 
-export { MetricsAPI, Metrics, toMetric, toMetricValue };
+export { MetricsAPI, Metrics };
