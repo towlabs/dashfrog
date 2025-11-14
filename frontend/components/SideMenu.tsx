@@ -85,7 +85,7 @@ export default function SideMenu({
 		? [
 				{
 					id: "data",
-					label: "Data",
+					label: "Data Library",
 					icon: Database,
 					href: `/tenants/${encodeURIComponent(selectedTenant)}`,
 				},

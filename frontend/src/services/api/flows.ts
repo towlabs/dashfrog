@@ -426,6 +426,29 @@ const Flows = {
 		);
 		*/
 	},
+
+	getLastFlow: async (
+		_tenant: string,
+		flowName: string,
+		_start: Date,
+		_end: Date,
+		_filters?: Filter[],
+	): Promise<FlowHistory> => {
+		return new Promise((resolve) =>
+			setTimeout(
+				() =>
+					resolve({
+						startTime: new Date(),
+						endTime: new Date(),
+						status: "success",
+						events: [],
+						steps: [],
+						labels: {},
+					}),
+				1500,
+			),
+		);
+	},
 };
 
 export {

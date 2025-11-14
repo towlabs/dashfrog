@@ -146,10 +146,12 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 								>
 									<TableRow
 										key={`${detailedFlow.name}-${rowIndex}`}
-										className="cursor-pointer hover:bg-muted/50"
-										onClick={() => toggleRowExpansion(rowIndex)}
+										className="hover:bg-muted/50"
 									>
-										<TableCell className="w-8">
+										<TableCell
+											className="w-8 cursor-pointer"
+											onClick={() => toggleRowExpansion(rowIndex)}
+										>
 											{isExpanded ? (
 												<ChevronDown className="size-4 text-muted-foreground" />
 											) : (

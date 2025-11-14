@@ -14,6 +14,14 @@ function generateMockNotebooks(_tenant: string): Notebook[] {
 			description: "Learn the basics of using DashFrog for observability",
 			blocks: [
 				{
+					id: "003d27f3-58d3-4417-b776-b81fb252a593",
+					type: "flowStatus",
+					props: {
+						flowName: "user-registration-flow",
+					},
+					children: [],
+				},
+				{
 					id: "d91ea77b-2246-456d-89c2-ab65a638347f",
 					type: "heading",
 					props: {
@@ -57,7 +65,7 @@ function generateMockNotebooks(_tenant: string): Notebook[] {
 					id: "5c8f5fa8-0096-4f57-9855-f6f549fb9870",
 					type: "flowHistory",
 					props: {
-						flowName: "",
+						flowName: "payment-processing",
 						statusFilter: "all",
 					},
 					children: [],

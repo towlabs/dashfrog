@@ -33,6 +33,7 @@ import { AddBlockButton } from "@/components/ui/add-block";
 import { DragHandleButton } from "@/components/ui/drag-block";
 import { FlowBlock } from "../blocks/FlowBlock";
 import { FlowHistoryBlock } from "../blocks/FlowHistoryBlock";
+import { FlowStatusBlock } from "../blocks/FlowStatusBlock";
 import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
@@ -44,7 +45,8 @@ const customDragHandleMenu = (menuProps: DragHandleMenuProps) => {
 	if (
 		blockType === "timeline" ||
 		blockType === "flow" ||
-		blockType === "flowHistory"
+		blockType === "flowHistory" ||
+		blockType === "flowStatus"
 	) {
 		return (
 			<DragHandleMenu {...menuProps}>
@@ -82,6 +84,9 @@ export default function NotebookPage() {
 	);
 	const updateNotebook = useNotebooksStore((state) => state.updateNotebook);
 	const notebooksAreLoading = useNotebooksStore((state) => state.loading);
+	const setOpenBlockSettings = useNotebooksStore(
+		(state) => state.openBlockSettings,
+	);
 
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
@@ -95,6 +100,7 @@ export default function NotebookPage() {
 					timeline: TimelineBlock,
 					flow: FlowBlock,
 					flowHistory: FlowHistoryBlock,
+					flowStatus: FlowStatusBlock,
 				},
 			}),
 		),
@@ -246,13 +252,23 @@ export default function NotebookPage() {
 												const block = insertOrUpdateBlock(editor, {
 													type: "flowHistory",
 												});
-												useNotebooksStore
-													.getState()
-													.openBlockSettings(block.id);
+												setOpenBlockSettings(block.id);
 											},
 											group: "Data",
 											subtext: "Execution history for a specific flow",
 											icon: <History className="h-4 w-4" />,
+										},
+										{
+											title: "Flow status",
+											onItemClick: () => {
+												const block = insertOrUpdateBlock(editor, {
+													type: "flowStatus",
+												});
+												setOpenBlockSettings(block.id);
+											},
+											group: "Data",
+											subtext: "Status card for a specific flow",
+											icon: <Workflow className="h-4 w-4" />,
 										},
 									];
 									const q = query.trim().toLowerCase();
