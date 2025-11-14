@@ -1,11 +1,15 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { Notebooks } from "@/src/services/api/notebooks";
+import { Flows, toFlow } from "@/src/services/api/flows";
 import type { Notebook } from "@/src/types/notebook";
+import type { Flow } from "@/src/types/flow";
 
 interface NotebooksState {
 	notebooks: Record<string, Notebook[]>; // Keyed by tenant
 	currentNotebook: Notebook | null;
+	flows: Flow[];
+	flowsLoading: boolean;
 	loading: boolean;
 	error: string | null;
 	settingsOpenBlockId: string | null;
@@ -14,6 +18,7 @@ interface NotebooksState {
 	closeBlockSettings: () => void;
 	fetchNotebooks: (tenant: string) => Promise<void>;
 	fetchNotebook: (tenant: string, notebookId: string) => Promise<void>;
+	fetchFlows: (tenant: string, start: Date, end: Date) => Promise<void>;
 	updateNotebook: (
 		tenant: string,
 		notebookId: string,
@@ -31,6 +36,8 @@ export const useNotebooksStore = create<NotebooksState>()(
 		(set, get) => ({
 			notebooks: {},
 			currentNotebook: null,
+			flows: [],
+			flowsLoading: false,
 			loading: true,
 			error: null,
 			settingsOpenBlockId: null,
@@ -39,6 +46,17 @@ export const useNotebooksStore = create<NotebooksState>()(
 			},
 			closeBlockSettings: () => {
 				set({ settingsOpenBlockId: null });
+			},
+			fetchFlows: async (tenant: string, start: Date, end: Date) => {
+				set({ flowsLoading: true });
+				try {
+					const response = await Flows.getByTenant(tenant, start, end, []);
+					const flows = response.data.map(toFlow);
+					set({ flows, flowsLoading: false });
+				} catch (error) {
+					console.error("Failed to fetch flows:", error);
+					set({ flows: [], flowsLoading: false });
+				}
 			},
 			setCurrentNotebook: (tenant: string, notebookId: string) => {
 				const currentNotebook =

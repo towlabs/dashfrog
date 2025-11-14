@@ -39,6 +39,7 @@ import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { resolveTimeWindow } from "../types/timewindow";
 
 const customDragHandleMenu = (menuProps: DragHandleMenuProps) => {
 	const blockType = menuProps.block.type as string;
@@ -87,6 +88,7 @@ export default function NotebookPage() {
 	const setOpenBlockSettings = useNotebooksStore(
 		(state) => state.openBlockSettings,
 	);
+	const fetchFlows = useNotebooksStore((state) => state.fetchFlows);
 
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
@@ -137,6 +139,12 @@ export default function NotebookPage() {
 		notebooksAreLoading,
 		setCurrentTenant,
 	]);
+
+	useEffect(() => {
+		if (!tenant) return;
+		const { start, end } = resolveTimeWindow(timeWindow);
+		void fetchFlows(tenant, start, end);
+	}, [tenant, timeWindow, fetchFlows]);
 
 	useEditorChange((editor) => {
 		console.log(JSON.stringify(editor.document, null, 2));

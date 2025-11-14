@@ -90,40 +90,14 @@ export const FlowStatusBlock = createReactBlockSpec(
 			const closeBlockSettings = useNotebooksStore(
 				(state) => state.closeBlockSettings,
 			);
+			const flows = useNotebooksStore((state) => state.flows);
+			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
 
-			const [availableFlows, setAvailableFlows] = useState<Flow[]>([]);
-			const [loadingFlows, setLoadingFlows] = useState(true);
 			const [flowHistory, setFlowHistory] = useState<FlowHistory | null>(null);
 			const [loadingHistory, setLoadingHistory] = useState(false);
 			const [comboboxOpen, setComboboxOpen] = useState(false);
 
 			const flowName = props.block.props.flowName as string;
-
-			// Fetch available flows
-			useEffect(() => {
-				const fetchFlows = async () => {
-					if (!tenantName) return;
-					setLoadingFlows(true);
-					try {
-						const { start, end } = resolveTimeWindow(timeWindow);
-						const response = await Flows.getByTenant(
-							tenantName,
-							start,
-							end,
-							filters,
-						);
-						const flows = response.data.map(toFlow);
-						setAvailableFlows(flows);
-					} catch (error) {
-						console.error("Failed to fetch flows:", error);
-						setAvailableFlows([]);
-					} finally {
-						setLoadingFlows(false);
-					}
-				};
-
-				void fetchFlows();
-			}, [tenantName, timeWindow, filters]);
 
 			// Fetch selected flow details when flowName is set
 			useEffect(() => {
@@ -254,11 +228,11 @@ export const FlowStatusBlock = createReactBlockSpec(
 							<div className="mt-6 space-y-6">
 								<div className="space-y-3">
 									<Label className="text-sm font-medium">Flow</Label>
-									{loadingFlows ? (
+									{flowsLoading ? (
 										<div className="text-sm text-muted-foreground">
 											Loading flows...
 										</div>
-									) : availableFlows.length === 0 ? (
+									) : flows.length === 0 ? (
 										<div className="text-sm text-muted-foreground">
 											No flows available
 										</div>
@@ -272,9 +246,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 													className="w-full justify-between"
 												>
 													{flowName
-														? availableFlows.find(
-																(flow) => flow.name === flowName,
-															)?.name
+														? flows.find((flow) => flow.name === flowName)?.name
 														: "Select a flow..."}
 													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 												</Button>
@@ -285,7 +257,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 													<CommandList>
 														<CommandEmpty>No flow found.</CommandEmpty>
 														<CommandGroup>
-															{availableFlows.map((flow) => (
+															{flows.map((flow) => (
 																<CommandItem
 																	key={flow.name}
 																	value={flow.name}
