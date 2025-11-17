@@ -7,7 +7,7 @@ import type { Notebook } from "@/src/types/notebook";
 import type { Flow } from "@/src/types/flow";
 import type { Metric } from "@/src/types/metric";
 import type { Filter } from "@/src/types/filter";
-import { useNavigate } from "react-router-dom";
+
 // Debounce timeout storage (outside of Zustand state)
 let saveTimeout: NodeJS.Timeout | null = null;
 
@@ -21,6 +21,7 @@ interface NotebooksState {
 	loading: boolean;
 	error: string | null;
 	settingsOpenBlockId: string | null;
+	notebookCreating: boolean;
 	setCurrentNotebook: (tenant: string, notebookId: string) => Notebook | null;
 	openBlockSettings: (blockId: string) => void;
 	closeBlockSettings: () => void;
@@ -33,10 +34,7 @@ interface NotebooksState {
 		notebook: Notebook,
 		updates: Partial<Notebook>,
 	) => void;
-	createNotebook: (
-		tenant: string,
-		notebook: Omit<Notebook, "id">,
-	) => Promise<void>;
+	createNotebook: (tenant: string, notebook: Omit<Notebook, "id">) => Notebook;
 	deleteNotebook: (tenant: string, notebookId: string) => Promise<void>;
 }
 
@@ -45,6 +43,7 @@ export const useNotebooksStore = create<NotebooksState>()(
 		(set, get) => ({
 			notebooks: {},
 			currentNotebook: null,
+			notebookCreating: false,
 			flows: [],
 			flowsLoading: false,
 			metrics: [],
@@ -168,29 +167,35 @@ export const useNotebooksStore = create<NotebooksState>()(
 				}, 200);
 			},
 
-			createNotebook: async (tenant: string, notebook: Notebook) => {
-				const navigate = useNavigate();
+			createNotebook: (
+				tenant: string,
+				notebook: Omit<Notebook, "id">,
+			): Notebook => {
 				const { notebooks } = get();
 				const tenantNotebooks = notebooks[tenant] || [];
 
+				// Generate UUID upfront
+				const newNotebook: Notebook = {
+					...notebook,
+					id: crypto.randomUUID(),
+				};
+
+				// Update state immediately with loading = true
 				set({
-					loading: true,
+					notebookCreating: true,
 					notebooks: {
 						...notebooks,
-						[tenant]: [...tenantNotebooks, notebook],
+						[tenant]: [...tenantNotebooks, newNotebook],
 					},
 				});
 
-				// Navigate to the new notebook
-				navigate(
-					`/tenants/${encodeURIComponent(tenant)}/notebooks/${notebook.id}`,
-				);
-
-				await Notebooks.create(tenant, notebook);
-
-				set({
-					loading: false,
+				// Call API in background
+				Notebooks.create(tenant, newNotebook).then(() => {
+					set({ notebookCreating: false });
 				});
+
+				// Return immediately for navigation
+				return newNotebook;
 			},
 
 			deleteNotebook: async (tenant: string, notebookId: string) => {

@@ -95,7 +95,7 @@ export default function SideMenu({
 			]
 		: [];
 
-	const handleCreateNotebook = async () => {
+	const handleCreateNotebook = () => {
 		if (!selectedTenant) return;
 
 		const newNotebook = {
@@ -104,18 +104,13 @@ export default function SideMenu({
 			blocks: null,
 		};
 
-		await createNotebook(selectedTenant, newNotebook);
-		// Refresh notebooks list
-		await fetchNotebooks(selectedTenant);
+		// Create notebook (returns immediately with UUID)
+		const created = createNotebook(selectedTenant, newNotebook);
 
-		// Get the newly created notebook (last in the list)
-		const updatedNotebooks = notebooksStore[selectedTenant] || [];
-		const created = updatedNotebooks[updatedNotebooks.length - 1];
-		if (created) {
-			navigate(
-				`/tenants/${encodeURIComponent(selectedTenant)}/notebooks/${created.id}`,
-			);
-		}
+		// Navigate immediately (API call happens in background)
+		navigate(
+			`/tenants/${encodeURIComponent(selectedTenant)}/notebooks/${created.id}`,
+		);
 	};
 
 	return (

@@ -174,10 +174,7 @@ export const Notebooks = {
 	},
 
 	// Create a new notebook
-	create: async (
-		tenant: string,
-		notebook: Omit<Notebook, "id" | "createdAt" | "updatedAt">,
-	): Promise<null> => {
+	create: async (tenant: string, notebook: Notebook): Promise<null> => {
 		const response = await fetch(`/api/notebooks/create`, {
 			method: "POST",
 			headers: {
