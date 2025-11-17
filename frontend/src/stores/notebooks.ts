@@ -26,7 +26,6 @@ interface NotebooksState {
 	openBlockSettings: (blockId: string) => void;
 	closeBlockSettings: () => void;
 	fetchNotebooks: (tenant: string) => Promise<void>;
-	fetchNotebook: (tenant: string, notebookId: string) => Promise<void>;
 	fetchFlows: (tenant: string, start: Date, end: Date) => Promise<void>;
 	fetchMetrics: (tenant: string, start: Date, end: Date) => Promise<void>;
 	updateNotebook: (
@@ -120,23 +119,6 @@ export const useNotebooksStore = create<NotebooksState>()(
 				}
 			},
 
-			fetchNotebook: async (tenant: string, notebookId: string) => {
-				set({ loading: true, error: null });
-				try {
-					const notebook = await Notebooks.getById(tenant, notebookId);
-					set({ currentNotebook: notebook, loading: false });
-				} catch (error) {
-					console.error("Failed to fetch notebook:", error);
-					set({
-						error:
-							error instanceof Error
-								? error.message
-								: "Failed to fetch notebook",
-						loading: false,
-					});
-				}
-			},
-
 			updateNotebook: (
 				tenant: string,
 				notebook: Notebook,
@@ -199,27 +181,17 @@ export const useNotebooksStore = create<NotebooksState>()(
 			},
 
 			deleteNotebook: async (tenant: string, notebookId: string) => {
-				try {
-					await Notebooks.delete(tenant, notebookId);
+				Notebooks.delete(notebookId);
 
-					const { notebooks } = get();
-					const tenantNotebooks = notebooks[tenant] || [];
+				const { notebooks } = get();
+				const tenantNotebooks = notebooks[tenant] || [];
 
-					set({
-						notebooks: {
-							...notebooks,
-							[tenant]: tenantNotebooks.filter((nb) => nb.id !== notebookId),
-						},
-					});
-				} catch (error) {
-					console.error("Failed to delete notebook:", error);
-					set({
-						error:
-							error instanceof Error
-								? error.message
-								: "Failed to delete notebook",
-					});
-				}
+				set({
+					notebooks: {
+						...notebooks,
+						[tenant]: tenantNotebooks.filter((nb) => nb.id !== notebookId),
+					},
+				});
 			},
 		}),
 		{ name: "notebooks" },

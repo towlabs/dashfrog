@@ -151,8 +151,7 @@ export default function NotebookPage() {
 		if (!notebook) return;
 
 		const timeoutId = setTimeout(() => {
-			if (!notebook.blocks) return;
-			editor.replaceBlocks(editor.document, notebook.blocks);
+			editor.replaceBlocks(editor.document, notebook.blocks || []);
 		});
 
 		return () => {

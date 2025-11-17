@@ -7,9 +7,20 @@ import {
 	Database,
 	Home,
 	Plus,
+	Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
 	Collapsible,
@@ -49,11 +60,17 @@ export default function SideMenu({
 	const _navigate = useNavigate();
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [notebooksOpen, setNotebooksOpen] = useState(true);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [notebookToDelete, setNotebookToDelete] = useState<{
+		id: string;
+		title: string;
+	} | null>(null);
 	const _tenants = useLabelsStore((state) => state.tenants);
 	const notebooksStore = useNotebooksStore((state) => state.notebooks);
 	const notebooksLoading = useNotebooksStore((state) => state.loading);
 	const fetchNotebooks = useNotebooksStore((state) => state.fetchNotebooks);
 	const createNotebook = useNotebooksStore((state) => state.createNotebook);
+	const deleteNotebook = useNotebooksStore((state) => state.deleteNotebook);
 	const navigate = useNavigate();
 
 	// Use controlled state if provided, otherwise use internal state
@@ -111,6 +128,34 @@ export default function SideMenu({
 		navigate(
 			`/tenants/${encodeURIComponent(selectedTenant)}/notebooks/${created.id}`,
 		);
+	};
+
+	const handleDeleteClick = (
+		e: React.MouseEvent,
+		notebookId: string,
+		notebookTitle: string,
+	) => {
+		e.preventDefault(); // Prevent navigation
+		e.stopPropagation(); // Prevent parent click
+
+		setNotebookToDelete({ id: notebookId, title: notebookTitle });
+		setDeleteDialogOpen(true);
+	};
+
+	const handleConfirmDelete = async () => {
+		if (!selectedTenant || !notebookToDelete) return;
+
+		try {
+			await deleteNotebook(selectedTenant, notebookToDelete.id);
+			setDeleteDialogOpen(false);
+			setNotebookToDelete(null);
+			// Navigate to tenant page after deletion
+			navigate(`/tenants/${encodeURIComponent(selectedTenant)}`);
+		} catch (error) {
+			console.error("Failed to delete notebook:", error);
+			setDeleteDialogOpen(false);
+			setNotebookToDelete(null);
+		}
 	};
 
 	return (
@@ -277,27 +322,38 @@ export default function SideMenu({
 											/>
 										))
 									) : notebooks.length > 0 ? (
-										notebooks.map((notebook) => (
-											<Link
-												key={notebook.id}
-												to={`/tenants/${encodeURIComponent(selectedTenant)}/notebooks/${notebook.id}`}
-												className={cn(
-													"flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent",
-													pathname ===
-														`/tenants/${encodeURIComponent(selectedTenant)}/notebooks/${notebook.id}` &&
-														"bg-accent text-accent-foreground",
-												)}
-												style={{
-													color:
-														pathname ===
-														`/tenants/${encodeURIComponent(selectedTenant)}/notebooks/${notebook.id}`
-															? undefined
-															: "#5f5e5b",
-												}}
-											>
-												{notebook.title}
-											</Link>
-										))
+										notebooks.map((notebook) => {
+											const isActive =
+												pathname ===
+												`/tenants/${encodeURIComponent(selectedTenant)}/notebooks/${notebook.id}`;
+											return (
+												<div key={notebook.id} className="group relative">
+													<Link
+														to={`/tenants/${encodeURIComponent(selectedTenant)}/notebooks/${notebook.id}`}
+														className={cn(
+															"flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent pr-10",
+															isActive && "bg-accent text-accent-foreground",
+														)}
+														style={{
+															color: isActive ? undefined : "#5f5e5b",
+														}}
+													>
+														{notebook.title}
+													</Link>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+														onClick={(e) =>
+															handleDeleteClick(e, notebook.id, notebook.title)
+														}
+														title="Delete notebook"
+													>
+														<Trash2 className="h-3.5 w-3.5 text-destructive" />
+													</Button>
+												</div>
+											);
+										})
 									) : (
 										<div className="px-3 py-2 text-xs text-muted-foreground">
 											No notebooks
@@ -311,6 +367,27 @@ export default function SideMenu({
 			</div>
 
 			<SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+
+			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete notebook?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Are you sure you want to delete "{notebookToDelete?.title}"? This
+							action cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleConfirmDelete}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</aside>
 	);
 }

@@ -156,23 +156,6 @@ export const Notebooks = {
 		return response.json();
 	},
 
-	// Get a single notebook by ID
-	getById: async (tenant: string, notebookId: string): Promise<Notebook> => {
-		// Simulate API delay
-		await new Promise((resolve) => setTimeout(resolve, 200));
-
-		ensureMockData(tenant);
-		const notebook = mockNotebooksData[tenant].find(
-			(nb) => nb.id === notebookId,
-		);
-
-		if (!notebook) {
-			throw new Error(`Notebook ${notebookId} not found`);
-		}
-
-		return notebook;
-	},
-
 	// Create a new notebook
 	create: async (tenant: string, notebook: Notebook): Promise<null> => {
 		const response = await fetch(`/api/notebooks/create`, {
@@ -206,19 +189,13 @@ export const Notebooks = {
 	},
 
 	// Delete a notebook
-	delete: async (tenant: string, notebookId: string): Promise<void> => {
-		// Simulate API delay
-		await new Promise((resolve) => setTimeout(resolve, 200));
-
-		ensureMockData(tenant);
-
-		const index = mockNotebooksData[tenant].findIndex(
-			(nb) => nb.id === notebookId,
-		);
-		if (index === -1) {
-			throw new Error(`Notebook ${notebookId} not found`);
-		}
-
-		mockNotebooksData[tenant].splice(index, 1);
+	delete: async (notebookId: string): Promise<void> => {
+		const response = await fetch(`/api/notebooks/${notebookId}`, {
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+		return response.json();
 	},
 };
