@@ -125,7 +125,7 @@ function generateDummyFlowHistories() {
 	const histories: FlowHistoryApiResponse["histories"] = [];
 
 	// Generate 20 runs over the past 24 hours
-	for (let i = 0; i < 20; i++) {
+	for (let i = 0; i < 200; i++) {
 		const startTime = new Date(now.getTime() - i * 3600000); // Every hour
 		const duration = Math.random() * 600000; // 0-10 minutes
 		const hasEnded = Math.random() > 0.1; // 90% have ended

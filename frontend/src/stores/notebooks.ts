@@ -7,6 +7,9 @@ import type { Notebook } from "@/src/types/notebook";
 import type { Flow } from "@/src/types/flow";
 import type { Metric } from "@/src/types/metric";
 import type { Filter } from "@/src/types/filter";
+import { useNavigate } from "react-router-dom";
+// Debounce timeout storage (outside of Zustand state)
+let saveTimeout: NodeJS.Timeout | null = null;
 
 interface NotebooksState {
 	notebooks: Record<string, Notebook[]>; // Keyed by tenant
@@ -27,9 +30,9 @@ interface NotebooksState {
 	fetchMetrics: (tenant: string, start: Date, end: Date) => Promise<void>;
 	updateNotebook: (
 		tenant: string,
-		notebookId: string,
+		notebook: Notebook,
 		updates: Partial<Notebook>,
-	) => Promise<void>;
+	) => void;
 	createNotebook: (
 		tenant: string,
 		notebook: Omit<Notebook, "id">,
@@ -135,71 +138,59 @@ export const useNotebooksStore = create<NotebooksState>()(
 				}
 			},
 
-			updateNotebook: async (
+			updateNotebook: (
 				tenant: string,
-				notebookId: string,
+				notebook: Notebook,
 				updates: Partial<Notebook>,
 			) => {
-				try {
-					const { notebooks, currentNotebook } = get();
-					const tenantNotebooks = notebooks[tenant] || [];
+				const { notebooks } = get();
+				const updatedNotebook = { ...notebook, ...updates };
+				// Update local state immediately (optimistic update)
+				const updatedNotebooks = (notebooks[tenant] || []).map((nb) =>
+					nb.id === updatedNotebook.id ? updatedNotebook : nb,
+				);
+				set({
+					notebooks: {
+						...notebooks,
+						[tenant]: updatedNotebooks,
+					},
+					currentNotebook: updatedNotebook,
+				});
 
-					// Update in notebooks list
-					const updatedNotebooks = tenantNotebooks.map((nb) =>
-						nb.id === notebookId ? { ...nb, ...updates } : nb,
-					);
-
-					// Update current notebook if it's the one being edited
-					const updatedCurrent =
-						currentNotebook?.id === notebookId
-							? { ...currentNotebook, ...updates }
-							: currentNotebook;
-
-					set({
-						notebooks: {
-							...notebooks,
-							[tenant]: updatedNotebooks,
-						},
-						currentNotebook: updatedCurrent,
-					});
-
-					await Notebooks.update(tenant, notebookId, updates);
-				} catch (error) {
-					console.error("Failed to update notebook:", error);
-					set({
-						error:
-							error instanceof Error
-								? error.message
-								: "Failed to update notebook",
-					});
+				// Clear existing timeout
+				if (saveTimeout) {
+					clearTimeout(saveTimeout);
 				}
+
+				// Debounced API call
+				saveTimeout = setTimeout(async () => {
+					await Notebooks.update(updatedNotebook);
+				}, 200);
 			},
 
-			createNotebook: async (
-				tenant: string,
-				notebook: Omit<Notebook, "id">,
-			) => {
-				try {
-					const newNotebook = await Notebooks.create(tenant, notebook);
+			createNotebook: async (tenant: string, notebook: Notebook) => {
+				const navigate = useNavigate();
+				const { notebooks } = get();
+				const tenantNotebooks = notebooks[tenant] || [];
 
-					const { notebooks } = get();
-					const tenantNotebooks = notebooks[tenant] || [];
+				set({
+					loading: true,
+					notebooks: {
+						...notebooks,
+						[tenant]: [...tenantNotebooks, notebook],
+					},
+				});
 
-					set({
-						notebooks: {
-							...notebooks,
-							[tenant]: [...tenantNotebooks, newNotebook],
-						},
-					});
-				} catch (error) {
-					console.error("Failed to create notebook:", error);
-					set({
-						error:
-							error instanceof Error
-								? error.message
-								: "Failed to create notebook",
-					});
-				}
+				// Navigate to the new notebook
+				navigate(
+					`/tenants/${encodeURIComponent(tenant)}/notebooks/${notebook.id}`,
+				);
+
+				await Notebooks.create(tenant, notebook);
+
+				set({
+					loading: false,
+				});
 			},
 
 			deleteNotebook: async (tenant: string, notebookId: string) => {

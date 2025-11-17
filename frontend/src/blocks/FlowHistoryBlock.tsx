@@ -1,7 +1,7 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { Check, ChevronsUpDown, History } from "lucide-react";
+import { Check, ChevronsUpDown, History, ListCollapse } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
@@ -132,7 +132,7 @@ export const FlowHistoryBlock = createReactBlockSpec(
 				if (!flowName) {
 					return (
 						<EmptyState
-							icon={History}
+							icon={ListCollapse}
 							title="No flow selected"
 							description="Select a flow to view its execution history."
 							onClick={() => openBlockSettings(props.block.id)}
@@ -148,7 +148,7 @@ export const FlowHistoryBlock = createReactBlockSpec(
 				if (!detailedFlow) {
 					return (
 						<EmptyState
-							icon={History}
+							icon={ListCollapse}
 							title="Flow not found"
 							description="The selected flow could not be loaded."
 						/>

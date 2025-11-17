@@ -23,6 +23,13 @@ export type MetricHistoryResponse = {
 	}[];
 };
 
+export type MetricScalarResponse = {
+	scalars: {
+		labels: Record<string, string>;
+		value: number;
+	}[];
+};
+
 /**
  * Generate mock metric history data
  */
@@ -227,6 +234,35 @@ const Metrics = {
 			timestamp: new Date(point.timestamp)
 		})) }));
 		*/
+	},
+
+	getScalars: async (
+		_tenant: string,
+		metricName: string,
+		unit: string | null,
+		startTime: Date,
+		endTime: Date,
+		_filters?: Filter[],
+		aggregation: "last" | "sum" | "avg" = "last",
+	): Promise<MetricScalarResponse> => {
+		return new Promise((resolve) => setTimeout(resolve, 300)).then(() => ({
+			scalars: [
+				{
+					labels: {
+						service: "api",
+						environment: "production",
+					},
+					value: 100,
+				},
+				// {
+				// 	labels: {
+				// 		service: "api",
+				// 		environment: "staging",
+				// 	},
+				// 	value: 200,
+				// },
+			],
+		}));
 	},
 };
 

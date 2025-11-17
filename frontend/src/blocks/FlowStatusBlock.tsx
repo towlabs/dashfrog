@@ -6,6 +6,7 @@ import {
 	CheckCircle2,
 	ChevronsUpDown,
 	CircleCheck,
+	RectangleEllipsis,
 	Workflow,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -143,16 +144,16 @@ export const FlowStatusBlock = createReactBlockSpec(
 				if (!flowName) {
 					return (
 						<EmptyState
-							icon={Workflow}
+							icon={RectangleEllipsis}
 							title="No flow selected"
-							description="Select a flow in the settings to view its status."
+							description="Select a flow to view its status."
 						/>
 					);
 				}
 
 				if (loadingHistory) {
 					return (
-						<Card>
+						<Card className="@container/card shadow-none">
 							<CardHeader>
 								<Skeleton className="h-4 w-64" />
 							</CardHeader>
@@ -166,7 +167,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 				if (flowHistories.length === 0) {
 					return (
 						<EmptyState
-							icon={Workflow}
+							icon={RectangleEllipsis}
 							title="Flow not found"
 							description="No flow found for the selected time window."
 						/>
@@ -175,17 +176,12 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 				return (
 					<div className="outline-none flex flex-col gap-1">
-						{flowHistories.map((flowHistory) =>
-							renderFlowHistory(flowHistory, flowHistories.length > 1),
-						)}
+						{flowHistories.map((flowHistory) => renderFlowHistory(flowHistory))}
 					</div>
 				);
 			};
 
-			const renderFlowHistory = (
-				flowHistory: FlowHistory,
-				displayLabels: boolean,
-			) => {
+			const renderFlowHistory = (flowHistory: FlowHistory) => {
 				return (
 					<Card className="@container/card shadow-none">
 						<CardHeader>
@@ -198,22 +194,21 @@ export const FlowStatusBlock = createReactBlockSpec(
 								/>
 								{title || flowName}
 							</CardDescription>
-						</CardHeader>
-						<CardFooter className="flex-col items-start gap-1.5 text-sm">
-							<div className="text-secondary-foreground">
+							<CardTitle className="text-secondary-foreground text-sm font-normal">
 								Duration:{" "}
 								{formatDuration(flowHistory.startTime, flowHistory.endTime)}
 								{flowHistory.endTime && (
 									<> - {formatTimeAgo(flowHistory.endTime)}</>
 								)}
-							</div>
+							</CardTitle>
+						</CardHeader>
+						<CardFooter className="flex-col items-start gap-1.5 text-sm p-3 pt-0">
 							<div className="flex gap-1">
-								{displayLabels &&
-									Object.entries(flowHistory.labels).map(([key, value]) => (
-										<div key={key}>
-											<LabelBadge labelKey={key} labelValue={value} readonly />
-										</div>
-									))}
+								{Object.entries(flowHistory.labels).map(([key, value]) => (
+									<div key={key}>
+										<LabelBadge labelKey={key} labelValue={value} readonly />
+									</div>
+								))}
 							</div>
 						</CardFooter>
 					</Card>

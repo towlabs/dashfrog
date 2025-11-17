@@ -6,6 +6,7 @@ import {
 	CornerDownRight,
 	Database,
 	Home,
+	Plus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -52,6 +53,8 @@ export default function SideMenu({
 	const notebooksStore = useNotebooksStore((state) => state.notebooks);
 	const notebooksLoading = useNotebooksStore((state) => state.loading);
 	const fetchNotebooks = useNotebooksStore((state) => state.fetchNotebooks);
+	const createNotebook = useNotebooksStore((state) => state.createNotebook);
+	const navigate = useNavigate();
 
 	// Use controlled state if provided, otherwise use internal state
 	const isCollapsed =
@@ -91,6 +94,29 @@ export default function SideMenu({
 				},
 			]
 		: [];
+
+	const handleCreateNotebook = async () => {
+		if (!selectedTenant) return;
+
+		const newNotebook = {
+			title: "Untitled Notebook",
+			description: "",
+			blocks: null,
+		};
+
+		await createNotebook(selectedTenant, newNotebook);
+		// Refresh notebooks list
+		await fetchNotebooks(selectedTenant);
+
+		// Get the newly created notebook (last in the list)
+		const updatedNotebooks = notebooksStore[selectedTenant] || [];
+		const created = updatedNotebooks[updatedNotebooks.length - 1];
+		if (created) {
+			navigate(
+				`/tenants/${encodeURIComponent(selectedTenant)}/notebooks/${created.id}`,
+			);
+		}
+	};
 
 	return (
 		<aside
@@ -228,16 +254,25 @@ export default function SideMenu({
 								onOpenChange={setNotebooksOpen}
 								className="space-y-1"
 							>
-								<CollapsibleTrigger className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent w-full">
-									<BookOpen className="h-4 w-4 shrink-0" />
-									<span className="flex-1 text-left">Notebooks</span>
-									<ChevronDown
-										className={cn(
-											"h-4 w-4 shrink-0 transition-transform",
-											notebooksOpen && "rotate-180",
-										)}
-									/>
-								</CollapsibleTrigger>
+								<div className="flex items-center gap-1 group">
+									<CollapsibleTrigger className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-accent flex-1">
+										<BookOpen className="h-4 w-4 shrink-0" />
+										<span className="flex-1 text-left">Notebooks</span>
+										<Plus
+											className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+											onClick={(event) => {
+												event.preventDefault();
+												void handleCreateNotebook();
+											}}
+										/>
+										<ChevronDown
+											className={cn(
+												"h-4 w-4 shrink-0 transition-transform",
+												notebooksOpen && "rotate-180",
+											)}
+										/>
+									</CollapsibleTrigger>
+								</div>
 								<CollapsibleContent className="space-y-1 pl-4">
 									{notebooksLoading ? (
 										[1, 2, 3].map((i) => (

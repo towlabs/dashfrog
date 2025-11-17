@@ -31,6 +31,14 @@ import {
 	Home,
 	TrendingUp,
 	Workflow,
+	ChartLine,
+	RectangleEllipsis,
+	Logs,
+	TableOfContents,
+	ListChecks,
+	ListCollapse,
+	RectangleHorizontal,
+	BarChart3,
 } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -40,13 +48,17 @@ import { DragHandleButton } from "@/components/ui/drag-block";
 import { FlowBlock } from "../blocks/FlowBlock";
 import { FlowHistoryBlock } from "../blocks/FlowHistoryBlock";
 import { FlowStatusBlock } from "../blocks/FlowStatusBlock";
+import { HeatmapBlock } from "../blocks/HeatmapBlock";
+import { KanbanBlock } from "../blocks/KanbanBlock";
 import { MetricBlock } from "../blocks/MetricBlock";
+import { MetricHistoryBlock } from "../blocks/MetricHistoryBlock";
 import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { resolveTimeWindow } from "../types/timewindow";
+import type { Notebook } from "../types/notebook";
 
 const customDragHandleMenu = (menuProps: DragHandleMenuProps) => {
 	const blockType = menuProps.block.type as string;
@@ -55,7 +67,9 @@ const customDragHandleMenu = (menuProps: DragHandleMenuProps) => {
 		blockType === "flow" ||
 		blockType === "flowHistory" ||
 		blockType === "flowStatus" ||
-		blockType === "metric"
+		blockType === "heatmap" ||
+		blockType === "metric" ||
+		blockType === "metricHistory"
 	) {
 		return (
 			<DragHandleMenu {...menuProps}>
@@ -112,7 +126,9 @@ export default function NotebookPage() {
 					flow: FlowBlock,
 					flowHistory: FlowHistoryBlock,
 					flowStatus: FlowStatusBlock,
+					heatmap: HeatmapBlock,
 					metric: MetricBlock,
+					metricHistory: MetricHistoryBlock,
 				},
 			}),
 		),
@@ -157,8 +173,14 @@ export default function NotebookPage() {
 		void fetchMetrics(tenant, start, end);
 	}, [tenant, timeWindow, fetchFlows, fetchMetrics]);
 
+	// Save editor content changes (debounced in store)
 	useEditorChange((editor) => {
-		console.log(JSON.stringify(editor.document, null, 2));
+		if (tenantName && currentNotebook) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			updateNotebook(tenantName, currentNotebook, {
+				blocks: editor.document as any,
+			});
+		}
 	}, editor);
 
 	if (!currentNotebook || !notebookId) {
@@ -203,11 +225,11 @@ export default function NotebookPage() {
 						<input
 							type="text"
 							value={currentNotebook.title}
-							onChange={(e) =>
-								updateNotebook(tenantName, notebookId, {
+							onChange={(e) => {
+								updateNotebook(tenantName, currentNotebook, {
 									title: e.target.value,
-								})
-							}
+								});
+							}}
 							placeholder="Untitled"
 							className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground"
 						/>
@@ -216,11 +238,11 @@ export default function NotebookPage() {
 						<input
 							type="text"
 							value={currentNotebook.description}
-							onChange={(e) =>
-								updateNotebook(tenantName, notebookId, {
+							onChange={(e) => {
+								updateNotebook(tenantName, currentNotebook, {
 									description: e.target.value,
-								})
-							}
+								});
+							}}
 							placeholder="Add a description..."
 							className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground"
 						/>
@@ -244,60 +266,101 @@ export default function NotebookPage() {
 											getMultiColumnSlashMenuItems(editor),
 										),
 										{
-											title: "Timeline events",
+											title: "Events",
 											onItemClick: () => {
 												insertOrUpdateBlock(editor, {
 													type: "timeline",
 												});
 											},
-											group: "Data",
+											group: "Timeline",
+											key: "timeline_events",
 											subtext: "Table listing of timeline events",
-											icon: <History className="h-4 w-4" />,
+											icon: <Logs className="h-4 w-4" />,
+											aliases: ["timeline"],
 										},
+
 										{
-											title: "Flows",
+											title: "Flows Listing",
 											onItemClick: () => {
 												insertOrUpdateBlock(editor, {
 													type: "flow",
 												});
 											},
-											group: "Data",
+											group: "Flows",
+											key: "flows_listing",
 											subtext: "Table listing of flows",
-											icon: <Workflow className="h-4 w-4" />,
+											icon: <ListChecks className="h-4 w-4" />,
+											aliases: [],
 										},
 										{
-											title: "Flow history",
+											title: "Flow History",
 											onItemClick: () => {
 												const block = insertOrUpdateBlock(editor, {
 													type: "flowHistory",
 												});
 												setOpenBlockSettings(block.id);
 											},
-											group: "Data",
+											group: "Flows",
+											key: "flow_history",
 											subtext: "Execution history for a specific flow",
-											icon: <History className="h-4 w-4" />,
+											icon: <ListCollapse className="h-4 w-4" />,
+											aliases: [],
 										},
 										{
-											title: "Flow status",
+											title: "Flow Status",
 											onItemClick: () => {
-												insertOrUpdateBlock(editor, {
+												const block = insertOrUpdateBlock(editor, {
 													type: "flowStatus",
 												});
+												setOpenBlockSettings(block.id);
 											},
-											group: "Data",
+											group: "Flows",
+											key: "flow_status",
 											subtext: "Status card for a specific flow",
-											icon: <Workflow className="h-4 w-4" />,
+											icon: <RectangleEllipsis className="h-4 w-4" />,
+											aliases: [],
 										},
 										{
-											title: "Metric",
+											title: "Heatmap",
 											onItemClick: () => {
-												insertOrUpdateBlock(editor, {
+												const block = insertOrUpdateBlock(editor, {
+													type: "heatmap",
+												});
+												setOpenBlockSettings(block.id);
+											},
+											group: "Flows",
+											key: "flow_heatmap",
+											subtext: "Heatmap showing daily flow status",
+											icon: <BarChart3 className="h-4 w-4" />,
+											aliases: ["flow heatmap"],
+										},
+										{
+											title: "Number",
+											onItemClick: () => {
+												const block = insertOrUpdateBlock(editor, {
 													type: "metric",
 												});
+												setOpenBlockSettings(block.id);
 											},
-											group: "Data",
+											group: "Metrics",
+											key: "metric_number",
 											subtext: "Display a metric value",
-											icon: <TrendingUp className="h-4 w-4" />,
+											icon: <RectangleHorizontal className="h-4 w-4" />,
+											aliases: ["metric"],
+										},
+										{
+											title: "Chart",
+											onItemClick: () => {
+												const block = insertOrUpdateBlock(editor, {
+													type: "metricHistory",
+												});
+												setOpenBlockSettings(block.id);
+											},
+											group: "Metrics",
+											key: "metric_chart",
+											subtext: "Chart showing metric history over time",
+											icon: <ChartLine className="h-4 w-4" />,
+											aliases: ["metric history"],
 										},
 									];
 									const q = query.trim().toLowerCase();

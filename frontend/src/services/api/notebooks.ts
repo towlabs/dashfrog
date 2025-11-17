@@ -145,11 +145,15 @@ function ensureMockData(tenant: string): void {
 export const Notebooks = {
 	// Get all notebooks for a tenant
 	getAll: async (tenant: string): Promise<Notebook[]> => {
-		// Simulate API delay
-		await new Promise((resolve) => setTimeout(resolve, 300));
-
-		ensureMockData(tenant);
-		return mockNotebooksData[tenant];
+		const query = new URLSearchParams();
+		query.set("tenant", tenant);
+		const response = await fetch(`/api/notebooks/list?${query.toString()}`, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+		return response.json();
 	},
 
 	// Get a single notebook by ID
@@ -173,49 +177,35 @@ export const Notebooks = {
 	create: async (
 		tenant: string,
 		notebook: Omit<Notebook, "id" | "createdAt" | "updatedAt">,
-	): Promise<Notebook> => {
-		// Simulate API delay
-		await new Promise((resolve) => setTimeout(resolve, 300));
-
-		ensureMockData(tenant);
-
-		const newNotebook: Notebook = {
-			...notebook,
-			id: Date.now().toString(),
-			createdAt: new Date(),
-			updatedAt: new Date(),
-		};
-
-		mockNotebooksData[tenant].push(newNotebook);
-		return newNotebook;
+	): Promise<null> => {
+		const response = await fetch(`/api/notebooks/create`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				tenant,
+				notebook,
+			}),
+		});
+		return response.json();
 	},
 
 	// Update a notebook
-	update: async (
-		tenant: string,
-		notebookId: string,
-		updates: Partial<Omit<Notebook, "id" | "createdAt" | "updatedAt">>,
-	): Promise<Notebook> => {
-		// Simulate API delay
-		await new Promise((resolve) => setTimeout(resolve, 200));
+	update: async (notebook: Notebook): Promise<any> => {
+		const response = await fetch(`/api/notebooks/update`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(notebook),
+		});
 
-		ensureMockData(tenant);
-
-		const index = mockNotebooksData[tenant].findIndex(
-			(nb) => nb.id === notebookId,
-		);
-		if (index === -1) {
-			throw new Error(`Notebook ${notebookId} not found`);
+		if (!response.ok) {
+			throw new Error(`Failed to update notebook: ${response.statusText}`);
 		}
 
-		const updatedNotebook: Notebook = {
-			...mockNotebooksData[tenant][index],
-			...updates,
-			updatedAt: new Date(),
-		};
-
-		mockNotebooksData[tenant][index] = updatedNotebook;
-		return updatedNotebook;
+		return await response.json();
 	},
 
 	// Delete a notebook
