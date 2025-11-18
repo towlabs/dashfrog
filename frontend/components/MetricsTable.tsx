@@ -132,13 +132,13 @@ export function MetricsTable({
 											<Tooltip>
 												<TooltipTrigger asChild>
 													<div
-														className="absolute -right-4 p-1 rounded-l-lg border border-r-0 bg-background group-hover:opacity-100 transition-opacity cursor-pointer z-10 flex items-center gap-1 opacity-0 shadow-xs "
+														className="absolute -right-3 -top-2 px-2 py-1.5 rounded-b-lg border border-t-0 bg-background group-hover:opacity-100 transition-opacity cursor-pointer z-10 flex items-center gap-1 opacity-0 shadow-xs "
 														onClick={(e) => {
 															e.stopPropagation();
 															handleRowClick(metric);
 														}}
 													>
-														<ChartLine className="size-5 text-muted-foreground" />
+														<ChartLine className="size-4 text-muted-foreground" />
 														<span className="text-xs text-muted-foreground ">
 															Values
 														</span>

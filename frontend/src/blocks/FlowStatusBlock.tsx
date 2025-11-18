@@ -1,9 +1,10 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { RectangleEllipsis } from "lucide-react";
+import { ChartNoAxesGantt, RectangleEllipsis } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
+import { FlowDetail } from "@/components/FlowDetail";
 import { FlowSelector } from "@/components/FlowSelector";
 import { LabelBadge } from "@/components/LabelBadge";
 import {
@@ -60,6 +61,12 @@ export const FlowStatusBlock = createReactBlockSpec(
 			);
 			const flows = useNotebooksStore((state) => state.flows);
 			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
+			const currentNotebook = useNotebooksStore(
+				(state) => state.currentNotebook,
+			);
+
+			const [selectedFlow, setSelectedFlow] = React.useState<Flow | null>(null);
+			const [detailOpen, setDetailOpen] = React.useState(false);
 
 			const flowName = props.block.props.flowName as string;
 			const title = props.block.props.title as string;
@@ -79,6 +86,11 @@ export const FlowStatusBlock = createReactBlockSpec(
 			}
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
+
+			const handleFlowClick = (flow: Flow) => {
+				setSelectedFlow(flow);
+				setDetailOpen(true);
+			};
 
 			const handleFlowSelect = (selectedFlowName: string) => {
 				props.editor.updateBlock(props.block, {
@@ -136,35 +148,49 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 			const renderFlowHistory = (flow: Flow) => {
 				return (
-					<Card className="@container/card shadow-none" key={flow.groupId}>
-						<CardHeader>
-							<CardDescription className="text-xl font-semibold flex items-baseline gap-2">
-								<div
-									className={cn(
-										"w-2.5 h-2.5 rounded-full",
-										flowStatusColors[flow.lastRunStatus],
-									)}
-								/>
-								{title || flowName}
-							</CardDescription>
-							<CardTitle className="text-secondary-foreground text-sm font-normal">
-								Duration:{" "}
-								{formatDuration(flow.lastRunStartedAt, flow.lastRunEndedAt)}
-								{flow.lastRunEndedAt && (
-									<> - {formatTimeAgo(flow.lastRunEndedAt)}</>
-								)}
-							</CardTitle>
-						</CardHeader>
-						<CardFooter className="flex-col items-start gap-1.5 text-sm p-3 pt-0">
-							<div className="flex gap-1">
-								{Object.entries(flow.labels).map(([key, value]) => (
-									<div key={key}>
-										<LabelBadge labelKey={key} labelValue={value} readonly />
+					<div
+						className="outline-none flex flex-col gap-1 group"
+						key={flow.groupId}
+					>
+						<Card className="@container/card shadow-none">
+							<CardHeader>
+								<CardDescription className="text-xl relative font-semibold flex items-baseline gap-2">
+									<div
+										className={cn(
+											"w-2.5 h-2.5 rounded-full",
+											flowStatusColors[flow.lastRunStatus],
+										)}
+									/>
+									{title || flowName}
+									<div
+										className="absolute right-0 -top-6 px-2 py-1.5 rounded-b-lg border border-t-0 bg-background group-hover:opacity-100 transition-opacity cursor-pointer z-10 flex items-center gap-1.5 opacity-0 shadow-xs"
+										onClick={() => handleFlowClick(flow)}
+									>
+										<ChartNoAxesGantt className="size-4 text-muted-foreground" />
+										<span className="text-xs text-muted-foreground whitespace-nowrap">
+											Details
+										</span>
 									</div>
-								))}
-							</div>
-						</CardFooter>
-					</Card>
+								</CardDescription>
+								<CardTitle className="text-secondary-foreground text-sm font-normal">
+									Duration:{" "}
+									{formatDuration(flow.lastRunStartedAt, flow.lastRunEndedAt)}
+									{flow.lastRunEndedAt && (
+										<> - {formatTimeAgo(flow.lastRunEndedAt)}</>
+									)}
+								</CardTitle>
+							</CardHeader>
+							<CardFooter className="flex-col items-start gap-1.5 text-sm p-3 pt-0">
+								<div className="flex gap-1">
+									{Object.entries(flow.labels).map(([key, value]) => (
+										<div key={key}>
+											<LabelBadge labelKey={key} labelValue={value} readonly />
+										</div>
+									))}
+								</div>
+							</CardFooter>
+						</Card>
+					</div>
 				);
 			};
 
@@ -212,6 +238,16 @@ export const FlowStatusBlock = createReactBlockSpec(
 							</div>
 						</SheetContent>
 					</Sheet>
+
+					{/* Flow Detail Sheet */}
+					{currentNotebook && (
+						<FlowDetail
+							initialFlow={selectedFlow}
+							open={detailOpen}
+							timeWindow={currentNotebook.timeWindow}
+							onOpenChange={setDetailOpen}
+						/>
+					)}
 				</>
 			);
 		},

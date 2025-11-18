@@ -150,7 +150,7 @@ export const HeatmapBlock = createReactBlockSpec(
 
 					// Process each history in this label group
 					for (const history of histories as FlowHistory[]) {
-						const date = new Date(history.startTime);
+						const date = history.startTime;
 						const dateStr = formatISO(date, {
 							representation: "date",
 						});
@@ -214,13 +214,10 @@ export const HeatmapBlock = createReactBlockSpec(
 
 			// Get days to display (from start to end of time window)
 			const { start, end } = resolveTimeWindow(timeWindow);
-			let startDay = new Date(start);
-			startDay.setHours(0, 0, 0, 0);
-			const endDay = new Date(end);
-			endDay.setHours(0, 0, 0, 0);
+			let startDay = start;
 			const days: Date[] = [startDay];
 
-			while (startDay < endDay) {
+			while (startDay < end) {
 				startDay = addDays(startDay, 1);
 				days.push(startDay);
 			}
