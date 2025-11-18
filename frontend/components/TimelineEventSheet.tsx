@@ -4,8 +4,6 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 import * as locales from "@blocknote/core/locales";
 import {
-	AddBlockButton,
-	DragHandleButton,
 	DragHandleMenu,
 	SideMenu,
 	SideMenuController,
@@ -28,6 +26,8 @@ import { formatTimeAgo } from "@/src/lib/formatters";
 import type { TimelineEvent } from "@/src/types/timeline";
 import { customEditor } from "@/src/utils/editor";
 import React from "react";
+import { AddBlockButton } from "./ui/add-block";
+import { DragHandleButton } from "./ui/drag-block";
 
 interface TimelineEventSheetProps {
 	event: TimelineEvent | null;

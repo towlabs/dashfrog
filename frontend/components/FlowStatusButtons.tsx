@@ -1,18 +1,23 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Flow } from "@/src/types/flow";
 
 type StatusFilter = "all" | "running" | "success" | "failure";
 
 type Props = {
-	flow: Flow;
+	failedCount: number;
+	successCount: number;
+	pendingCount: number;
+	runCount: number;
 	statusFilter: StatusFilter;
 	onStatusFilterChange: (filter: StatusFilter) => void;
 };
 
 export function FlowStatusButtons({
-	flow,
+	failedCount,
+	successCount,
+	pendingCount,
+	runCount,
 	statusFilter,
 	onStatusFilterChange,
 }: Props) {
@@ -28,7 +33,7 @@ export function FlowStatusButtons({
 					All
 				</span>
 				<span className="text-lg leading-none font-bold sm:text-3xl">
-					{flow.runCount.toLocaleString()}
+					{runCount.toLocaleString()}
 				</span>
 			</button>
 			<button
@@ -42,7 +47,7 @@ export function FlowStatusButtons({
 					Success
 				</span>
 				<span className="text-lg leading-none font-bold sm:text-3xl">
-					{flow.successCount.toLocaleString()}
+					{successCount.toLocaleString()}
 				</span>
 			</button>
 			<button
@@ -56,7 +61,7 @@ export function FlowStatusButtons({
 					Failed
 				</span>
 				<span className="text-lg leading-none font-bold sm:text-3xl">
-					{flow.failedCount.toLocaleString()}
+					{failedCount.toLocaleString()}
 				</span>
 			</button>
 			<button
@@ -70,7 +75,7 @@ export function FlowStatusButtons({
 					Running
 				</span>
 				<span className="text-lg leading-none font-bold sm:text-3xl">
-					{flow.pendingCount.toLocaleString()}
+					{pendingCount.toLocaleString()}
 				</span>
 			</button>
 		</>

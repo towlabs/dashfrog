@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/sheet";
 import { Flows } from "@/src/services/api/flows";
 import { useNotebooksStore } from "@/src/stores/notebooks";
-import type { DetailedFlow } from "@/src/types/flow";
 import { resolveTimeWindow } from "@/src/types/timewindow";
+import { FlowHistory } from "../types/flow";
 
 export const FlowHistoryBlock = createReactBlockSpec(
 	{
@@ -55,47 +55,44 @@ export const FlowHistoryBlock = createReactBlockSpec(
 			const filters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
-			const [detailedFlow, setDetailedFlow] = useState<DetailedFlow | null>(
-				null,
-			);
-			const [loadingDetail, setLoadingDetail] = useState(false);
+			const [flowHistory, setFlowHistory] = useState<FlowHistory[]>([]);
+			const [loading, setLoading] = useState(false);
 
 			const flowName = props.block.props.flowName as string;
-			const statusFilter = props.block.props.statusFilter as StatusFilter;
 
-			// Fetch detailed flow when flowName is set
+			// Fetch flow history when flowName is set
 			useEffect(() => {
-				const fetchDetailedFlow = async () => {
+				const fetchFlowHistory = async () => {
 					if (
 						!tenantName ||
 						!flowName ||
 						timeWindow === undefined ||
 						filters === undefined
 					) {
-						setDetailedFlow(null);
+						setFlowHistory([]);
 						return;
 					}
 
-					setLoadingDetail(true);
+					setLoading(true);
 					try {
 						const { start, end } = resolveTimeWindow(timeWindow);
-						const response = await Flows.getDetailedFlow(
+						const response = await Flows.getFlowHistory(
 							tenantName,
 							flowName,
 							start,
 							end,
 							filters,
 						);
-						setDetailedFlow(response);
+						setFlowHistory(response);
 					} catch (error) {
 						console.error("Failed to fetch detailed flow:", error);
-						setDetailedFlow(null);
+						setFlowHistory([]);
 					} finally {
-						setLoadingDetail(false);
+						setLoading(false);
 					}
 				};
 
-				void fetchDetailedFlow();
+				void fetchFlowHistory();
 			}, [tenantName, flowName, timeWindow, filters]);
 
 			if (!tenantName) {
@@ -133,15 +130,12 @@ export const FlowHistoryBlock = createReactBlockSpec(
 					);
 				}
 
-				if (loadingDetail) {
+				if (loading) {
 					return <TableSkeleton columns={6} rows={5} />;
 				}
 
 				return (
-					<FlowHistoryTable
-						detailedFlow={detailedFlow}
-						statusFilter={statusFilter}
-					/>
+					<FlowHistoryTable flowHistory={flowHistory} statusFilter={"all"} />
 				);
 			};
 

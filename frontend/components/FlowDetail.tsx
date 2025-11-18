@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FlowHistoryTable } from "@/components/FlowHistoryTable";
 import type { StatusFilter } from "@/components/FlowStatusButtons";
 import {
@@ -19,64 +19,77 @@ import {
 import { Flows } from "@/src/services/api/flows";
 import { useTenantStore } from "@/src/stores/tenant";
 import type { Filter } from "@/src/types/filter";
-import type { DetailedFlow, Flow } from "@/src/types/flow";
+import type { Flow, FlowHistory } from "@/src/types/flow";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 export interface FlowDetailProps {
-	initialFlow: Flow | null;
+	flowName: string;
 	open: boolean;
 	timeWindow: TimeWindow;
+	labels: Record<string, string>;
 	onOpenChange: (open: boolean) => void;
 }
 
 export function FlowDetail({
-	initialFlow,
+	flowName,
 	open,
 	timeWindow,
+	labels,
 	onOpenChange,
 }: FlowDetailProps) {
 	const currentTenant = useTenantStore((state) => state.currentTenant);
 	// Local state for detailed flow data
-	const [flowDetail, setFlowDetail] = useState<DetailedFlow | null>(null);
+	const [flowHistory, setFlowHistory] = useState<FlowHistory[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
 	// Fetch detailed flow when filters or time window change
 	useEffect(() => {
-		if (!currentTenant || !initialFlow) return;
+		if (!currentTenant) return;
 
-		const fetchDetailedFlow = async (filters: Filter[]) => {
+		const fetchFlowHistory = async () => {
 			setLoading(true);
 			const { start, end } = resolveTimeWindow(timeWindow);
 			try {
-				const detailedFlow = await Flows.getDetailedFlow(
+				const response = await Flows.getFlowHistory(
 					currentTenant,
-					initialFlow.name,
+					flowName,
 					start,
 					end,
-					filters,
+					Object.entries(labels).map(([key, value]) => ({
+						label: key,
+						value: value,
+					})),
 				);
-				setFlowDetail(detailedFlow);
+				setFlowHistory(response);
 			} catch (error) {
-				console.error("Failed to fetch detailed flow:", error);
-				setFlowDetail(null);
+				console.error("Failed to fetch flow history:", error);
+				setFlowHistory([]);
 			} finally {
 				setLoading(false);
 			}
 		};
 
-		const filters = Object.entries(initialFlow.labels).map(
-			([label, value]) => ({
-				label,
-				value: String(value),
-			}),
-		);
 		const status = "all";
 
 		setStatusFilter(status);
 
-		void fetchDetailedFlow(filters);
-	}, [currentTenant, initialFlow, timeWindow]);
+		void fetchFlowHistory();
+	}, [currentTenant, flowName, labels, timeWindow]);
+
+	const failedCount = useMemo(
+		() => flowHistory.filter((f) => f.status === "failure").length,
+		[flowHistory],
+	);
+	const successCount = useMemo(
+		() => flowHistory.filter((f) => f.status === "success").length,
+		[flowHistory],
+	);
+	const pendingCount = useMemo(
+		() => flowHistory.filter((f) => f.status === "running").length,
+		[flowHistory],
+	);
+	const runCount = useMemo(() => flowHistory.length, [flowHistory]);
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
@@ -87,9 +100,7 @@ export function FlowDetail({
 				<SheetHeader className="flex-shrink-0">
 					<CardHeader className="flex flex-col items-stretch border-b !p-0 sm:flex-row">
 						<div className="flex flex-1 flex-col justify-center gap-1 px-6 pt-4 pb-3 sm:py-6">
-							<SheetTitle className="text-2xl">
-								{initialFlow?.name || "Flow Details"}
-							</SheetTitle>
+							<SheetTitle className="text-2xl">{flowName}</SheetTitle>
 							<SheetDescription>
 								Flow execution history and details
 							</SheetDescription>
@@ -98,9 +109,12 @@ export function FlowDetail({
 							{loading ? (
 								<FlowStatusButtonsSkeleton />
 							) : (
-								flowDetail && (
+								flowName && (
 									<FlowStatusButtons
-										flow={flowDetail}
+										failedCount={failedCount}
+										successCount={successCount}
+										pendingCount={pendingCount}
+										runCount={runCount}
 										statusFilter={statusFilter}
 										onStatusFilterChange={setStatusFilter}
 									/>
@@ -114,11 +128,11 @@ export function FlowDetail({
 					<div className="flex flex-col h-full gap-2">
 						{/* Flow History Table - Scrollable */}
 						<div className="flex-1 overflow-y-auto">
-							{loading || !flowDetail ? (
+							{loading ? (
 								<TableSkeleton columns={6} rows={10} />
 							) : (
 								<FlowHistoryTable
-									detailedFlow={flowDetail}
+									flowHistory={flowHistory}
 									statusFilter={statusFilter}
 								/>
 							)}

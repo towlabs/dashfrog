@@ -310,12 +310,15 @@ export function FlowTable({
 			/>
 
 			{/* Flow Detail Sheet */}
-			<FlowDetail
-				initialFlow={selectedFlow}
-				open={detailOpen}
-				timeWindow={timeWindow}
-				onOpenChange={setDetailOpen}
-			/>
+			{selectedFlow && (
+				<FlowDetail
+					labels={selectedFlow.labels}
+					flowName={selectedFlow.name}
+					open={detailOpen}
+					timeWindow={timeWindow}
+					onOpenChange={setDetailOpen}
+				/>
+			)}
 		</>
 	);
 }

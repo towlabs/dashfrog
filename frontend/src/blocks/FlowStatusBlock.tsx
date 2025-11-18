@@ -240,9 +240,10 @@ export const FlowStatusBlock = createReactBlockSpec(
 					</Sheet>
 
 					{/* Flow Detail Sheet */}
-					{currentNotebook && (
+					{currentNotebook && selectedFlow && (
 						<FlowDetail
-							initialFlow={selectedFlow}
+							labels={selectedFlow.labels}
+							flowName={selectedFlow.name}
 							open={detailOpen}
 							timeWindow={currentNotebook.timeWindow}
 							onOpenChange={setDetailOpen}

@@ -7,6 +7,7 @@ import { BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
+import { FlowDetail } from "@/components/FlowDetail";
 import { FlowSelector } from "@/components/FlowSelector";
 import { LabelBadge } from "@/components/LabelBadge";
 import { Label } from "@/components/ui/label";
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Flows } from "@/src/services/api/flows";
 import { useNotebooksStore } from "@/src/stores/notebooks";
-import type { FlowHistory } from "@/src/types/flow";
+import type { Flow, FlowHistory } from "@/src/types/flow";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 
 interface DayData {
@@ -38,8 +39,8 @@ interface DayData {
 
 interface LabelGroupData {
 	labels: Record<string, string>;
-	labelKey: string;
 	dayDataMap: Map<string, DayData>;
+	groupId: string;
 }
 
 function getBarColor(dayData: DayData | null): string {
@@ -98,6 +99,10 @@ export const HeatmapBlock = createReactBlockSpec(
 
 			const [flowHistories, setFlowHistories] = useState<FlowHistory[]>([]);
 			const [labelGroups, setLabelGroups] = useState<LabelGroupData[]>([]);
+			const [detailOpen, setDetailOpen] = useState(false);
+			const [selectedLabels, setSelectedLabels] = useState<
+				Record<string, string>
+			>({});
 
 			const flowName = props.block.props.flowName as string;
 
@@ -118,14 +123,14 @@ export const HeatmapBlock = createReactBlockSpec(
 					setLoading(true);
 					try {
 						const { start, end } = resolveTimeWindow(timeWindow);
-						const response = await Flows.getDetailedFlow(
+						const response = await Flows.getFlowHistory(
 							tenantName,
 							flowName,
 							start,
 							end,
 							filters,
 						);
-						setFlowHistories(response.history);
+						setFlowHistories(response);
 					} catch (error) {
 						console.error("Failed to fetch flow histories:", error);
 						setFlowHistories([]);
@@ -140,12 +145,13 @@ export const HeatmapBlock = createReactBlockSpec(
 			// Process flow histories into label groups
 			useEffect(() => {
 				// Group histories by label combinations using lodash
-				const grouped = groupBy(flowHistories, (history: FlowHistory) =>
-					JSON.stringify(history.labels, Object.keys(history.labels).sort()),
+				const grouped = groupBy(
+					flowHistories,
+					(history: FlowHistory) => history.groupId,
 				);
 
 				// Convert grouped data into LabelGroupData array
-				const groups = Object.entries(grouped).map(([labelKey, histories]) => {
+				const groups = Object.entries(grouped).map(([groupId, histories]) => {
 					const dayDataMap = new Map<string, DayData>();
 
 					// Process each history in this label group
@@ -175,7 +181,7 @@ export const HeatmapBlock = createReactBlockSpec(
 
 					return {
 						labels: (histories as FlowHistory[])[0].labels,
-						labelKey,
+						groupId: groupId,
 						dayDataMap,
 					};
 				});
@@ -202,6 +208,11 @@ export const HeatmapBlock = createReactBlockSpec(
 			}
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
+
+			const handleDayClick = (labels: Record<string, string>) => {
+				setSelectedLabels(labels);
+				setDetailOpen(true);
+			};
 
 			const handleFlowSelect = (selectedFlowName: string) => {
 				props.editor.updateBlock(props.block, {
@@ -249,7 +260,7 @@ export const HeatmapBlock = createReactBlockSpec(
 						<TooltipProvider>
 							{labelGroups.map((labelGroup, index) => {
 								return (
-									<div key={labelGroup.labelKey} className="space-y-1">
+									<div key={labelGroup.groupId} className="space-y-1">
 										{/* Show flow name on first row */}
 										{index === 0 && (
 											<div className="text-m font-medium mb-1">
@@ -272,6 +283,9 @@ export const HeatmapBlock = createReactBlockSpec(
 																<div
 																	className="w-3 h-8 rounded-sm transition-opacity hover:opacity-80 cursor-pointer"
 																	style={{ backgroundColor: color }}
+																	onClick={() =>
+																		handleDayClick(labelGroup.labels)
+																	}
 																/>
 															</TooltipTrigger>
 															<TooltipContent>
@@ -411,6 +425,17 @@ export const HeatmapBlock = createReactBlockSpec(
 							</div>
 						</SheetContent>
 					</Sheet>
+
+					{/* Flow Detail Sheet */}
+					{timeWindow && (
+						<FlowDetail
+							labels={selectedLabels}
+							flowName={flowName}
+							open={detailOpen}
+							timeWindow={timeWindow}
+							onOpenChange={setDetailOpen}
+						/>
+					)}
 				</>
 			);
 		},

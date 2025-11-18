@@ -30,36 +30,31 @@ import {
 } from "@/components/ui/tooltip";
 import { Waterfall } from "@/components/Waterfall";
 import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
-import type { DetailedFlow } from "@/src/types/flow";
+import type { Flow, FlowHistory } from "@/src/types/flow";
 
 type Props = {
-	detailedFlow: DetailedFlow | null;
+	flowHistory: FlowHistory[];
 	statusFilter: StatusFilter;
 };
 
 const ITEMS_PER_PAGE = 10;
 
-export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
+export function FlowHistoryTable({ flowHistory, statusFilter }: Props) {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
-	const flowHistories = useMemo(
-		() => detailedFlow?.history || [],
-		[detailedFlow],
-	);
-
-	const filteredFlows = useMemo(() => {
+	const filteredHistory = useMemo(() => {
 		if (statusFilter === "all") {
-			return flowHistories;
+			return flowHistory;
 		}
-		return flowHistories.filter((f) => f.status === statusFilter);
-	}, [flowHistories, statusFilter]);
+		return flowHistory.filter((f) => f.status === statusFilter);
+	}, [flowHistory, statusFilter]);
 
 	// Calculate pagination
-	const totalPages = Math.ceil(filteredFlows.length / ITEMS_PER_PAGE);
+	const totalPages = Math.ceil(filteredHistory.length / ITEMS_PER_PAGE);
 	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 	const endIndex = startIndex + ITEMS_PER_PAGE;
-	const paginatedFlows = filteredFlows.slice(startIndex, endIndex);
+	const paginatedHistory = filteredHistory.slice(startIndex, endIndex);
 
 	// Reset to page 1 when filter changes
 	// biome-ignore lint/correctness/useExhaustiveDependencies: we want to reset the page when the filter changes
@@ -127,17 +122,12 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{paginatedFlows.map((flow, index) => {
+						{paginatedHistory.map((history, index) => {
 							const rowIndex = startIndex + index;
 							const isExpanded = expandedRows.has(rowIndex);
 							return (
-								<React.Fragment
-									key={`${detailedFlow?.name}-${rowIndex}-fragment`}
-								>
-									<TableRow
-										key={`${detailedFlow?.name}-${rowIndex}`}
-										className="hover:bg-muted/50"
-									>
+								<React.Fragment key={`${rowIndex}-fragment`}>
+									<TableRow key={`${rowIndex}`} className="hover:bg-muted/50">
 										<TableCell
 											className="w-8 cursor-pointer"
 											onClick={() => toggleRowExpansion(rowIndex)}
@@ -153,11 +143,11 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 												className="flex flex-wrap gap-1"
 												onClick={(e) => e.stopPropagation()}
 											>
-												{Object.entries(flow.labels).map(([key, value]) => (
+												{Object.entries(history.labels).map(([key, value]) => (
 													<LabelBadge
 														key={key}
 														labelKey={key}
-														labelValue={value}
+														labelValue={value as string}
 													/>
 												))}
 											</div>
@@ -165,21 +155,21 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 										<TableCell className="text-muted-foreground text-sm">
 											<Tooltip>
 												<TooltipTrigger className="cursor-default">
-													{formatTimeAgo(flow.startTime)}
+													{formatTimeAgo(history.startTime)}
 												</TooltipTrigger>
 												<TooltipContent>
-													{format(flow.startTime, "PPpp")}
+													{format(history.startTime, "PPpp")}
 												</TooltipContent>
 											</Tooltip>
 										</TableCell>
 										<TableCell className="text-muted-foreground text-sm">
-											{flow.endTime ? (
+											{history.endTime ? (
 												<Tooltip>
 													<TooltipTrigger className="cursor-default">
-														{formatTimeAgo(flow.endTime)}
+														{formatTimeAgo(history.endTime)}
 													</TooltipTrigger>
 													<TooltipContent>
-														{format(flow.endTime, "PPpp")}
+														{format(history.endTime, "PPpp")}
 													</TooltipContent>
 												</Tooltip>
 											) : (
@@ -187,23 +177,21 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 											)}
 										</TableCell>
 										<TableCell className="text-muted-foreground text-sm">
-											{formatDuration(flow.startTime, flow.endTime)}
+											{formatDuration(history.startTime, history.endTime)}
 										</TableCell>
 										<TableCell>
-											<FlowStatus status={flow.status} />
+											<FlowStatus status={history.status} />
 										</TableCell>
 									</TableRow>
 									{isExpanded && (
-										<TableRow
-											key={`${detailedFlow?.name}-${rowIndex}-expanded`}
-										>
+										<TableRow key={`${rowIndex}-expanded`}>
 											<TableCell colSpan={7} className="bg-muted/30 p-0">
 												<div className="px-4">
 													<Waterfall
-														steps={flow.steps}
-														events={flow.events}
-														startTime={flow.startTime}
-														endTime={flow.endTime}
+														steps={history.steps}
+														events={history.events}
+														startTime={history.startTime}
+														endTime={history.endTime}
 													/>
 												</div>
 											</TableCell>
@@ -212,7 +200,7 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 								</React.Fragment>
 							);
 						})}
-						{filteredFlows.length === 0 && (
+						{filteredHistory.length === 0 && (
 							<TableRow>
 								<TableCell
 									colSpan={6}

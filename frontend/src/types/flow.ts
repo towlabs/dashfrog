@@ -13,11 +13,9 @@ export interface Flow {
 	failedCount: number;
 }
 
-export interface DetailedFlow extends Flow {
-	history: FlowHistory[];
-}
-
 export interface FlowHistory {
+	flowId: string;
+	groupId: string;
 	startTime: Date;
 	endTime: Date | null;
 	status: FlowStatus;

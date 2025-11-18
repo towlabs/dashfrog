@@ -1,6 +1,5 @@
 import type { Filter } from "@/src/types/filter";
 import type {
-	DetailedFlow,
 	Flow,
 	FlowHistory,
 	FlowHistoryEvent,
@@ -23,7 +22,7 @@ interface FlowApiResponse {
 	failedCount: number;
 }
 
-interface FlowDetailsApiResponse extends FlowApiResponse {
+interface FlowDetailsApiResponse {
 	history: {
 		status: "success" | "failure" | "running";
 		flowId: string;
@@ -140,16 +139,16 @@ const Flows = {
 	},
 
 	/**
-	 * Get detailed flow (flow metadata + history)
+	 * Get flow history
 	 */
-	getDetailedFlow: async (
+	getFlowHistory: async (
 		tenant: string,
 		flowName: string,
 		start: Date,
 		end: Date,
 		labels: Filter[],
-	): Promise<DetailedFlow> => {
-		const response = await fetch(`/api/flows/details`, {
+	): Promise<FlowHistory[]> => {
+		const response = await fetch(`/api/flows/history`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -166,10 +165,7 @@ const Flows = {
 			throw new Error(`Failed to fetch flow details: ${response.statusText}`);
 		}
 		const data = (await response.json()) as FlowDetailsApiResponse;
-		return {
-			...toFlow(data),
-			history: toFlowHistory(data.history),
-		};
+		return toFlowHistory(data.history);
 	},
 };
 
