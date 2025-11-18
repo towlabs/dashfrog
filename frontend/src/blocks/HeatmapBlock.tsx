@@ -1,11 +1,13 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { BarChart3 } from "lucide-react";
+import { addDays, formatISO } from "date-fns";
 import { groupBy } from "lodash";
+import { BarChart3 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
+import { FlowSelector } from "@/components/FlowSelector";
 import { LabelBadge } from "@/components/LabelBadge";
 import { Label } from "@/components/ui/label";
 import {
@@ -20,28 +22,10 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Flows } from "@/src/services/api/flows";
 import { useNotebooksStore } from "@/src/stores/notebooks";
-import { useTenantStore } from "@/src/stores/tenant";
-import type { Flow, FlowHistory } from "@/src/types/flow";
+import type { FlowHistory } from "@/src/types/flow";
 import { resolveTimeWindow } from "@/src/types/timewindow";
-import { formatISO, addDays } from "date-fns";
 
 interface DayData {
 	date: Date;
@@ -94,8 +78,12 @@ export const HeatmapBlock = createReactBlockSpec(
 		render: (props) => {
 			const { tenant } = useParams<{ tenant: string }>();
 			const tenantName = tenant ? decodeURIComponent(tenant) : "";
-			const timeWindow = useTenantStore((state) => state.timeWindow);
-			const filters = useTenantStore((state) => state.filters);
+			const timeWindow = useNotebooksStore(
+				(state) => state.currentNotebook?.timeWindow,
+			);
+			const filters = useNotebooksStore(
+				(state) => state.currentNotebook?.filters,
+			);
 			const settingsOpenBlockId = useNotebooksStore(
 				(state) => state.settingsOpenBlockId,
 			);
@@ -109,10 +97,11 @@ export const HeatmapBlock = createReactBlockSpec(
 			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
 
 			const [loading, setLoading] = useState(false);
-			const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null);
+			const [selectedFlow, setSelectedFlow] = useState<{
+				name: string;
+			} | null>(null);
 			const [flowHistories, setFlowHistories] = useState<FlowHistory[]>([]);
 			const [labelGroups, setLabelGroups] = useState<LabelGroupData[]>([]);
-			const [comboboxOpen, setComboboxOpen] = useState(false);
 
 			const flowName = props.block.props.flowName as string;
 
@@ -129,7 +118,12 @@ export const HeatmapBlock = createReactBlockSpec(
 
 			// Fetch flow histories when flow is selected
 			useEffect(() => {
-				if (!tenantName || !selectedFlow) {
+				if (
+					!tenantName ||
+					!selectedFlow ||
+					timeWindow === undefined ||
+					filters === undefined
+				) {
 					setFlowHistories([]);
 					setLabelGroups([]);
 					return;
@@ -146,7 +140,7 @@ export const HeatmapBlock = createReactBlockSpec(
 							end,
 							filters,
 						);
-						setFlowHistories(response.data.histories);
+						setFlowHistories(response.history);
 					} catch (error) {
 						console.error("Failed to fetch flow histories:", error);
 						setFlowHistories([]);
@@ -172,8 +166,9 @@ export const HeatmapBlock = createReactBlockSpec(
 					// Process each history in this label group
 					for (const history of histories as FlowHistory[]) {
 						const date = new Date(history.startTime);
-						date.setHours(0, 0, 0, 0); // Reset to start of day
-						const dateStr = date.toISOString().split("T")[0];
+						const dateStr = formatISO(date, {
+							representation: "date",
+						});
 
 						const existing = dayDataMap.get(dateStr);
 						if (existing) {
@@ -209,6 +204,14 @@ export const HeatmapBlock = createReactBlockSpec(
 						<div className="text-sm text-muted-foreground">
 							No tenant selected
 						</div>
+					</div>
+				);
+			}
+
+			if (timeWindow === undefined) {
+				return (
+					<div className="p-4 border rounded-lg">
+						<div className="text-sm text-muted-foreground"></div>
 					</div>
 				);
 			}
@@ -270,16 +273,6 @@ export const HeatmapBlock = createReactBlockSpec(
 					);
 				}
 
-				if (!selectedFlow) {
-					return (
-						<EmptyState
-							icon={BarChart3}
-							title="Flow not found"
-							description="The selected flow could not be loaded."
-						/>
-					);
-				}
-
 				return (
 					<div className="space-y-1">
 						{/* Status Page Style Heatmap - Multiple Rows by Label */}
@@ -289,9 +282,7 @@ export const HeatmapBlock = createReactBlockSpec(
 									<div key={labelGroup.labelKey} className="space-y-1">
 										{/* Show flow name on first row */}
 										{index === 0 && (
-											<div className="text-sm font-medium mb-1">
-												{selectedFlow.name}
-											</div>
+											<div className="text-sm font-medium mb-1">{flowName}</div>
 										)}
 										<div className="flex items-center gap-2">
 											<div className="flex gap-[2px] flex-1">
@@ -376,6 +367,45 @@ export const HeatmapBlock = createReactBlockSpec(
 									</div>
 								);
 							})}
+							{!selectedFlow && (
+								<div className="space-y-1">
+									{/* Show flow name on first row */}
+									{<div className="text-sm font-medium mb-1">{flowName}</div>}
+									<div className="flex items-center gap-2">
+										<div className="flex gap-[2px] flex-1">
+											{days.map((day) => {
+												const dateStr = formatISO(day, {
+													representation: "date",
+												});
+
+												return (
+													<Tooltip key={dateStr} delayDuration={0}>
+														<TooltipTrigger asChild>
+															<div
+																className="w-3 h-8 rounded-sm transition-opacity hover:opacity-80 cursor-pointer"
+																style={{
+																	backgroundColor: "var(--color-secondary)",
+																}}
+															/>
+														</TooltipTrigger>
+														<TooltipContent>
+															<div className="text-xs">
+																<div className="font-semibold mb-1">
+																	{dateStr}
+																</div>
+
+																<div className="text-muted-foreground">
+																	No runs
+																</div>
+															</div>
+														</TooltipContent>
+													</Tooltip>
+												);
+											})}
+										</div>
+									</div>
+								</div>
+							)}
 						</TooltipProvider>
 					</div>
 				);
@@ -399,65 +429,12 @@ export const HeatmapBlock = createReactBlockSpec(
 							<div className="mt-6 space-y-6">
 								<div className="space-y-3">
 									<Label className="text-sm font-medium">Flow</Label>
-									{flowsLoading ? (
-										<div className="text-sm text-muted-foreground">
-											Loading flows...
-										</div>
-									) : flows.length === 0 ? (
-										<div className="text-sm text-muted-foreground">
-											No flows available
-										</div>
-									) : (
-										<Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-											<PopoverTrigger asChild>
-												<Button
-													variant="outline"
-													role="combobox"
-													aria-expanded={comboboxOpen}
-													className="w-full justify-between"
-												>
-													{flowName
-														? flows.find((f) => f.name === flowName)?.name
-														: "Select a flow..."}
-													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-												</Button>
-											</PopoverTrigger>
-											<PopoverContent className="w-[400px] p-0">
-												<Command>
-													<CommandInput placeholder="Search flows..." />
-													<CommandList>
-														<CommandEmpty>No flow found.</CommandEmpty>
-														<CommandGroup>
-															{flows.map((flow) => (
-																<CommandItem
-																	key={flow.name}
-																	value={flow.name}
-																	onSelect={(currentValue) => {
-																		handleFlowSelect(
-																			currentValue === flowName
-																				? ""
-																				: currentValue,
-																		);
-																		setComboboxOpen(false);
-																	}}
-																>
-																	<Check
-																		className={cn(
-																			"mr-2 h-4 w-4",
-																			flowName === flow.name
-																				? "opacity-100"
-																				: "opacity-0",
-																		)}
-																	/>
-																	{flow.name}
-																</CommandItem>
-															))}
-														</CommandGroup>
-													</CommandList>
-												</Command>
-											</PopoverContent>
-										</Popover>
-									)}
+									<FlowSelector
+										flows={flows}
+										flowsLoading={flowsLoading}
+										selectedFlowName={flowName}
+										onFlowSelect={handleFlowSelect}
+									/>
 								</div>
 							</div>
 						</SheetContent>

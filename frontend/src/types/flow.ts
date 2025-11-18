@@ -1,6 +1,7 @@
 export type FlowStatus = "success" | "failure" | "running";
 
 export interface Flow {
+	groupId: string;
 	name: string;
 	labels: Record<string, string>;
 	lastRunStatus: FlowStatus;
@@ -13,7 +14,7 @@ export interface Flow {
 }
 
 export interface DetailedFlow extends Flow {
-	histories: FlowHistory[];
+	history: FlowHistory[];
 }
 
 export interface FlowHistory {

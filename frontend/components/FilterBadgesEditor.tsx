@@ -63,7 +63,7 @@ export function FilterBadgesEditor({
 				if (!filter) return null;
 
 				const labelConfig = availableLabels.find(
-					(l) => l.name === filter.label,
+					(l) => l.label === filter.label,
 				);
 
 				return (
@@ -85,7 +85,7 @@ export function FilterBadgesEditor({
 					labelValue={""}
 					readonly={false}
 					availableValues={
-						availableLabels.find((l) => l.name === draftLabel)?.values
+						availableLabels.find((l) => l.label === draftLabel)?.values
 					}
 					onValueChange={(value) => {
 						if (value) {
@@ -115,11 +115,11 @@ export function FilterBadgesEditor({
 							<CommandGroup heading="Labels">
 								{availableLabels.map((label) => (
 									<CommandItem
-										key={label.name}
-										value={label.name}
-										onSelect={() => newFilter(label.name)}
+										key={label.label}
+										value={label.label}
+										onSelect={() => newFilter(label.label)}
 									>
-										{label.name}
+										{label.label}
 									</CommandItem>
 								))}
 							</CommandGroup>

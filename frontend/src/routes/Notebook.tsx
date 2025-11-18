@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	type Block,
 	BlockNoteSchema,
 	combineByGroup,
 	defaultBlockSpecs,
@@ -9,13 +10,13 @@ import {
 import * as locales from "@blocknote/core/locales";
 import {
 	DragHandleMenu,
-	type DragHandleMenuProps,
+	DragHandleMenuProps,
 	getDefaultReactSlashMenuItems,
 	RemoveBlockItem,
 	SideMenu,
 	SideMenuController,
+	SideMenuProps,
 	SuggestionMenuController,
-	useCreateBlockNote,
 	useEditorChange,
 } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
@@ -26,25 +27,19 @@ import {
 	withMultiColumn,
 } from "@blocknote/xl-multi-column";
 import {
-	ChevronRight,
-	History,
-	Home,
-	TrendingUp,
-	Workflow,
+	BarChart3,
 	ChartLine,
-	RectangleEllipsis,
-	Logs,
-	TableOfContents,
+	ChevronRight,
+	Home,
 	ListChecks,
 	ListCollapse,
+	Logs,
+	RectangleEllipsis,
 	RectangleHorizontal,
-	BarChart3,
 } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { TenantControls } from "@/components/TenantControls";
-import { AddBlockButton } from "@/components/ui/add-block";
-import { DragHandleButton } from "@/components/ui/drag-block";
 import { FlowBlock } from "../blocks/FlowBlock";
 import { FlowHistoryBlock } from "../blocks/FlowHistoryBlock";
 import { FlowStatusBlock } from "../blocks/FlowStatusBlock";
@@ -55,38 +50,13 @@ import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import type { Notebook } from "../types/notebook";
 import { resolveTimeWindow } from "../types/timewindow";
-import { Notebook } from "../types/notebook";
-
-const customDragHandleMenu = (menuProps: DragHandleMenuProps) => {
-	const blockType = menuProps.block.type as string;
-	if (
-		blockType === "timeline" ||
-		blockType === "flow" ||
-		blockType === "flowHistory" ||
-		blockType === "flowStatus" ||
-		blockType === "heatmap" ||
-		blockType === "metric" ||
-		blockType === "metricHistory"
-	) {
-		return (
-			<DragHandleMenu {...menuProps}>
-				<DropdownMenuItem
-					className={"bn-menu-item"}
-					onClick={() =>
-						useNotebooksStore.getState().openBlockSettings(menuProps.block.id)
-					}
-				>
-					Settings
-				</DropdownMenuItem>
-				<RemoveBlockItem {...menuProps}>Delete</RemoveBlockItem>
-			</DragHandleMenu>
-		);
-	} else {
-		return <DragHandleMenu {...menuProps} />;
-	}
-};
+import { customEditor } from "../utils/editor";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import React from "react";
+import { AddBlockButton } from "@/components/ui/add-block";
+import { DragHandleButton } from "@/components/ui/drag-block";
 
 export default function NotebookPage() {
 	const { tenant, notebookId } = useParams<{
@@ -94,13 +64,13 @@ export default function NotebookPage() {
 		notebookId: string;
 	}>();
 
-	const timeWindow = useTenantStore((state) => state.timeWindow);
-	const filters = useTenantStore((state) => state.filters);
 	const setCurrentTenant = useTenantStore((state) => state.setCurrentTenant);
-	const setTimeWindow = useTenantStore((state) => state.setTimeWindow);
-	const setFilters = useTenantStore((state) => state.setFilters);
 	const labels = useLabelsStore((state) => state.labels);
 	const currentNotebook = useNotebooksStore((state) => state.currentNotebook);
+	const timeWindow = useNotebooksStore(
+		(state) => state.currentNotebook?.timeWindow,
+	);
+	const filters = useNotebooksStore((state) => state.currentNotebook?.filters);
 	const setCurrentNotebook = useNotebooksStore(
 		(state) => state.setCurrentNotebook,
 	);
@@ -112,16 +82,20 @@ export default function NotebookPage() {
 	const fetchFlows = useNotebooksStore((state) => state.fetchFlows);
 	const fetchMetrics = useNotebooksStore((state) => state.fetchMetrics);
 	const notebookCreating = useNotebooksStore((state) => state.notebookCreating);
+	const openBlockSettings = useNotebooksStore(
+		(state) => state.openBlockSettings,
+	);
 
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
 
 	// Create BlockNote editor instance
-	const editor = useCreateBlockNote({
+	const { table, ...defaultSpecs } = defaultBlockSpecs;
+	const editor = customEditor({
 		schema: withMultiColumn(
 			BlockNoteSchema.create({
 				blockSpecs: {
-					...defaultBlockSpecs,
+					...defaultSpecs,
 					timeline: TimelineBlock,
 					flow: FlowBlock,
 					flowHistory: FlowHistoryBlock,
@@ -142,6 +116,7 @@ export default function NotebookPage() {
 			emptyDocument: "Write or press '/' for commands",
 			default: "Write or press '/' for commands",
 		},
+		extensions: [],
 	});
 
 	useEffect(() => {
@@ -167,21 +142,68 @@ export default function NotebookPage() {
 	]);
 
 	useEffect(() => {
-		if (!tenant) return;
+		if (!tenant || timeWindow === undefined || filters === undefined) return;
 		const { start, end } = resolveTimeWindow(timeWindow);
-		void fetchFlows(tenant, start, end);
-		void fetchMetrics(tenant, start, end);
-	}, [tenant, timeWindow, fetchFlows, fetchMetrics]);
+		void fetchFlows(tenant, start, end, filters);
+		void fetchMetrics(tenant, start, end, filters);
+	}, [tenant, fetchFlows, fetchMetrics, timeWindow, filters]);
 
 	// Save editor content changes (debounced in store)
 	useEditorChange((editor) => {
 		if (tenantName && currentNotebook && !notebookCreating) {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			updateNotebook(tenantName, currentNotebook, {
-				blocks: editor.document as any,
+				blocks: editor.document as Block[],
 			});
 		}
 	}, editor);
+
+	const customDragHandleMenu = React.useCallback(
+		(menuProps: DragHandleMenuProps) => {
+			const blockType = menuProps.block.type as string;
+			if (
+				blockType === "timeline" ||
+				blockType === "flow" ||
+				blockType === "flowHistory" ||
+				blockType === "flowStatus" ||
+				blockType === "heatmap" ||
+				blockType === "metric" ||
+				blockType === "metricHistory"
+			) {
+				return (
+					<DragHandleMenu {...menuProps}>
+						<DropdownMenuItem
+							className={"bn-menu-item"}
+							onClick={() => {
+								openBlockSettings(menuProps.block.id);
+							}}
+						>
+							Settings
+						</DropdownMenuItem>
+						<RemoveBlockItem {...menuProps}>Delete</RemoveBlockItem>
+					</DragHandleMenu>
+				);
+			} else {
+				return <DragHandleMenu {...menuProps} />;
+			}
+		},
+		[openBlockSettings],
+	);
+
+	const customSideMenu = React.useCallback(
+		(props: SideMenuProps) => {
+			return (
+				<SideMenu {...props}>
+					<AddBlockButton {...props} />
+					<DragHandleButton
+						{...props}
+						dragHandleMenu={(menuProps) => customDragHandleMenu(menuProps)}
+					/>
+				</SideMenu>
+			);
+		},
+		[customDragHandleMenu],
+	);
 
 	const renderNotebook = (notebook: Notebook) => {
 		return (
@@ -218,9 +240,11 @@ export default function NotebookPage() {
 				<div className="mx-19">
 					<BlockNoteView
 						editor={editor}
+						// key={notebook.id}
 						theme="light"
 						slashMenu={false}
 						sideMenu={false}
+						// tableHandles={false}
 					>
 						<SuggestionMenuController
 							triggerCharacter="/"
@@ -339,17 +363,7 @@ export default function NotebookPage() {
 									: all;
 							}}
 						/>
-						<SideMenuController
-							sideMenu={(props) => (
-								<SideMenu {...props}>
-									<AddBlockButton {...props} />
-									<DragHandleButton
-										{...props}
-										dragHandleMenu={customDragHandleMenu}
-									/>
-								</SideMenu>
-							)}
-						/>
+						<SideMenuController sideMenu={customSideMenu} />
 					</BlockNoteView>
 				</div>
 			</div>
@@ -372,13 +386,25 @@ export default function NotebookPage() {
 					</span>
 				</nav>
 				{/* Time Window and Filters */}
-				<TenantControls
-					timeWindow={timeWindow}
-					filters={filters}
-					availableLabels={labels}
-					onTimeWindowChange={setTimeWindow}
-					onFiltersChange={setFilters}
-				/>
+				{timeWindow !== undefined && filters !== undefined && (
+					<TenantControls
+						timeWindow={timeWindow}
+						filters={filters}
+						availableLabels={labels}
+						onTimeWindowChange={(timeWindow) => {
+							if (!currentNotebook) return;
+							updateNotebook(tenantName, currentNotebook, {
+								timeWindow,
+							});
+						}}
+						onFiltersChange={(filters) => {
+							if (!currentNotebook) return;
+							updateNotebook(tenantName, currentNotebook, {
+								filters,
+							});
+						}}
+					/>
+				)}
 			</div>
 
 			{/* Notebook Content */}

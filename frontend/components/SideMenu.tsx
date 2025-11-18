@@ -31,6 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Notebook } from "@/src/types/notebook";
 import SearchDialog from "./SearchDialog";
 
 const topMenuItems = [
@@ -48,8 +49,6 @@ interface SideMenuProps {
 	isCollapsed?: boolean;
 	onToggleCollapse?: (collapsed: boolean) => void;
 }
-
-const _MAX_VISIBLE_TENANTS = 10;
 
 export default function SideMenu({
 	isCollapsed: controlledCollapsed,
@@ -115,10 +114,18 @@ export default function SideMenu({
 	const handleCreateNotebook = () => {
 		if (!selectedTenant) return;
 
-		const newNotebook = {
+		const newNotebook: Notebook = {
+			id: crypto.randomUUID(),
 			title: "Untitled Notebook",
 			description: "",
 			blocks: null,
+			timeWindow: {
+				type: "relative",
+				metadata: {
+					value: "24h",
+				},
+			},
+			filters: [],
 		};
 
 		// Create notebook (returns immediately with UUID)
@@ -349,7 +356,10 @@ export default function SideMenu({
 														}
 														title="Delete notebook"
 													>
-														<Trash2 className="h-3.5 w-3.5 text-destructive" />
+														<Trash2
+															className="h-3.5 w-3.5 text-secondary-foreground"
+															strokeWidth={2.5}
+														/>
 													</Button>
 												</div>
 											);

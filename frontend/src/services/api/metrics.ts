@@ -1,10 +1,6 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
 import type { Filter } from "@/src/types/filter";
-import type {
-	Metric,
-	MetricAggregation,
-	MetricValue,
-} from "@/src/types/metric";
+import type { Metric } from "@/src/types/metric";
 
 const MetricsAPI = NewRestAPI(`api`);
 
@@ -238,12 +234,12 @@ const Metrics = {
 
 	getScalars: async (
 		_tenant: string,
-		metricName: string,
-		unit: string | null,
-		startTime: Date,
-		endTime: Date,
+		_metricName: string,
+		_unit: string | null,
+		_startTime: Date,
+		_endTime: Date,
 		_filters?: Filter[],
-		aggregation: "last" | "sum" | "avg" = "last",
+		_aggregation: "last" | "sum" | "avg" = "last",
 	): Promise<MetricScalarResponse> => {
 		return new Promise((resolve) => setTimeout(resolve, 300)).then(() => ({
 			scalars: [

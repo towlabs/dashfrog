@@ -121,7 +121,7 @@ export function TimeWindowSelector({
 					variant="ghost"
 					size="sm"
 					className={cn(
-						"justify-between text-sm text-muted-foreground",
+						"justify-between text-sm text-muted-foreground gap-0",
 						className,
 					)}
 				>

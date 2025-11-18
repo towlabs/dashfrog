@@ -20,10 +20,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatTimeAgo } from "@/src/lib/formatters";
-import {
-	processTimelineEvents,
-	Timeline as TimelineAPI,
-} from "@/src/services/api/timeline";
+import { Timeline as TimelineAPI } from "@/src/services/api/timeline";
 import type { Filter } from "@/src/types/filter";
 import type { TimelineEvent } from "@/src/types/timeline";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
@@ -60,13 +57,12 @@ export function Timeline({
 			setLoading(true);
 			try {
 				const { start, end } = resolveTimeWindow(timeWindow);
-				const response = await TimelineAPI.getByTenant(
+				const timelineEvents = await TimelineAPI.getByTenant(
 					tenant,
 					start,
 					end,
 					filters,
 				);
-				const timelineEvents = processTimelineEvents(response.data);
 				setEvents(timelineEvents);
 			} catch (error) {
 				console.error("Failed to fetch timeline:", error);
@@ -88,14 +84,6 @@ export function Timeline({
 
 	if (loading) {
 		return <TableSkeleton columns={4} rows={10} />;
-	}
-
-	if (events.length === 0) {
-		return (
-			<div className="text-center text-muted-foreground py-12">
-				No timeline events
-			</div>
-		);
 	}
 
 	// Pagination calculations
@@ -147,9 +135,9 @@ export function Timeline({
 					{paginatedEvents.map((event, index) => (
 						<TableRow key={startIndex + index} className="group">
 							{visibleColumns.event && (
-								<TableCell className="text-sm">
+								<TableCell>
 									<div className="relative flex items-center">
-										<span className="mr-2 text-xl">{event.emoji}</span>
+										<span className="mr-2 text-lg">{event.emoji}</span>
 										<span>{event.name}</span>
 										<Tooltip>
 											<TooltipTrigger asChild>
@@ -192,6 +180,17 @@ export function Timeline({
 							)}
 						</TableRow>
 					))}
+
+					{events.length === 0 && (
+						<TableRow>
+							<TableCell
+								colSpan={Object.keys(visibleColumns).length}
+								className="text-center text-secondary-foreground text-sm py-6"
+							>
+								No timeline events found for the selected time window.
+							</TableCell>
+						</TableRow>
+					)}
 				</TableBody>
 			</Table>
 
@@ -200,6 +199,7 @@ export function Timeline({
 				event={selectedEvent}
 				open={sheetOpen}
 				onOpenChange={setSheetOpen}
+				key={selectedEvent?.id}
 			/>
 
 			{/* Pagination */}

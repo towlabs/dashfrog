@@ -9,10 +9,8 @@ import {
 	Hash,
 	Tags,
 	Timer,
-	Workflow,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { EmptyState } from "@/components/EmptyState";
 import { FlowDetail } from "@/components/FlowDetail";
 import { FlowStatus } from "@/components/FlowStatus";
 import { LabelBadge } from "@/components/LabelBadge";
@@ -33,7 +31,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
-import { Flows, toFlow } from "@/src/services/api/flows";
+import { Flows } from "@/src/services/api/flows";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
@@ -55,15 +53,20 @@ type Props = {
 
 const ITEMS_PER_PAGE = 14;
 
-export function FlowTable({ tenant, timeWindow, filters, visibleColumns = {
-	name: true,
-	labels: true,
-	lastStatus: true,
-	lastStart: true,
-	lastEnd: true,
-	lastDuration: true,
-	runCounts: true,
-} }: Props) {
+export function FlowTable({
+	tenant,
+	timeWindow,
+	filters,
+	visibleColumns = {
+		name: true,
+		labels: true,
+		lastStatus: true,
+		lastStart: true,
+		lastEnd: true,
+		lastDuration: true,
+		runCounts: true,
+	},
+}: Props) {
 	const [flows, setFlows] = useState<Flow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [currentPage, setCurrentPage] = useState(1);
@@ -75,12 +78,13 @@ export function FlowTable({ tenant, timeWindow, filters, visibleColumns = {
 			setLoading(true);
 			try {
 				const { start, end } = resolveTimeWindow(timeWindow);
-				const response = await Flows.getByTenant(tenant, start, end, filters);
-				const fetchedFlows = response.data.map(toFlow);
+				const fetchedFlows = await Flows.getByTenant(
+					tenant,
+					start,
+					end,
+					filters,
+				);
 				setFlows(fetchedFlows);
-			} catch (error) {
-				console.error("Failed to fetch flows:", error);
-				setFlows([]);
 			} finally {
 				setLoading(false);
 			}
@@ -111,16 +115,6 @@ export function FlowTable({ tenant, timeWindow, filters, visibleColumns = {
 
 	if (loading) {
 		return <TableSkeleton columns={6} rows={5} />;
-	}
-
-	if (flows.length === 0) {
-		return (
-			<EmptyState
-				icon={Workflow}
-				title="No flows yet"
-				description="Flows will appear here once you start tracking workflow executions."
-			/>
-		);
 	}
 
 	return (
@@ -299,6 +293,16 @@ export function FlowTable({ tenant, timeWindow, filters, visibleColumns = {
 							</TableRow>
 						);
 					})}
+					{flows.length === 0 && (
+						<TableRow>
+							<TableCell
+								colSpan={Object.keys(visibleColumns).length}
+								className="text-center text-secondary-foreground text-sm py-6"
+							>
+								No flows found for the selected time window.
+							</TableCell>
+						</TableRow>
+					)}
 				</TableBody>
 			</Table>
 			<SimplePagination
@@ -312,6 +316,7 @@ export function FlowTable({ tenant, timeWindow, filters, visibleColumns = {
 			<FlowDetail
 				initialFlow={selectedFlow}
 				open={detailOpen}
+				timeWindow={timeWindow}
 				onOpenChange={setDetailOpen}
 			/>
 		</>

@@ -1,12 +1,12 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { RectangleHorizontal, TrendingUp } from "lucide-react";
+import { RectangleHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { EmptyState } from "@/components/EmptyState";
 import { LabelBadge } from "@/components/LabelBadge";
 import { MetricSelector } from "@/components/MetricSelector";
-import { EmptyState } from "@/components/EmptyState";
 import {
 	Card,
 	CardDescription,
@@ -33,8 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Metrics } from "@/src/services/api/metrics";
 import { useNotebooksStore } from "@/src/stores/notebooks";
-import { useTenantStore } from "@/src/stores/tenant";
-import { MetricAggregationLabel, type Metric } from "@/src/types/metric";
+import { type Metric, MetricAggregationLabel } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
 
@@ -66,8 +65,6 @@ export const MetricBlock = createReactBlockSpec(
 		render: (props) => {
 			const { tenant } = useParams<{ tenant: string }>();
 			const tenantName = tenant ? decodeURIComponent(tenant) : "";
-			const timeWindow = useTenantStore((state) => state.timeWindow);
-			const filters = useTenantStore((state) => state.filters);
 			const settingsOpenBlockId = useNotebooksStore(
 				(state) => state.settingsOpenBlockId,
 			);
@@ -76,6 +73,12 @@ export const MetricBlock = createReactBlockSpec(
 			);
 			const metrics = useNotebooksStore((state) => state.metrics);
 			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
+			const timeWindow = useNotebooksStore(
+				(state) => state.currentNotebook?.timeWindow,
+			);
+			const filters = useNotebooksStore(
+				(state) => state.currentNotebook?.filters,
+			);
 
 			const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
 			const [scalarData, setScalarData] = useState<
@@ -105,7 +108,13 @@ export const MetricBlock = createReactBlockSpec(
 
 			// Fetch scalar data when metric and aggregation are selected
 			useEffect(() => {
-				if (!tenantName || !selectedMetric || !aggregation) {
+				if (
+					!tenantName ||
+					!selectedMetric ||
+					!aggregation ||
+					timeWindow === undefined ||
+					filters === undefined
+				) {
 					setScalarData([]);
 					return;
 				}

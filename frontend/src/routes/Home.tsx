@@ -14,7 +14,8 @@ import { useLabelsStore } from "@/src/stores/labels";
 
 export default function HomePage() {
 	const tenants = useLabelsStore((state) => state.tenants);
-	const loading = useLabelsStore((state) => state.loading);
+	const tenantsLoading = useLabelsStore((state) => state.loadingTenants);
+	const labelsLoading = useLabelsStore((state) => state.loadingLabels);
 	const navigate = useNavigate();
 
 	const handleTenantClick = (tenantName: string) => {
@@ -39,7 +40,7 @@ export default function HomePage() {
 
 			{/* Tenant Table */}
 			<div>
-				{loading ? (
+				{tenantsLoading || labelsLoading ? (
 					<TableSkeleton columns={1} rows={5} />
 				) : tenants.length === 0 ? (
 					<EmptyState

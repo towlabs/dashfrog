@@ -19,8 +19,7 @@ import {
 	Metrics,
 } from "@/src/services/api/metrics";
 import { useNotebooksStore } from "@/src/stores/notebooks";
-import { useTenantStore } from "@/src/stores/tenant";
-import { MetricAggregationLabel, type Metric } from "@/src/types/metric";
+import { type Metric, MetricAggregationLabel } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 
 export const MetricHistoryBlock = createReactBlockSpec(
@@ -37,8 +36,6 @@ export const MetricHistoryBlock = createReactBlockSpec(
 		render: (props) => {
 			const { tenant } = useParams<{ tenant: string }>();
 			const tenantName = tenant ? decodeURIComponent(tenant) : "";
-			const timeWindow = useTenantStore((state) => state.timeWindow);
-			const filters = useTenantStore((state) => state.filters);
 			const settingsOpenBlockId = useNotebooksStore(
 				(state) => state.settingsOpenBlockId,
 			);
@@ -50,6 +47,12 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			);
 			const metrics = useNotebooksStore((state) => state.metrics);
 			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
+			const timeWindow = useNotebooksStore(
+				(state) => state.currentNotebook?.timeWindow,
+			);
+			const filters = useNotebooksStore(
+				(state) => state.currentNotebook?.filters,
+			);
 
 			const [historyData, setHistoryData] =
 				useState<MetricHistoryResponse | null>(null);
@@ -71,7 +74,12 @@ export const MetricHistoryBlock = createReactBlockSpec(
 
 			// Fetch metric history when metric is selected
 			useEffect(() => {
-				if (!tenantName || !selectedMetric) {
+				if (
+					!tenantName ||
+					!selectedMetric ||
+					timeWindow === undefined ||
+					filters === undefined
+				) {
 					setHistoryData(null);
 					return;
 				}

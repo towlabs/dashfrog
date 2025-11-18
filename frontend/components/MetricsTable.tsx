@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	CaseUpper,
-	ChartLine,
-	ChevronDown,
-	ChevronRight,
-	Hash,
-	Tags,
-} from "lucide-react";
+import { CaseUpper, ChartLine, Tags } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
@@ -28,10 +21,9 @@ import {
 } from "@/components/ui/tooltip";
 import { Metrics } from "@/src/services/api/metrics";
 import type { Filter } from "@/src/types/filter";
-import type { Metric, MetricValue } from "@/src/types/metric";
+import type { Metric } from "@/src/types/metric";
 import { MetricAggregationLabel } from "@/src/types/metric";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
-import { formatMetricValue } from "@/src/utils/metricFormatting";
 
 type MetricsTableProps = {
 	tenant: string;
@@ -103,6 +95,8 @@ export function MetricsTable({
 					open={drawerOpen}
 					onOpenChange={setDrawerOpen}
 					metric={selectedMetric.metric}
+					timeWindow={timeWindow}
+					filters={filters}
 				/>
 			)}
 			<Table>

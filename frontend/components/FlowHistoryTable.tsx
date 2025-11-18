@@ -6,12 +6,10 @@ import {
 	ChevronRight,
 	CircleDot,
 	Clock,
-	History,
 	Tags,
 	Timer,
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
-import { EmptyState } from "@/components/EmptyState";
 import { FlowStatus } from "@/components/FlowStatus";
 import type { StatusFilter } from "@/components/FlowStatusButtons";
 import { LabelBadge } from "@/components/LabelBadge";
@@ -32,11 +30,10 @@ import {
 } from "@/components/ui/tooltip";
 import { Waterfall } from "@/components/Waterfall";
 import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
-import type { Filter } from "@/src/types/filter";
 import type { DetailedFlow } from "@/src/types/flow";
 
 type Props = {
-	detailedFlow: DetailedFlow;
+	detailedFlow: DetailedFlow | null;
 	statusFilter: StatusFilter;
 };
 
@@ -46,7 +43,10 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
-	const flowHistories = useMemo(() => detailedFlow.histories, [detailedFlow]);
+	const flowHistories = useMemo(
+		() => detailedFlow?.history || [],
+		[detailedFlow],
+	);
 
 	const filteredFlows = useMemo(() => {
 		if (statusFilter === "all") {
@@ -86,16 +86,6 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 			return newSet;
 		});
 	};
-
-	if (filteredFlows.length === 0) {
-		return (
-			<EmptyState
-				icon={History}
-				title="No execution history"
-				description="This flow hasn't been executed yet, or no runs match the selected filter."
-			/>
-		);
-	}
 
 	return (
 		<TooltipProvider>
@@ -142,10 +132,10 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 							const isExpanded = expandedRows.has(rowIndex);
 							return (
 								<React.Fragment
-									key={`${detailedFlow.name}-${rowIndex}-fragment`}
+									key={`${detailedFlow?.name}-${rowIndex}-fragment`}
 								>
 									<TableRow
-										key={`${detailedFlow.name}-${rowIndex}`}
+										key={`${detailedFlow?.name}-${rowIndex}`}
 										className="hover:bg-muted/50"
 									>
 										<TableCell
@@ -204,7 +194,9 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 										</TableCell>
 									</TableRow>
 									{isExpanded && (
-										<TableRow key={`${detailedFlow.name}-${rowIndex}-expanded`}>
+										<TableRow
+											key={`${detailedFlow?.name}-${rowIndex}-expanded`}
+										>
 											<TableCell colSpan={7} className="bg-muted/30 p-0">
 												<div className="px-4">
 													<Waterfall
@@ -220,6 +212,16 @@ export function FlowHistoryTable({ detailedFlow, statusFilter }: Props) {
 								</React.Fragment>
 							);
 						})}
+						{filteredFlows.length === 0 && (
+							<TableRow>
+								<TableCell
+									colSpan={6}
+									className="text-center text-secondary-foreground text-sm py-6"
+								>
+									No execution history found for the selected filter.
+								</TableCell>
+							</TableRow>
+						)}
 					</TableBody>
 				</Table>
 				<SimplePagination

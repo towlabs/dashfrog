@@ -56,10 +56,16 @@ export function MetricSelector({
 					aria-expanded={comboboxOpen}
 					className="w-full justify-between"
 				>
-					{selectedMetricName ? (() => {
-						const metric = metrics.find((m) => m.name === selectedMetricName);
-						return metric ? `${MetricAggregationLabel[metric.aggregation]} Of ${metric.name}` : "Select a metric...";
-					})() : "Select a metric..."}
+					{selectedMetricName
+						? (() => {
+								const metric = metrics.find(
+									(m) => m.name === selectedMetricName,
+								);
+								return metric
+									? `${MetricAggregationLabel[metric.aggregation]} Of ${metric.name}`
+									: "Select a metric...";
+							})()
+						: "Select a metric..."}
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			</PopoverTrigger>

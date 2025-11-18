@@ -1,7 +1,6 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { useParams } from "react-router-dom";
 import {
 	CaseUpper,
 	CircleDot,
@@ -12,6 +11,7 @@ import {
 	Tags,
 	Timer,
 } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { FlowTable } from "@/components/FlowTable";
 import {
 	Sheet,
@@ -20,7 +20,6 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { useNotebooksStore } from "@/src/stores/notebooks";
-import { useTenantStore } from "@/src/stores/tenant";
 
 export const FlowBlock = createReactBlockSpec(
 	{
@@ -54,15 +53,18 @@ export const FlowBlock = createReactBlockSpec(
 		render: (props) => {
 			const { tenant } = useParams<{ tenant: string }>();
 			const tenantName = tenant ? decodeURIComponent(tenant) : "";
-			const timeWindow = useTenantStore((state) => state.timeWindow);
-			const filters = useTenantStore((state) => state.filters);
 			const settingsOpenBlockId = useNotebooksStore(
 				(state) => state.settingsOpenBlockId,
 			);
 			const closeBlockSettings = useNotebooksStore(
 				(state) => state.closeBlockSettings,
 			);
-
+			const timeWindow = useNotebooksStore(
+				(state) => state.currentNotebook?.timeWindow,
+			);
+			const filters = useNotebooksStore(
+				(state) => state.currentNotebook?.filters,
+			);
 			if (!tenantName) {
 				return (
 					<div className="p-4 border rounded-lg">
@@ -95,177 +97,183 @@ export const FlowBlock = createReactBlockSpec(
 			};
 
 			return (
-				<>
-					<div className="outline-none min-w-0 flex-1">
-						<FlowTable
-							tenant={tenantName}
-							timeWindow={timeWindow}
-							filters={filters}
-							visibleColumns={{
-								name: props.block.props.showName,
-								labels: props.block.props.showLabels,
-								lastStatus: props.block.props.showLastStatus,
-								lastStart: props.block.props.showLastStart,
-								lastEnd: props.block.props.showLastEnd,
-								lastDuration: props.block.props.showLastDuration,
-								runCounts: props.block.props.showRunCounts,
+				timeWindow !== undefined &&
+				filters !== undefined && (
+					<>
+						<div className="outline-none min-w-0 flex-1">
+							<FlowTable
+								tenant={tenantName}
+								timeWindow={timeWindow}
+								filters={filters}
+								visibleColumns={{
+									name: props.block.props.showName,
+									labels: props.block.props.showLabels,
+									lastStatus: props.block.props.showLastStatus,
+									lastStart: props.block.props.showLastStart,
+									lastEnd: props.block.props.showLastEnd,
+									lastDuration: props.block.props.showLastDuration,
+									runCounts: props.block.props.showRunCounts,
+								}}
+							/>
+						</div>
+
+						<Sheet
+							open={isSettingsOpen}
+							onOpenChange={(open) => {
+								if (!open) closeBlockSettings();
 							}}
-						/>
-					</div>
+						>
+							<SheetContent>
+								<SheetHeader>
+									<SheetTitle>Flow Settings</SheetTitle>
+								</SheetHeader>
 
-					<Sheet
-						open={isSettingsOpen}
-						onOpenChange={(open) => {
-							if (!open) closeBlockSettings();
-						}}
-					>
-						<SheetContent>
-							<SheetHeader>
-								<SheetTitle>Flow Settings</SheetTitle>
-							</SheetHeader>
-
-							<div className="mt-6">
-								<div className="space-y-1">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-										Columns
-									</h3>
+								<div className="mt-6">
 									<div className="space-y-1">
-										<div
-											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
-											onClick={() =>
-												handleColumnToggle("showName", !props.block.props.showName)
-											}
-										>
-											<div className="flex items-center gap-2">
-												<CaseUpper className="size-4" strokeWidth={2.5} />
-												<span className="text-sm">Name</span>
+										<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+											Columns
+										</h3>
+										<div className="space-y-1">
+											<div
+												className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+												onClick={() =>
+													handleColumnToggle(
+														"showName",
+														!props.block.props.showName,
+													)
+												}
+											>
+												<div className="flex items-center gap-2">
+													<CaseUpper className="size-4" strokeWidth={2.5} />
+													<span className="text-sm">Name</span>
+												</div>
+												{props.block.props.showName ? (
+													<Eye className="size-4" strokeWidth={2.5} />
+												) : (
+													<EyeOff className="size-4" strokeWidth={2.5} />
+												)}
 											</div>
-											{props.block.props.showName ? (
-												<Eye className="size-4" strokeWidth={2.5} />
-											) : (
-												<EyeOff className="size-4" strokeWidth={2.5} />
-											)}
-										</div>
-										<div
-											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
-											onClick={() =>
-												handleColumnToggle(
-													"showLabels",
-													!props.block.props.showLabels,
-												)
-											}
-										>
-											<div className="flex items-center gap-2">
-												<Tags className="size-4" strokeWidth={2.5} />
-												<span className="text-sm">Labels</span>
+											<div
+												className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+												onClick={() =>
+													handleColumnToggle(
+														"showLabels",
+														!props.block.props.showLabels,
+													)
+												}
+											>
+												<div className="flex items-center gap-2">
+													<Tags className="size-4" strokeWidth={2.5} />
+													<span className="text-sm">Labels</span>
+												</div>
+												{props.block.props.showLabels ? (
+													<Eye className="size-4" strokeWidth={2.5} />
+												) : (
+													<EyeOff className="size-4" strokeWidth={2.5} />
+												)}
 											</div>
-											{props.block.props.showLabels ? (
-												<Eye className="size-4" strokeWidth={2.5} />
-											) : (
-												<EyeOff className="size-4" strokeWidth={2.5} />
-											)}
-										</div>
-										<div
-											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
-											onClick={() =>
-												handleColumnToggle(
-													"showLastStatus",
-													!props.block.props.showLastStatus,
-												)
-											}
-										>
-											<div className="flex items-center gap-2">
-												<CircleDot className="size-4" strokeWidth={2.5} />
-												<span className="text-sm">Last Status</span>
+											<div
+												className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+												onClick={() =>
+													handleColumnToggle(
+														"showLastStatus",
+														!props.block.props.showLastStatus,
+													)
+												}
+											>
+												<div className="flex items-center gap-2">
+													<CircleDot className="size-4" strokeWidth={2.5} />
+													<span className="text-sm">Last Status</span>
+												</div>
+												{props.block.props.showLastStatus ? (
+													<Eye className="size-4" strokeWidth={2.5} />
+												) : (
+													<EyeOff className="size-4" strokeWidth={2.5} />
+												)}
 											</div>
-											{props.block.props.showLastStatus ? (
-												<Eye className="size-4" strokeWidth={2.5} />
-											) : (
-												<EyeOff className="size-4" strokeWidth={2.5} />
-											)}
-										</div>
-										<div
-											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
-											onClick={() =>
-												handleColumnToggle(
-													"showLastStart",
-													!props.block.props.showLastStart,
-												)
-											}
-										>
-											<div className="flex items-center gap-2">
-												<Clock className="size-4" strokeWidth={2.5} />
-												<span className="text-sm">Last Start</span>
+											<div
+												className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+												onClick={() =>
+													handleColumnToggle(
+														"showLastStart",
+														!props.block.props.showLastStart,
+													)
+												}
+											>
+												<div className="flex items-center gap-2">
+													<Clock className="size-4" strokeWidth={2.5} />
+													<span className="text-sm">Last Start</span>
+												</div>
+												{props.block.props.showLastStart ? (
+													<Eye className="size-4" strokeWidth={2.5} />
+												) : (
+													<EyeOff className="size-4" strokeWidth={2.5} />
+												)}
 											</div>
-											{props.block.props.showLastStart ? (
-												<Eye className="size-4" strokeWidth={2.5} />
-											) : (
-												<EyeOff className="size-4" strokeWidth={2.5} />
-											)}
-										</div>
-										<div
-											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
-											onClick={() =>
-												handleColumnToggle(
-													"showLastEnd",
-													!props.block.props.showLastEnd,
-												)
-											}
-										>
-											<div className="flex items-center gap-2">
-												<Clock className="size-4" strokeWidth={2.5} />
-												<span className="text-sm">Last End</span>
+											<div
+												className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+												onClick={() =>
+													handleColumnToggle(
+														"showLastEnd",
+														!props.block.props.showLastEnd,
+													)
+												}
+											>
+												<div className="flex items-center gap-2">
+													<Clock className="size-4" strokeWidth={2.5} />
+													<span className="text-sm">Last End</span>
+												</div>
+												{props.block.props.showLastEnd ? (
+													<Eye className="size-4" strokeWidth={2.5} />
+												) : (
+													<EyeOff className="size-4" strokeWidth={2.5} />
+												)}
 											</div>
-											{props.block.props.showLastEnd ? (
-												<Eye className="size-4" strokeWidth={2.5} />
-											) : (
-												<EyeOff className="size-4" strokeWidth={2.5} />
-											)}
-										</div>
-										<div
-											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
-											onClick={() =>
-												handleColumnToggle(
-													"showLastDuration",
-													!props.block.props.showLastDuration,
-												)
-											}
-										>
-											<div className="flex items-center gap-2">
-												<Timer className="size-4" strokeWidth={2.5} />
-												<span className="text-sm">Last Duration</span>
+											<div
+												className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+												onClick={() =>
+													handleColumnToggle(
+														"showLastDuration",
+														!props.block.props.showLastDuration,
+													)
+												}
+											>
+												<div className="flex items-center gap-2">
+													<Timer className="size-4" strokeWidth={2.5} />
+													<span className="text-sm">Last Duration</span>
+												</div>
+												{props.block.props.showLastDuration ? (
+													<Eye className="size-4" strokeWidth={2.5} />
+												) : (
+													<EyeOff className="size-4" strokeWidth={2.5} />
+												)}
 											</div>
-											{props.block.props.showLastDuration ? (
-												<Eye className="size-4" strokeWidth={2.5} />
-											) : (
-												<EyeOff className="size-4" strokeWidth={2.5} />
-											)}
-										</div>
-										<div
-											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
-											onClick={() =>
-												handleColumnToggle(
-													"showRunCounts",
-													!props.block.props.showRunCounts,
-												)
-											}
-										>
-											<div className="flex items-center gap-2">
-												<Hash className="size-4" strokeWidth={2.5} />
-												<span className="text-sm">Run Counts</span>
+											<div
+												className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+												onClick={() =>
+													handleColumnToggle(
+														"showRunCounts",
+														!props.block.props.showRunCounts,
+													)
+												}
+											>
+												<div className="flex items-center gap-2">
+													<Hash className="size-4" strokeWidth={2.5} />
+													<span className="text-sm">Run Counts</span>
+												</div>
+												{props.block.props.showRunCounts ? (
+													<Eye className="size-4" strokeWidth={2.5} />
+												) : (
+													<EyeOff className="size-4" strokeWidth={2.5} />
+												)}
 											</div>
-											{props.block.props.showRunCounts ? (
-												<Eye className="size-4" strokeWidth={2.5} />
-											) : (
-												<EyeOff className="size-4" strokeWidth={2.5} />
-											)}
 										</div>
 									</div>
 								</div>
-							</div>
-						</SheetContent>
-					</Sheet>
-				</>
+							</SheetContent>
+						</Sheet>
+					</>
+				)
 			);
 		},
 	},

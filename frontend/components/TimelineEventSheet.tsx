@@ -3,9 +3,16 @@
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 import * as locales from "@blocknote/core/locales";
-import { useCreateBlockNote } from "@blocknote/react";
+import {
+	AddBlockButton,
+	DragHandleButton,
+	DragHandleMenu,
+	SideMenu,
+	SideMenuController,
+	SideMenuProps,
+} from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
-import { Clock } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { useEffect } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { Separator } from "@/components/ui/separator";
@@ -19,6 +26,8 @@ import {
 } from "@/components/ui/sheet";
 import { formatTimeAgo } from "@/src/lib/formatters";
 import type { TimelineEvent } from "@/src/types/timeline";
+import { customEditor } from "@/src/utils/editor";
+import React from "react";
 
 interface TimelineEventSheetProps {
 	event: TimelineEvent | null;
@@ -32,7 +41,7 @@ export function TimelineEventSheet({
 	onOpenChange,
 }: TimelineEventSheetProps) {
 	// Create BlockNote editor instance
-	const editor = useCreateBlockNote({
+	const editor = customEditor({
 		initialContent: undefined,
 		placeholders: {
 			...locales.en.placeholders,
@@ -40,6 +49,15 @@ export function TimelineEventSheet({
 			default: "Write or press '/' for commands",
 		},
 	});
+
+	const customSideMenu = React.useCallback((props: SideMenuProps) => {
+		return (
+			<SideMenu {...props}>
+				<AddBlockButton {...props} />
+				<DragHandleButton {...props} dragHandleMenu={DragHandleMenu} />
+			</SideMenu>
+		);
+	}, []);
 
 	useEffect(() => {
 		const blocks = editor.tryParseMarkdownToBlocks(event?.markdown || "");
@@ -53,14 +71,16 @@ export function TimelineEventSheet({
 			<SheetContent className="sm:max-w-4xl overflow-y-auto py-4">
 				{/* Timestamp at top right */}
 				<div className="flex items-center justify-end gap-1 text-s text-muted-foreground mb-4">
-					<Clock className="h-4 w-4" />
-					{formatTimeAgo(event.eventDt)}
+					<div className="justify-between text-sm text-muted-foreground flex items-center gap-0">
+						<CalendarIcon className="mr-2 h-4 w-4" />
+						{formatTimeAgo(event.eventDt)}
+					</div>
 				</div>
 
-				<SheetHeader>
-					<div className="text-5xl mb-3">{event.emoji}</div>
+				<SheetHeader className="mx-13">
+					<div className="text-3xl mb-1">{event.emoji}</div>
 					<SheetTitle>
-						<h1 className="text-2xl font-bold">{event.name}</h1>
+						<span className="text-2xl font-bold">{event.name}</span>
 					</SheetTitle>
 					<SheetDescription className="flex items-center gap-2 flex-wrap">
 						{Object.entries(event.labels).map(([key, value]) => (
@@ -70,13 +90,15 @@ export function TimelineEventSheet({
 				</SheetHeader>
 
 				{/* Separator */}
-				<div className="my-6">
+				<div className="my-6 mx-13">
 					<Separator />
 				</div>
 
 				{/* BlockNote Editor */}
 				<div>
-					<BlockNoteView editor={editor} theme="light" />
+					<BlockNoteView editor={editor} theme="light" sideMenu={false}>
+						<SideMenuController sideMenu={customSideMenu} />
+					</BlockNoteView>
 				</div>
 			</SheetContent>
 		</Sheet>

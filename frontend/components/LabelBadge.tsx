@@ -45,7 +45,7 @@ export function LabelBadge({
 				open={isEditing}
 				onOpenChange={(open: boolean) => {
 					setIsEditing(open);
-					if (!labelValue && !open) {
+					if (labelValue && !open) {
 						onValueChange(labelValue);
 					}
 				}}

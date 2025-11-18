@@ -1,12 +1,12 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { Notebooks } from "@/src/services/api/notebooks";
-import { Flows, toFlow } from "@/src/services/api/flows";
+import { Flows } from "@/src/services/api/flows";
 import { Metrics } from "@/src/services/api/metrics";
-import type { Notebook } from "@/src/types/notebook";
+import { Notebooks } from "@/src/services/api/notebooks";
+import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
 import type { Metric } from "@/src/types/metric";
-import type { Filter } from "@/src/types/filter";
+import type { Notebook } from "@/src/types/notebook";
 
 // Debounce timeout storage (outside of Zustand state)
 let saveTimeout: NodeJS.Timeout | null = null;
@@ -26,14 +26,27 @@ interface NotebooksState {
 	openBlockSettings: (blockId: string) => void;
 	closeBlockSettings: () => void;
 	fetchNotebooks: (tenant: string) => Promise<void>;
-	fetchFlows: (tenant: string, start: Date, end: Date) => Promise<void>;
-	fetchMetrics: (tenant: string, start: Date, end: Date) => Promise<void>;
+	fetchFlows: (
+		tenant: string,
+		start: Date,
+		end: Date,
+		filters: Filter[],
+	) => Promise<void>;
+	fetchMetrics: (
+		tenant: string,
+		start: Date,
+		end: Date,
+		filters: Filter[],
+	) => Promise<void>;
 	updateNotebook: (
 		tenant: string,
 		notebook: Notebook,
 		updates: Partial<Notebook>,
 	) => void;
-	createNotebook: (tenant: string, notebook: Omit<Notebook, "id">) => Notebook;
+	createNotebook: (
+		tenant: string,
+		notebook: Omit<Notebook, "id" | "timeWindow" | "filters">,
+	) => Notebook;
 	deleteNotebook: (tenant: string, notebookId: string) => Promise<void>;
 }
 
@@ -50,17 +63,22 @@ export const useNotebooksStore = create<NotebooksState>()(
 			loading: true,
 			error: null,
 			settingsOpenBlockId: null,
+
 			openBlockSettings: (blockId: string) => {
 				set({ settingsOpenBlockId: blockId });
 			},
 			closeBlockSettings: () => {
 				set({ settingsOpenBlockId: null });
 			},
-			fetchFlows: async (tenant: string, start: Date, end: Date) => {
+			fetchFlows: async (
+				tenant: string,
+				start: Date,
+				end: Date,
+				filters: Filter[],
+			) => {
 				set({ flowsLoading: true });
 				try {
-					const response = await Flows.getByTenant(tenant, start, end, []);
-					const flows = response.data.map(toFlow);
+					const flows = await Flows.getByTenant(tenant, start, end, filters);
 					set({ flows, flowsLoading: false });
 				} catch (error) {
 					console.error("Failed to fetch flows:", error);
@@ -91,7 +109,11 @@ export const useNotebooksStore = create<NotebooksState>()(
 				const currentNotebook =
 					(get().notebooks[tenant] || []).find((nb) => nb.id === notebookId) ||
 					null;
-				set({ currentNotebook });
+				if (!currentNotebook) return null;
+				set({
+					currentNotebook,
+				});
+
 				return currentNotebook;
 			},
 			fetchNotebooks: async (tenant: string) => {
@@ -149,35 +171,28 @@ export const useNotebooksStore = create<NotebooksState>()(
 				}, 200);
 			},
 
-			createNotebook: (
-				tenant: string,
-				notebook: Omit<Notebook, "id">,
-			): Notebook => {
+			createNotebook: (tenant: string, notebook: Notebook): Notebook => {
 				const { notebooks } = get();
 				const tenantNotebooks = notebooks[tenant] || [];
 
 				// Generate UUID upfront
-				const newNotebook: Notebook = {
-					...notebook,
-					id: crypto.randomUUID(),
-				};
 
 				// Update state immediately with loading = true
 				set({
 					notebookCreating: true,
 					notebooks: {
 						...notebooks,
-						[tenant]: [...tenantNotebooks, newNotebook],
+						[tenant]: [...tenantNotebooks, notebook],
 					},
 				});
 
 				// Call API in background
-				Notebooks.create(tenant, newNotebook).then(() => {
+				Notebooks.create(tenant, notebook).then(() => {
 					set({ notebookCreating: false });
 				});
 
 				// Return immediately for navigation
-				return newNotebook;
+				return notebook;
 			},
 
 			deleteNotebook: async (tenant: string, notebookId: string) => {

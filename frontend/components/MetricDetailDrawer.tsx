@@ -1,5 +1,3 @@
-"use client";
-
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MetricHistoryChart } from "@/components/MetricHistoryChart";
@@ -8,8 +6,6 @@ import {
 	Drawer,
 	DrawerClose,
 	DrawerContent,
-	DrawerDescription,
-	DrawerFooter,
 	DrawerHeader,
 	DrawerTitle,
 } from "@/components/ui/drawer";
@@ -18,28 +14,31 @@ import {
 	Metrics,
 } from "@/src/services/api/metrics";
 import { useTenantStore } from "@/src/stores/tenant";
+import type { Filter } from "@/src/types/filter";
 import type { Metric } from "@/src/types/metric";
 import { MetricAggregationLabel } from "@/src/types/metric";
-import { resolveTimeWindow } from "@/src/types/timewindow";
+import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 type MetricDetailDrawerProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	metric: Metric;
+	timeWindow: TimeWindow;
+	filters: Filter[];
 };
 
 export function MetricDetailDrawer({
 	open,
 	onOpenChange,
 	metric,
+	timeWindow,
+	filters,
 }: MetricDetailDrawerProps) {
 	const [historyData, setHistoryData] = useState<MetricHistoryResponse | null>(
 		null,
 	);
 	const [loading, setLoading] = useState(false);
 	const currentTenant = useTenantStore((state) => state.currentTenant);
-	const timeWindow = useTenantStore((state) => state.timeWindow);
-	const filters = useTenantStore((state) => state.filters);
 
 	useEffect(() => {
 		if (!open || !currentTenant) return;

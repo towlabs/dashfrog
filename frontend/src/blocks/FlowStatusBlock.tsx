@@ -1,19 +1,11 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import {
-	Check,
-	CheckCircle2,
-	ChevronsUpDown,
-	CircleCheck,
-	RectangleEllipsis,
-	Workflow,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { RectangleEllipsis } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
-import { FlowStatus } from "@/components/FlowStatus";
-import { Button } from "@/components/ui/button";
+import { FlowSelector } from "@/components/FlowSelector";
+import { LabelBadge } from "@/components/LabelBadge";
 import {
 	Card,
 	CardContent,
@@ -22,21 +14,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import {
 	Sheet,
 	SheetContent,
@@ -44,19 +23,15 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
-import { Flows, toFlow } from "@/src/services/api/flows";
-import { useNotebooksStore } from "@/src/stores/notebooks";
-import { useTenantStore } from "@/src/stores/tenant";
-import type { Flow, FlowHistory } from "@/src/types/flow";
-import { resolveTimeWindow } from "@/src/types/timewindow";
 import { cn } from "@/lib/utils";
-import { LabelBadge } from "@/components/LabelBadge";
+import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
+import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Flow } from "@/src/types/flow";
 
 const flowStatusColors = {
-	success: "bg-green-700",
-	failure: "bg-red-700",
-	running: "bg-blue-700",
+	success: "bg-[#5cb660]",
+	failure: "bg-[#e56458]",
+	running: "bg-[#2883df]",
 };
 
 export const FlowStatusBlock = createReactBlockSpec(
@@ -76,8 +51,6 @@ export const FlowStatusBlock = createReactBlockSpec(
 		render: (props) => {
 			const { tenant } = useParams<{ tenant: string }>();
 			const tenantName = tenant ? decodeURIComponent(tenant) : "";
-			const timeWindow = useTenantStore((state) => state.timeWindow);
-			const filters = useTenantStore((state) => state.filters);
 			const settingsOpenBlockId = useNotebooksStore(
 				(state) => state.settingsOpenBlockId,
 			);
@@ -87,36 +60,8 @@ export const FlowStatusBlock = createReactBlockSpec(
 			const flows = useNotebooksStore((state) => state.flows);
 			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
 
-			const [flowHistories, setFlowHistories] = useState<FlowHistory[]>([]);
-			const [loadingHistory, setLoadingHistory] = useState(false);
-			const [comboboxOpen, setComboboxOpen] = useState(false);
-
 			const flowName = props.block.props.flowName as string;
 			const title = props.block.props.title as string;
-
-			// Fetch selected flow details when flowName is set
-			useEffect(() => {
-				const fetchFlowHistory = async () => {
-					if (!tenantName || !flowName) {
-						setFlowHistories([]);
-						return;
-					}
-
-					setLoadingHistory(true);
-					const { start, end } = resolveTimeWindow(timeWindow);
-					const flowHistories = await Flows.getLastFlow(
-						tenantName,
-						flowName,
-						start,
-						end,
-						filters,
-					);
-					setFlowHistories(flowHistories);
-					setLoadingHistory(false);
-				};
-
-				void fetchFlowHistory();
-			}, [tenantName, flowName, timeWindow, filters]);
 
 			if (!tenantName) {
 				return (
@@ -151,7 +96,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 					);
 				}
 
-				if (loadingHistory) {
+				if (flowsLoading) {
 					return (
 						<Card className="@container/card shadow-none">
 							<CardHeader>
@@ -164,47 +109,60 @@ export const FlowStatusBlock = createReactBlockSpec(
 					);
 				}
 
-				if (flowHistories.length === 0) {
+				if (flows.length === 0) {
 					return (
-						<EmptyState
-							icon={RectangleEllipsis}
-							title="Flow not found"
-							description="No flow found for the selected time window."
-						/>
+						<div className="outline-none flex flex-col gap-1">
+							<Card className="@container/card shadow-none">
+								<CardHeader>
+									<CardDescription className="text-xl font-semibold flex items-baseline gap-2">
+										<div
+											className={cn(
+												"w-2.5 h-2.5 rounded-full bg-muted-foreground",
+											)}
+										/>
+										{title || flowName}
+									</CardDescription>
+									<CardTitle className="text-secondary-foreground text-sm font-normal">
+										No runs
+									</CardTitle>
+								</CardHeader>
+								<CardFooter className="flex-col items-start gap-1.5 text-sm p-3 pt-0"></CardFooter>
+							</Card>
+						</div>
 					);
 				}
 
 				return (
 					<div className="outline-none flex flex-col gap-1">
-						{flowHistories.map((flowHistory) => renderFlowHistory(flowHistory))}
+						{flows.map((flow) => renderFlowHistory(flow))}
 					</div>
 				);
 			};
 
-			const renderFlowHistory = (flowHistory: FlowHistory) => {
+			const renderFlowHistory = (flow: Flow) => {
 				return (
-					<Card className="@container/card shadow-none">
+					<Card className="@container/card shadow-none" key={flow.groupId}>
 						<CardHeader>
 							<CardDescription className="text-xl font-semibold flex items-baseline gap-2">
 								<div
 									className={cn(
 										"w-2.5 h-2.5 rounded-full",
-										flowStatusColors[flowHistory.status],
+										flowStatusColors[flow.lastRunStatus],
 									)}
 								/>
 								{title || flowName}
 							</CardDescription>
 							<CardTitle className="text-secondary-foreground text-sm font-normal">
 								Duration:{" "}
-								{formatDuration(flowHistory.startTime, flowHistory.endTime)}
-								{flowHistory.endTime && (
-									<> - {formatTimeAgo(flowHistory.endTime)}</>
+								{formatDuration(flow.lastRunStartedAt, flow.lastRunEndedAt)}
+								{flow.lastRunEndedAt && (
+									<> - {formatTimeAgo(flow.lastRunEndedAt)}</>
 								)}
 							</CardTitle>
 						</CardHeader>
 						<CardFooter className="flex-col items-start gap-1.5 text-sm p-3 pt-0">
 							<div className="flex gap-1">
-								{Object.entries(flowHistory.labels).map(([key, value]) => (
+								{Object.entries(flow.labels).map(([key, value]) => (
 									<div key={key}>
 										<LabelBadge labelKey={key} labelValue={value} readonly />
 									</div>
@@ -249,65 +207,12 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 								<div className="space-y-3">
 									<Label className="text-sm font-medium">Flow</Label>
-									{flowsLoading ? (
-										<div className="text-sm text-muted-foreground">
-											Loading flows...
-										</div>
-									) : flows.length === 0 ? (
-										<div className="text-sm text-muted-foreground">
-											No flows available
-										</div>
-									) : (
-										<Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-											<PopoverTrigger asChild>
-												<Button
-													variant="outline"
-													role="combobox"
-													aria-expanded={comboboxOpen}
-													className="w-full justify-between"
-												>
-													{flowName
-														? flows.find((flow) => flow.name === flowName)?.name
-														: "Select a flow..."}
-													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-												</Button>
-											</PopoverTrigger>
-											<PopoverContent className="w-[400px] p-0">
-												<Command>
-													<CommandInput placeholder="Search flows..." />
-													<CommandList>
-														<CommandEmpty>No flow found.</CommandEmpty>
-														<CommandGroup>
-															{flows.map((flow) => (
-																<CommandItem
-																	key={flow.name}
-																	value={flow.name}
-																	onSelect={(currentValue) => {
-																		handleFlowSelect(
-																			currentValue === flowName
-																				? ""
-																				: currentValue,
-																		);
-																		setComboboxOpen(false);
-																	}}
-																>
-																	<Check
-																		className={cn(
-																			"mr-2 h-4 w-4",
-																			flowName === flow.name
-																				? "opacity-100"
-																				: "opacity-0",
-																		)}
-																	/>
-																	{flow.name}
-																</CommandItem>
-															))}
-														</CommandGroup>
-													</CommandList>
-												</Command>
-											</PopoverContent>
-										</Popover>
-									)}
+									<FlowSelector
+										flows={flows}
+										flowsLoading={flowsLoading}
+										selectedFlowName={flowName}
+										onFlowSelect={handleFlowSelect}
+									/>
 								</div>
 							</div>
 						</SheetContent>

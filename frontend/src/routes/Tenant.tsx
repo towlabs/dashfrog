@@ -6,7 +6,7 @@ import {
 	Home,
 	Workflow,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { FlowTable } from "@/components/FlowTable";
 import { MetricsTable } from "@/components/MetricsTable";
@@ -15,14 +15,17 @@ import { Timeline } from "@/components/Timeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useTenantStore } from "@/src/stores/tenant";
+import type { Filter } from "../types/filter";
+import type { TimeWindow } from "../types/timewindow";
 
 export default function TenantPage() {
 	const { tenant } = useParams<{ tenant: string }>();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const timeWindow = useTenantStore((state) => state.timeWindow);
-	const filters = useTenantStore((state) => state.filters);
-	const setTimeWindow = useTenantStore((state) => state.setTimeWindow);
-	const setFilters = useTenantStore((state) => state.setFilters);
+	const [timeWindow, setTimeWindow] = useState<TimeWindow>({
+		type: "relative",
+		metadata: { value: "24h" },
+	});
+	const [filters, setFilters] = useState<Filter[]>([]);
 	const setCurrentTenant = useTenantStore((state) => state.setCurrentTenant);
 
 	// Get labels for filter dropdown
