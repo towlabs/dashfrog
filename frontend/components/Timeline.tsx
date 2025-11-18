@@ -142,17 +142,14 @@ export function Timeline({
 										<Tooltip>
 											<TooltipTrigger asChild>
 												<div
-													className="absolute right-0 p-1 rounded border bg-background opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10 shadow-xs flex items-center gap-1"
+													className="absolute -right-4 p-1 rounded-l-lg border border-r-0 bg-background group-hover:opacity-100 transition-opacity cursor-pointer z-10 flex items-center gap-1 opacity-0 shadow-xs "
 													onClick={(e) => {
 														e.stopPropagation();
 														handleEventClick(event);
 													}}
 												>
-													<PanelRight
-														className="size-4 text-secondary-foreground"
-														strokeWidth={2.5}
-													/>
-													<span className="text-xs text-secondary-foreground ">
+													<PanelRight className="size-5 text-muted-foreground" />
+													<span className="text-xs text-muted-foreground ">
 														Details
 													</span>
 												</div>
