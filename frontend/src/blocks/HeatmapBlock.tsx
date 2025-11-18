@@ -90,37 +90,22 @@ export const HeatmapBlock = createReactBlockSpec(
 			const closeBlockSettings = useNotebooksStore(
 				(state) => state.closeBlockSettings,
 			);
-			const openBlockSettings = useNotebooksStore(
-				(state) => state.openBlockSettings,
-			);
+
 			const flows = useNotebooksStore((state) => state.flows);
 			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
 
 			const [loading, setLoading] = useState(false);
-			const [selectedFlow, setSelectedFlow] = useState<{
-				name: string;
-			} | null>(null);
+
 			const [flowHistories, setFlowHistories] = useState<FlowHistory[]>([]);
 			const [labelGroups, setLabelGroups] = useState<LabelGroupData[]>([]);
 
 			const flowName = props.block.props.flowName as string;
 
-			// Update selected flow when flowName or available flows change
-			useEffect(() => {
-				if (!flowName || flows.length === 0) {
-					setSelectedFlow(null);
-					return;
-				}
-
-				const flow = flows.find((f) => f.name === flowName);
-				setSelectedFlow(flow || null);
-			}, [flowName, flows]);
-
 			// Fetch flow histories when flow is selected
 			useEffect(() => {
 				if (
 					!tenantName ||
-					!selectedFlow ||
+					!flowName ||
 					timeWindow === undefined ||
 					filters === undefined
 				) {
@@ -135,7 +120,7 @@ export const HeatmapBlock = createReactBlockSpec(
 						const { start, end } = resolveTimeWindow(timeWindow);
 						const response = await Flows.getDetailedFlow(
 							tenantName,
-							selectedFlow.name,
+							flowName,
 							start,
 							end,
 							filters,
@@ -150,7 +135,7 @@ export const HeatmapBlock = createReactBlockSpec(
 				};
 
 				void fetchFlowHistories();
-			}, [tenantName, selectedFlow, timeWindow, filters]);
+			}, [tenantName, flowName, timeWindow, filters]);
 
 			// Process flow histories into label groups
 			useEffect(() => {
@@ -242,18 +227,6 @@ export const HeatmapBlock = createReactBlockSpec(
 
 			// Render content based on state
 			const renderContent = () => {
-				if (!flowName) {
-					return (
-						<EmptyState
-							icon={BarChart3}
-							title="No flow selected"
-							description="Select a flow to view its heatmap."
-							onClick={() => openBlockSettings(props.block.id)}
-							className="cursor-pointer"
-						/>
-					);
-				}
-
 				if (loading) {
 					return (
 						<div className="space-y-2">
@@ -282,7 +255,9 @@ export const HeatmapBlock = createReactBlockSpec(
 									<div key={labelGroup.labelKey} className="space-y-1">
 										{/* Show flow name on first row */}
 										{index === 0 && (
-											<div className="text-sm font-medium mb-1">{flowName}</div>
+											<div className="text-m font-medium mb-1">
+												{flowName || "N/A"}
+											</div>
 										)}
 										<div className="flex items-center gap-2">
 											<div className="flex gap-[2px] flex-1">
@@ -367,10 +342,10 @@ export const HeatmapBlock = createReactBlockSpec(
 									</div>
 								);
 							})}
-							{!selectedFlow && (
+							{!flowName && (
 								<div className="space-y-1">
 									{/* Show flow name on first row */}
-									{<div className="text-sm font-medium mb-1">{flowName}</div>}
+									<div className="text-m font-medium mb-1">N/A</div>
 									<div className="flex items-center gap-2">
 										<div className="flex gap-[2px] flex-1">
 											{days.map((day) => {

@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Flow } from "@/src/types/flow";
+import React from "react";
 
 const flowStatusColors = {
 	success: "bg-[#5cb660]",
@@ -63,6 +64,10 @@ export const FlowStatusBlock = createReactBlockSpec(
 			const flowName = props.block.props.flowName as string;
 			const title = props.block.props.title as string;
 
+			const selectedFlows = React.useMemo(() => {
+				return flows.filter((flow) => flow.name === flowName);
+			}, [flows, flowName]);
+
 			if (!tenantName) {
 				return (
 					<div className="p-4 border rounded-lg">
@@ -86,16 +91,6 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 			// Render content based on state
 			const renderContent = () => {
-				if (!flowName) {
-					return (
-						<EmptyState
-							icon={RectangleEllipsis}
-							title="No flow selected"
-							description="Select a flow to view its status."
-						/>
-					);
-				}
-
 				if (flowsLoading) {
 					return (
 						<Card className="@container/card shadow-none">
@@ -109,7 +104,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 					);
 				}
 
-				if (flows.length === 0) {
+				if (selectedFlows.length === 0) {
 					return (
 						<div className="outline-none flex flex-col gap-1">
 							<Card className="@container/card shadow-none">
@@ -120,7 +115,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 												"w-2.5 h-2.5 rounded-full bg-muted-foreground",
 											)}
 										/>
-										{title || flowName}
+										{title || flowName || "N/A"}
 									</CardDescription>
 									<CardTitle className="text-secondary-foreground text-sm font-normal">
 										No runs
@@ -134,7 +129,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 				return (
 					<div className="outline-none flex flex-col gap-1">
-						{flows.map((flow) => renderFlowHistory(flow))}
+						{selectedFlows.map((flow) => renderFlowHistory(flow))}
 					</div>
 				);
 			};
