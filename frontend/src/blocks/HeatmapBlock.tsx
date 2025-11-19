@@ -4,7 +4,7 @@ import { createReactBlockSpec } from "@blocknote/react";
 import { addDays, formatISO } from "date-fns";
 import { groupBy } from "lodash";
 import { BarChart3 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { FlowDetail } from "@/components/FlowDetail";
@@ -26,7 +26,7 @@ import {
 import { Flows } from "@/src/services/api/flows";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Flow, FlowHistory } from "@/src/types/flow";
-import { resolveTimeWindow } from "@/src/types/timewindow";
+import { resolveTimeWindow, TimeWindow } from "@/src/types/timewindow";
 
 interface DayData {
 	date: Date;
@@ -103,6 +103,16 @@ export const HeatmapBlock = createReactBlockSpec(
 			const [selectedLabels, setSelectedLabels] = useState<
 				Record<string, string>
 			>({});
+			const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+
+			const selectedTimeWindow: TimeWindow | null = useMemo(() => {
+				if (!selectedDay) return null;
+				const start = new Date(selectedDay);
+				const end = new Date(selectedDay);
+				start.setHours(0, 0, 0, 0);
+				end.setHours(23, 59, 59, 999);
+				return { type: "absolute", metadata: { start, end } };
+			}, [selectedDay]);
 
 			const flowName = props.block.props.flowName as string;
 
@@ -209,8 +219,9 @@ export const HeatmapBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleDayClick = (labels: Record<string, string>) => {
+			const handleDayClick = (labels: Record<string, string>, day: Date) => {
 				setSelectedLabels(labels);
+				setSelectedDay(day);
 				setDetailOpen(true);
 			};
 
@@ -284,7 +295,7 @@ export const HeatmapBlock = createReactBlockSpec(
 																	className="w-3 h-8 rounded-sm transition-opacity hover:opacity-80 cursor-pointer"
 																	style={{ backgroundColor: color }}
 																	onClick={() =>
-																		handleDayClick(labelGroup.labels)
+																		handleDayClick(labelGroup.labels, day)
 																	}
 																/>
 															</TooltipTrigger>
@@ -427,12 +438,12 @@ export const HeatmapBlock = createReactBlockSpec(
 					</Sheet>
 
 					{/* Flow Detail Sheet */}
-					{timeWindow && (
+					{selectedTimeWindow && (
 						<FlowDetail
 							labels={selectedLabels}
 							flowName={flowName}
 							open={detailOpen}
-							timeWindow={timeWindow}
+							timeWindow={selectedTimeWindow}
 							onOpenChange={setDetailOpen}
 						/>
 					)}
