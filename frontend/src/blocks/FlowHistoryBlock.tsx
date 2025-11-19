@@ -2,9 +2,10 @@
 
 import { createReactBlockSpec } from "@blocknote/react";
 import { ListCollapse } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { FlowHistoryTable } from "@/components/FlowHistoryTable";
 import { FlowSelector } from "@/components/FlowSelector";
 import type { StatusFilter } from "@/components/FlowStatusButtons";
@@ -17,7 +18,9 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Flows } from "@/src/services/api/flows";
+import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Filter } from "@/src/types/filter";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 import { FlowHistory } from "../types/flow";
 
@@ -30,6 +33,9 @@ export const FlowHistoryBlock = createReactBlockSpec(
 			},
 			statusFilter: {
 				default: "all" as StatusFilter,
+			},
+			blockFilters: {
+				default: "[]",
 			},
 		},
 		content: "none",
@@ -52,13 +58,30 @@ export const FlowHistoryBlock = createReactBlockSpec(
 			const timeWindow = useNotebooksStore(
 				(state) => state.currentNotebook?.timeWindow,
 			);
-			const filters = useNotebooksStore(
+			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
+			const labels = useLabelsStore((state) => state.labels);
+
 			const [flowHistory, setFlowHistory] = useState<FlowHistory[]>([]);
 			const [loading, setLoading] = useState(false);
 
 			const flowName = props.block.props.flowName as string;
+
+			// Parse block filters from JSON string
+			const blockFilters: Filter[] = useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.blockFilters as string);
+				} catch {
+					return [];
+				}
+			}, [props.block.props.blockFilters]);
+
+			// Merge notebook filters with block filters
+			const filters = useMemo(
+				() => [...(notebookFilters || []), ...blockFilters],
+				[notebookFilters, blockFilters],
+			);
 
 			// Fetch flow history when flowName is set
 			useEffect(() => {
@@ -116,6 +139,15 @@ export const FlowHistoryBlock = createReactBlockSpec(
 				});
 			};
 
+			const handleFiltersChange = (newFilters: Filter[]) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						...props.block.props,
+						blockFilters: JSON.stringify(newFilters),
+					},
+				});
+			};
+
 			// Render content based on state
 			const renderContent = () => {
 				if (!flowName) {
@@ -162,6 +194,17 @@ export const FlowHistoryBlock = createReactBlockSpec(
 										flowsLoading={flowsLoading}
 										selectedFlowName={flowName}
 										onFlowSelect={handleFlowSelect}
+									/>
+								</div>
+
+								<div className="space-y-3 mt-6">
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Additional Filters
+									</h3>
+									<FilterBadgesEditor
+										availableLabels={labels}
+										filters={blockFilters}
+										onFiltersChange={handleFiltersChange}
 									/>
 								</div>
 							</div>

@@ -2,7 +2,9 @@
 
 import { createReactBlockSpec } from "@blocknote/react";
 import { Calendar, CaseUpper, Eye, EyeOff, Tags } from "lucide-react";
+import React from "react";
 import { useParams } from "react-router-dom";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { Timeline } from "@/components/Timeline";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -11,7 +13,9 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Filter } from "@/src/types/filter";
 
 export const TimelineBlock = createReactBlockSpec(
 	{
@@ -25,6 +29,9 @@ export const TimelineBlock = createReactBlockSpec(
 			},
 			showTime: {
 				default: true,
+			},
+			blockFilters: {
+				default: "[]",
 			},
 		},
 		content: "none",
@@ -42,8 +49,24 @@ export const TimelineBlock = createReactBlockSpec(
 			const timeWindow = useNotebooksStore(
 				(state) => state.currentNotebook?.timeWindow,
 			);
-			const filters = useNotebooksStore(
+			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
+			);
+			const labels = useLabelsStore((state) => state.labels);
+
+			// Parse block filters from JSON string
+			const blockFilters: Filter[] = React.useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.blockFilters as string);
+				} catch {
+					return [];
+				}
+			}, [props.block.props.blockFilters]);
+
+			// Merge notebook filters with block filters
+			const filters = React.useMemo(
+				() => [...(notebookFilters || []), ...blockFilters],
+				[notebookFilters, blockFilters],
 			);
 
 			if (!tenantName) {
@@ -66,6 +89,15 @@ export const TimelineBlock = createReactBlockSpec(
 					props: {
 						...props.block.props,
 						[column]: value,
+					},
+				});
+			};
+
+			const handleFiltersChange = (newFilters: Filter[]) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						...props.block.props,
+						blockFilters: JSON.stringify(newFilters),
 					},
 				});
 			};
@@ -164,6 +196,17 @@ export const TimelineBlock = createReactBlockSpec(
 												)}
 											</div>
 										</div>
+									</div>
+
+									<div className="space-y-3 mt-6">
+										<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+											Additional Filters
+										</h3>
+										<FilterBadgesEditor
+											availableLabels={labels}
+											filters={blockFilters}
+											onFiltersChange={handleFiltersChange}
+										/>
 									</div>
 								</div>
 							</SheetContent>

@@ -7,6 +7,7 @@ import { BarChart3 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { FlowDetail } from "@/components/FlowDetail";
 import { FlowSelector } from "@/components/FlowSelector";
 import { LabelBadge } from "@/components/LabelBadge";
@@ -24,7 +25,9 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Flows } from "@/src/services/api/flows";
+import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Filter } from "@/src/types/filter";
 import type { Flow, FlowHistory } from "@/src/types/flow";
 import { resolveTimeWindow, TimeWindow } from "@/src/types/timewindow";
 
@@ -72,6 +75,9 @@ export const HeatmapBlock = createReactBlockSpec(
 			flowName: {
 				default: "",
 			},
+			blockFilters: {
+				default: "[]",
+			},
 		},
 		content: "none",
 	},
@@ -82,7 +88,7 @@ export const HeatmapBlock = createReactBlockSpec(
 			const timeWindow = useNotebooksStore(
 				(state) => state.currentNotebook?.timeWindow,
 			);
-			const filters = useNotebooksStore(
+			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
 			const settingsOpenBlockId = useNotebooksStore(
@@ -94,6 +100,7 @@ export const HeatmapBlock = createReactBlockSpec(
 
 			const flows = useNotebooksStore((state) => state.flows);
 			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
+			const labels = useLabelsStore((state) => state.labels);
 
 			const [loading, setLoading] = useState(false);
 
@@ -105,6 +112,23 @@ export const HeatmapBlock = createReactBlockSpec(
 			>({});
 			const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
+			const flowName = props.block.props.flowName as string;
+
+			// Parse block filters from JSON string
+			const blockFilters: Filter[] = useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.blockFilters as string);
+				} catch {
+					return [];
+				}
+			}, [props.block.props.blockFilters]);
+
+			// Merge notebook filters with block filters
+			const filters = useMemo(
+				() => [...(notebookFilters || []), ...blockFilters],
+				[notebookFilters, blockFilters],
+			);
+
 			const selectedTimeWindow: TimeWindow | null = useMemo(() => {
 				if (!selectedDay) return null;
 				const start = new Date(selectedDay);
@@ -113,8 +137,6 @@ export const HeatmapBlock = createReactBlockSpec(
 				end.setHours(23, 59, 59, 999);
 				return { type: "absolute", metadata: { start, end } };
 			}, [selectedDay]);
-
-			const flowName = props.block.props.flowName as string;
 
 			// Fetch flow histories when flow is selected
 			useEffect(() => {
@@ -230,6 +252,15 @@ export const HeatmapBlock = createReactBlockSpec(
 					props: {
 						...props.block.props,
 						flowName: selectedFlowName,
+					},
+				});
+			};
+
+			const handleFiltersChange = (newFilters: Filter[]) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						...props.block.props,
+						blockFilters: JSON.stringify(newFilters),
 					},
 				});
 			};
@@ -364,10 +395,12 @@ export const HeatmapBlock = createReactBlockSpec(
 									</div>
 								);
 							})}
-							{!flowName && (
+							{labelGroups.length === 0 && (
 								<div className="space-y-1">
 									{/* Show flow name on first row */}
-									<div className="text-m font-medium mb-1">N/A</div>
+									<div className="text-m font-medium mb-1">
+										{flowName || "N/A"}
+									</div>
 									<div className="flex items-center gap-2">
 										<div className="flex gap-[2px] flex-1">
 											{days.map((day) => {
@@ -431,6 +464,17 @@ export const HeatmapBlock = createReactBlockSpec(
 										flowsLoading={flowsLoading}
 										selectedFlowName={flowName}
 										onFlowSelect={handleFlowSelect}
+									/>
+								</div>
+
+								<div className="space-y-3 mt-6">
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Additional Filters
+									</h3>
+									<FilterBadgesEditor
+										availableLabels={labels}
+										filters={blockFilters}
+										onFiltersChange={handleFiltersChange}
 									/>
 								</div>
 							</div>

@@ -2,9 +2,10 @@
 
 import { createReactBlockSpec } from "@blocknote/react";
 import { RectangleHorizontal } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { LabelBadge } from "@/components/LabelBadge";
 import { MetricSelector } from "@/components/MetricSelector";
 import {
@@ -32,7 +33,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Metrics } from "@/src/services/api/metrics";
+import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Filter } from "@/src/types/filter";
 import { type Metric, MetricAggregationLabel } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
@@ -58,6 +61,9 @@ export const MetricBlock = createReactBlockSpec(
 			healthMax: {
 				default: "",
 			},
+			blockFilters: {
+				default: "[]",
+			},
 		},
 		content: "none",
 	},
@@ -76,9 +82,10 @@ export const MetricBlock = createReactBlockSpec(
 			const timeWindow = useNotebooksStore(
 				(state) => state.currentNotebook?.timeWindow,
 			);
-			const filters = useNotebooksStore(
+			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
+			const labels = useLabelsStore((state) => state.labels);
 
 			const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
 			const [scalarData, setScalarData] = useState<
@@ -94,6 +101,21 @@ export const MetricBlock = createReactBlockSpec(
 			const aggregation = props.block.props.aggregation as AggregationFunction;
 			const healthMin = props.block.props.healthMin as string;
 			const healthMax = props.block.props.healthMax as string;
+
+			// Parse block filters from JSON string
+			const blockFilters: Filter[] = useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.blockFilters as string);
+				} catch {
+					return [];
+				}
+			}, [props.block.props.blockFilters]);
+
+			// Merge notebook filters with block filters
+			const filters = useMemo(
+				() => [...(notebookFilters || []), ...blockFilters],
+				[notebookFilters, blockFilters],
+			);
 
 			// Update selected metric when metricName or available metrics change
 			useEffect(() => {
@@ -170,6 +192,15 @@ export const MetricBlock = createReactBlockSpec(
 					props: {
 						...props.block.props,
 						aggregation: value,
+					},
+				});
+			};
+
+			const handleFiltersChange = (newFilters: Filter[]) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						...props.block.props,
+						blockFilters: JSON.stringify(newFilters),
 					},
 				});
 			};
@@ -406,6 +437,17 @@ export const MetricBlock = createReactBlockSpec(
 									<p className="text-xs text-muted-foreground">
 										Values outside this range will be shown in red
 									</p>
+								</div>
+
+								<div className="space-y-3 mt-6">
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Additional Filters
+									</h3>
+									<FilterBadgesEditor
+										availableLabels={labels}
+										filters={blockFilters}
+										onFiltersChange={handleFiltersChange}
+									/>
 								</div>
 							</div>
 						</SheetContent>

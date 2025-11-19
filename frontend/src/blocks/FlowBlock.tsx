@@ -12,6 +12,7 @@ import {
 	Timer,
 } from "lucide-react";
 import { useParams } from "react-router-dom";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { FlowTable } from "@/components/FlowTable";
 import {
 	Sheet,
@@ -19,7 +20,10 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Filter } from "@/src/types/filter";
+import React from "react";
 
 export const FlowBlock = createReactBlockSpec(
 	{
@@ -46,6 +50,9 @@ export const FlowBlock = createReactBlockSpec(
 			showRunCounts: {
 				default: true,
 			},
+			blockFilters: {
+				default: "[]",
+			},
 		},
 		content: "none",
 	},
@@ -62,9 +69,26 @@ export const FlowBlock = createReactBlockSpec(
 			const timeWindow = useNotebooksStore(
 				(state) => state.currentNotebook?.timeWindow,
 			);
-			const filters = useNotebooksStore(
+			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
+			const labels = useLabelsStore((state) => state.labels);
+
+			// Parse block filters from JSON string
+			const blockFilters: Filter[] = React.useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.blockFilters as string);
+				} catch {
+					return [];
+				}
+			}, [props.block.props.blockFilters]);
+
+			// Merge notebook filters with block filters
+			const filters = React.useMemo(
+				() => [...(notebookFilters || []), ...blockFilters],
+				[notebookFilters, blockFilters],
+			);
+
 			if (!tenantName) {
 				return (
 					<div className="p-4 border rounded-lg">
@@ -92,6 +116,15 @@ export const FlowBlock = createReactBlockSpec(
 					props: {
 						...props.block.props,
 						[column]: value,
+					},
+				});
+			};
+
+			const handleFiltersChange = (newFilters: Filter[]) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						...props.block.props,
+						blockFilters: JSON.stringify(newFilters),
 					},
 				});
 			};
@@ -268,6 +301,17 @@ export const FlowBlock = createReactBlockSpec(
 												)}
 											</div>
 										</div>
+									</div>
+
+									<div className="space-y-3 mt-6">
+										<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+											Additional Filters
+										</h3>
+										<FilterBadgesEditor
+											availableLabels={labels}
+											filters={blockFilters}
+											onFiltersChange={handleFiltersChange}
+										/>
 									</div>
 								</div>
 							</SheetContent>
