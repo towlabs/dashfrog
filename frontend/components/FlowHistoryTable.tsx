@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Waterfall } from "@/components/Waterfall";
 import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
-import type { Flow, FlowHistory } from "@/src/types/flow";
+import type { FlowHistory } from "@/src/types/flow";
 
 type Props = {
 	flowHistory: FlowHistory[];

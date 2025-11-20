@@ -11,14 +11,14 @@ export default function LayoutClient({
 }) {
 	const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 	const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
-	const fetchLabels = useLabelsStore((state) => state.fetchLabels);
-	const fetchTenants = useLabelsStore((state) => state.fetchTenants);
+	const fetchLabelsAndTenants = useLabelsStore(
+		(state) => state.fetchLabelsAndTenants,
+	);
 
 	// Load labels on app startup
 	React.useEffect(() => {
-		void fetchLabels();
-		void fetchTenants();
-	}, [fetchLabels, fetchTenants]);
+		void fetchLabelsAndTenants();
+	}, [fetchLabelsAndTenants]);
 
 	return (
 		<>

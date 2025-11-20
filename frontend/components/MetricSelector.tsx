@@ -17,20 +17,21 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import type { Metric } from "@/src/types/metric";
-import { MetricAggregationLabel } from "@/src/types/metric";
+import type { Metric, MetricAggregation } from "@/src/types/metric";
 
 type MetricSelectorProps = {
 	metrics: Metric[];
 	metricsLoading: boolean;
 	selectedMetricName: string;
-	onMetricSelect: (metricName: string) => void;
+	selectedSpatialAggregation: MetricAggregation | "";
+	onMetricSelect: (metric: Metric) => void;
 };
 
 export function MetricSelector({
 	metrics,
 	metricsLoading,
 	selectedMetricName,
+	selectedSpatialAggregation,
 	onMetricSelect,
 }: MetricSelectorProps) {
 	const [comboboxOpen, setComboboxOpen] = useState(false);
@@ -59,11 +60,11 @@ export function MetricSelector({
 					{selectedMetricName
 						? (() => {
 								const metric = metrics.find(
-									(m) => m.name === selectedMetricName,
+									(m) =>
+										m.prometheusName === selectedMetricName &&
+										m.aggregation === selectedSpatialAggregation,
 								);
-								return metric
-									? `${MetricAggregationLabel[metric.aggregation]} Of ${metric.name}`
-									: "Select a metric...";
+								return metric ? metric.prettyName : "Select a metric...";
 							})()
 						: "Select a metric..."}
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -77,24 +78,23 @@ export function MetricSelector({
 						<CommandGroup>
 							{metrics.map((metric) => (
 								<CommandItem
-									key={metric.name}
-									value={metric.name}
-									onSelect={(currentValue) => {
-										onMetricSelect(
-											currentValue === selectedMetricName ? "" : currentValue,
-										);
+									key={`${metric.prometheusName}-${metric.aggregation}`}
+									value={`${metric.prometheusName}-${metric.aggregation}`}
+									onSelect={() => {
+										onMetricSelect(metric);
 										setComboboxOpen(false);
 									}}
 								>
 									<Check
 										className={cn(
 											"mr-2 h-4 w-4",
-											selectedMetricName === metric.name
+											selectedMetricName === metric.prometheusName &&
+												selectedSpatialAggregation === metric.aggregation
 												? "opacity-100"
 												: "opacity-0",
 										)}
 									/>
-									{MetricAggregationLabel[metric.aggregation]} Of {metric.name}
+									<span>{metric.prettyName}</span>
 								</CommandItem>
 							))}
 						</CommandGroup>

@@ -203,14 +203,7 @@ export function TimeWindowSelector({
 								<ChevronLeft className="h-3.5 w-3.5" />
 								Back
 							</Button>
-							<Button
-								variant="default"
-								size="sm"
-								onClick={handleCustomApply}
-								disabled={(() => {
-									return !(end.getTime() > start.getTime());
-								})()}
-							>
+							<Button variant="default" size="sm" onClick={handleCustomApply}>
 								Apply
 							</Button>
 						</div>

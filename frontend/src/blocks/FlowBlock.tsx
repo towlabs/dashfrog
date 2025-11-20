@@ -11,6 +11,7 @@ import {
 	Tags,
 	Timer,
 } from "lucide-react";
+import React from "react";
 import { useParams } from "react-router-dom";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { FlowTable } from "@/components/FlowTable";
@@ -23,7 +24,6 @@ import {
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import React from "react";
 
 export const FlowBlock = createReactBlockSpec(
 	{

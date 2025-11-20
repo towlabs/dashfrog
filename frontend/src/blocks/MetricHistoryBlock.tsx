@@ -2,7 +2,7 @@
 
 import { createReactBlockSpec } from "@blocknote/react";
 import { ChartLine } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { MetricHistoryChart } from "@/components/MetricHistoryChart";
@@ -14,12 +14,9 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import {
-	type MetricHistoryResponse,
-	Metrics,
-} from "@/src/services/api/metrics";
+import { type MetricHistoryPoint, Metrics } from "@/src/services/api/metrics";
 import { useNotebooksStore } from "@/src/stores/notebooks";
-import { type Metric, MetricAggregationLabel } from "@/src/types/metric";
+import type { Metric, MetricAggregation } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 
 export const MetricHistoryBlock = createReactBlockSpec(
@@ -28,6 +25,9 @@ export const MetricHistoryBlock = createReactBlockSpec(
 		propSchema: {
 			metricName: {
 				default: "",
+			},
+			spatialAggregation: {
+				default: "" as MetricAggregation | "",
 			},
 		},
 		content: "none",
@@ -54,23 +54,26 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				(state) => state.currentNotebook?.filters,
 			);
 
-			const [historyData, setHistoryData] =
-				useState<MetricHistoryResponse | null>(null);
+			const [historyData, setHistoryData] = useState<{
+				series: {
+					labels: Record<string, string>;
+					values: MetricHistoryPoint[];
+				}[];
+			} | null>(null);
 			const [loading, setLoading] = useState(false);
-			const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
 
 			const metricName = props.block.props.metricName as string;
+			const spatialAggregation = props.block.props.spatialAggregation as
+				| MetricAggregation
+				| "";
 
-			// Update selected metric when metricName or available metrics change
-			useEffect(() => {
-				if (!metricName || metrics.length === 0) {
-					setSelectedMetric(null);
-					return;
-				}
-
-				const metric = metrics.find((m) => m.name === metricName);
-				setSelectedMetric(metric || null);
-			}, [metricName, metrics]);
+			const selectedMetric = React.useMemo(() => {
+				return metrics.find(
+					(m) =>
+						m.prometheusName === metricName &&
+						m.aggregation === spatialAggregation,
+				);
+			}, [metricName, spatialAggregation, metrics]);
 
 			// Fetch metric history when metric is selected
 			useEffect(() => {
@@ -90,8 +93,8 @@ export const MetricHistoryBlock = createReactBlockSpec(
 						const { start, end } = resolveTimeWindow(timeWindow);
 						const response = await Metrics.getHistory(
 							tenantName,
-							selectedMetric.name,
-							selectedMetric.unit,
+							selectedMetric.prometheusName,
+							selectedMetric.aggregation,
 							start,
 							end,
 							filters,
@@ -120,11 +123,12 @@ export const MetricHistoryBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleMetricSelect = (selectedMetricName: string) => {
+			const handleMetricSelect = (metric: Metric) => {
 				props.editor.updateBlock(props.block, {
 					props: {
 						...props.block.props,
-						metricName: selectedMetricName,
+						metricName: metric.prometheusName,
+						spatialAggregation: metric.aggregation,
 					},
 				});
 			};
@@ -169,19 +173,27 @@ export const MetricHistoryBlock = createReactBlockSpec(
 					);
 				}
 
+				if (!timeWindow) {
+					return (
+						<div className="rounded-lg border p-8 text-center text-muted-foreground">
+							<p>No time window configured</p>
+						</div>
+					);
+				}
+
 				return (
 					<div className="space-y-4">
 						<div className="flex items-center justify-between">
 							<div>
 								<h3 className="text-lg font-semibold">
-									{MetricAggregationLabel[selectedMetric.aggregation]} Of{" "}
-									{selectedMetric.name}
+									{selectedMetric.prettyName}
 								</h3>
 							</div>
 						</div>
 						<MetricHistoryChart
 							historyData={historyData}
 							metric={selectedMetric}
+							timeWindow={timeWindow}
 						/>
 					</div>
 				);
@@ -209,6 +221,9 @@ export const MetricHistoryBlock = createReactBlockSpec(
 										metrics={metrics}
 										metricsLoading={metricsLoading}
 										selectedMetricName={metricName}
+										selectedSpatialAggregation={
+											selectedMetric?.aggregation ?? ""
+										}
 										onMetricSelect={handleMetricSelect}
 									/>
 								</div>

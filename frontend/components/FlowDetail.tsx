@@ -18,8 +18,7 @@ import {
 } from "@/components/ui/sheet";
 import { Flows } from "@/src/services/api/flows";
 import { useTenantStore } from "@/src/stores/tenant";
-import type { Filter } from "@/src/types/filter";
-import type { Flow, FlowHistory } from "@/src/types/flow";
+import type { FlowHistory } from "@/src/types/flow";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 export interface FlowDetailProps {

@@ -1,9 +1,9 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { ChartNoAxesGantt, RectangleEllipsis } from "lucide-react";
+import { ChartNoAxesGantt } from "lucide-react";
+import React from "react";
 import { useParams } from "react-router-dom";
-import { EmptyState } from "@/components/EmptyState";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { FlowDetail } from "@/components/FlowDetail";
 import { FlowSelector } from "@/components/FlowSelector";
@@ -31,7 +31,6 @@ import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
-import React from "react";
 
 const flowStatusColors = {
 	success: "bg-[#5cb660]",

@@ -24,6 +24,7 @@ interface FlowApiResponse {
 
 interface FlowDetailsApiResponse {
 	history: {
+		groupId: string;
 		status: "success" | "failure" | "running";
 		flowId: string;
 		startTime: string;

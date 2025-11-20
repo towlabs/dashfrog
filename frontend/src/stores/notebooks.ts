@@ -32,12 +32,7 @@ interface NotebooksState {
 		end: Date,
 		filters: Filter[],
 	) => Promise<void>;
-	fetchMetrics: (
-		tenant: string,
-		start: Date,
-		end: Date,
-		filters: Filter[],
-	) => Promise<void>;
+	fetchMetrics: () => Promise<void>;
 	updateNotebook: (
 		tenant: string,
 		notebook: Notebook,
@@ -85,21 +80,11 @@ export const useNotebooksStore = create<NotebooksState>()(
 					set({ flows: [], flowsLoading: false });
 				}
 			},
-			fetchMetrics: async (
-				tenant: string,
-				start: Date,
-				end: Date,
-				filters: Filter[],
-			) => {
+			fetchMetrics: async () => {
 				set({ metricsLoading: true });
 				try {
-					const response = await Metrics.getByTenant(
-						tenant,
-						start,
-						end,
-						filters,
-					);
-					set({ metrics: response.data, metricsLoading: false });
+					const response = await Metrics.list();
+					set({ metrics: response, metricsLoading: false });
 				} catch (error) {
 					console.error("Failed to fetch metrics:", error);
 					set({ metrics: [], metricsLoading: false });

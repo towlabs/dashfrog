@@ -3,10 +3,8 @@
 import { createReactBlockSpec } from "@blocknote/react";
 import { addDays, formatISO } from "date-fns";
 import { groupBy } from "lodash";
-import { BarChart3 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { EmptyState } from "@/components/EmptyState";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { FlowDetail } from "@/components/FlowDetail";
 import { FlowSelector } from "@/components/FlowSelector";
@@ -28,8 +26,8 @@ import { Flows } from "@/src/services/api/flows";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import type { Flow, FlowHistory } from "@/src/types/flow";
-import { resolveTimeWindow, TimeWindow } from "@/src/types/timewindow";
+import type { FlowHistory } from "@/src/types/flow";
+import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 interface DayData {
 	date: Date;

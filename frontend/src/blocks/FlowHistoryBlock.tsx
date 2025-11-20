@@ -22,7 +22,7 @@ import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import { resolveTimeWindow } from "@/src/types/timewindow";
-import { FlowHistory } from "../types/flow";
+import type { FlowHistory } from "../types/flow";
 
 export const FlowHistoryBlock = createReactBlockSpec(
 	{

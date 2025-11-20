@@ -36,11 +36,13 @@ import { Metrics } from "@/src/services/api/metrics";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import { type Metric, MetricAggregationLabel } from "@/src/types/metric";
+import type {
+	AggregationFunction,
+	Metric,
+	MetricAggregation,
+} from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
-
-type AggregationFunction = "last" | "sum" | "avg";
 
 export const MetricBlock = createReactBlockSpec(
 	{
@@ -52,7 +54,10 @@ export const MetricBlock = createReactBlockSpec(
 			title: {
 				default: "",
 			},
-			aggregation: {
+			spatialAggregation: {
+				default: "" as MetricAggregation | "",
+			},
+			temporalAggregation: {
 				default: "last" as AggregationFunction,
 			},
 			healthMin: {
@@ -98,7 +103,11 @@ export const MetricBlock = createReactBlockSpec(
 
 			const metricName = props.block.props.metricName as string;
 			const title = props.block.props.title as string;
-			const aggregation = props.block.props.aggregation as AggregationFunction;
+			const spatialAggregation = props.block.props.spatialAggregation as
+				| MetricAggregation
+				| "";
+			const temporalAggregation = props.block.props
+				.temporalAggregation as AggregationFunction;
 			const healthMin = props.block.props.healthMin as string;
 			const healthMax = props.block.props.healthMax as string;
 
@@ -133,7 +142,8 @@ export const MetricBlock = createReactBlockSpec(
 				if (
 					!tenantName ||
 					!selectedMetric ||
-					!aggregation ||
+					!spatialAggregation ||
+					!temporalAggregation ||
 					timeWindow === undefined ||
 					filters === undefined
 				) {
@@ -151,8 +161,9 @@ export const MetricBlock = createReactBlockSpec(
 							selectedMetric.unit,
 							start,
 							end,
+							spatialAggregation,
+							temporalAggregation,
 							filters,
-							aggregation,
 						);
 						setScalarData(response.scalars);
 					} catch (error) {
@@ -164,7 +175,14 @@ export const MetricBlock = createReactBlockSpec(
 				};
 
 				void fetchScalar();
-			}, [tenantName, selectedMetric, aggregation, timeWindow, filters]);
+			}, [
+				tenantName,
+				selectedMetric,
+				spatialAggregation,
+				temporalAggregation,
+				timeWindow,
+				filters,
+			]);
 
 			if (!tenantName) {
 				return (
@@ -178,11 +196,13 @@ export const MetricBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleMetricSelect = (selectedMetricName: string) => {
+			const handleMetricSelect = (metric: Metric) => {
 				props.editor.updateBlock(props.block, {
 					props: {
 						...props.block.props,
-						metricName: selectedMetricName,
+						metricName: metric.prometheusName,
+						spatialAggregation: metric.aggregation,
+						temporalAggregation: "last",
 					},
 				});
 			};
@@ -191,7 +211,7 @@ export const MetricBlock = createReactBlockSpec(
 				props.editor.updateBlock(props.block, {
 					props: {
 						...props.block.props,
-						aggregation: value,
+						temporalAggregation: value,
 					},
 				});
 			};
@@ -297,8 +317,7 @@ export const MetricBlock = createReactBlockSpec(
 					<Card key={index} className="@container/card shadow-none">
 						<CardHeader>
 							<CardDescription>
-								{title ||
-									`${MetricAggregationLabel[selectedMetric.aggregation]} Of ${selectedMetric.name}`}
+								{title || selectedMetric.prettyName}
 							</CardDescription>
 							<CardTitle
 								className={cn(
@@ -375,6 +394,7 @@ export const MetricBlock = createReactBlockSpec(
 										metrics={metrics}
 										metricsLoading={metricsLoading}
 										selectedMetricName={metricName}
+										selectedSpatialAggregation={spatialAggregation}
 										onMetricSelect={handleMetricSelect}
 									/>
 								</div>
@@ -382,7 +402,7 @@ export const MetricBlock = createReactBlockSpec(
 								<div className="space-y-3">
 									<Label className="text-sm font-medium">Aggregation</Label>
 									<Select
-										value={aggregation}
+										value={temporalAggregation}
 										onValueChange={handleAggregationChange}
 									>
 										<SelectTrigger className="w-full">

@@ -22,8 +22,7 @@ import {
 import { Metrics } from "@/src/services/api/metrics";
 import type { Filter } from "@/src/types/filter";
 import type { Metric } from "@/src/types/metric";
-import { MetricAggregationLabel } from "@/src/types/metric";
-import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
+import type { TimeWindow } from "@/src/types/timewindow";
 
 type MetricsTableProps = {
 	tenant: string;
@@ -50,9 +49,8 @@ export function MetricsTable({
 		const fetchMetrics = async () => {
 			setLoading(true);
 			try {
-				const { start, end } = resolveTimeWindow(timeWindow);
-				const response = await Metrics.getByTenant(tenant, start, end, filters);
-				setMetrics(response.data);
+				const response = await Metrics.list();
+				setMetrics(response);
 			} catch (error) {
 				console.error("Failed to fetch metrics:", error);
 				setMetrics([]);
@@ -64,7 +62,7 @@ export function MetricsTable({
 		if (tenant) {
 			void fetchMetrics();
 		}
-	}, [tenant, timeWindow, filters]);
+	}, [tenant]);
 
 	const handleRowClick = (metric: Metric) => {
 		setSelectedMetric({ metric });
@@ -125,10 +123,7 @@ export function MetricsTable({
 								<TableRow className="group cursor-pointer hover:bg-muted/50">
 									<TableCell>
 										<div className="relative flex items-center gap-2">
-											<span>
-												{MetricAggregationLabel[metric.aggregation]} of{" "}
-												{metric.name}
-											</span>
+											<span>{metric.prettyName}</span>
 											<Tooltip>
 												<TooltipTrigger asChild>
 													<div

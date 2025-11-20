@@ -1,27 +1,52 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: code from blocknote */
 import {
 	BlockNoteEditor,
 	type BlockNoteEditorOptions,
+	type BlockSchema,
 	type CustomBlockNoteSchema,
+	combineByGroup,
 	type DefaultBlockSchema,
 	type DefaultInlineContentSchema,
 	type DefaultStyleSchema,
+	getDefaultSlashMenuItems,
+	type InlineContentSchema,
+	insertOrUpdateBlock,
 	type SideMenuProsemirrorPlugin,
 	SideMenuView,
+	type StyleSchema,
 	sideMenuPluginKey,
 } from "@blocknote/core";
+import type { DefaultReactSuggestionItem } from "@blocknote/react";
 import {
-	DragHandleMenu,
-	type DragHandleMenuProps,
-	RemoveBlockItem,
-	SideMenu,
-	type SideMenuProps,
-} from "@blocknote/react";
+	checkMultiColumnBlocksInSchema,
+	getMultiColumnDictionary,
+} from "@blocknote/xl-multi-column";
+import {
+	AudioLines,
+	Code,
+	Columns2,
+	Columns3,
+	File,
+	Heading1,
+	Heading2,
+	Heading3,
+	Heading4,
+	Heading5,
+	Heading6,
+	Image,
+	List,
+	ListChecks,
+	ListCollapse,
+	ListOrdered,
+	Minus,
+	Pilcrow,
+	Quote,
+	Smile,
+	SquarePlay,
+	Table,
+} from "lucide-react";
 import { Plugin } from "prosemirror-state";
 import { useMemo } from "react";
-import { AddBlockButton } from "@/components/ui/add-block";
-import { DragHandleButton } from "@/components/ui/drag-block";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { useNotebooksStore } from "../stores/notebooks";
 
 export const customEditor = <
 	Options extends Partial<BlockNoteEditorOptions<any, any, any>> | undefined,
@@ -120,3 +145,130 @@ export const customEditor = <
 		return editor;
 	}, []);
 };
+
+const icons = {
+	heading: Heading1,
+	heading_2: Heading2,
+	heading_3: Heading3,
+	heading_4: Heading4,
+	heading_5: Heading5,
+	heading_6: Heading6,
+	toggle_heading: Heading1,
+	toggle_heading_2: Heading2,
+	toggle_heading_3: Heading3,
+	quote: Quote,
+	toggle_list: ListCollapse,
+	numbered_list: ListOrdered,
+	bullet_list: List,
+	check_list: ListChecks,
+	paragraph: Pilcrow,
+	table: Table,
+	image: Image,
+	video: SquarePlay,
+	audio: AudioLines,
+	file: File,
+	emoji: Smile,
+	code_block: Code,
+	divider: Minus,
+	columns_2: Columns2,
+	columns_3: Columns3,
+};
+
+export function getMultiColumnSlashMenuItems<
+	BSchema extends BlockSchema,
+	I extends InlineContentSchema,
+	S extends StyleSchema,
+>(editor: BlockNoteEditor<BSchema, I, S>) {
+	const items: Omit<DefaultReactSuggestionItem, "key">[] = [];
+
+	if (checkMultiColumnBlocksInSchema(editor)) {
+		items.push(
+			{
+				...getMultiColumnDictionary(editor).slash_menu.two_columns,
+				icon: <Columns2 className="size-4.5" />,
+				onItemClick: () => {
+					insertOrUpdateBlock(editor, {
+						type: "columnList",
+						children: [
+							{
+								type: "column",
+								children: [
+									{
+										type: "paragraph" as any,
+									},
+								],
+							},
+							{
+								type: "column",
+								children: [
+									{
+										type: "paragraph" as any,
+									},
+								],
+							},
+						],
+					});
+				},
+			},
+			{
+				...getMultiColumnDictionary(editor).slash_menu.three_columns,
+				icon: <Columns3 className="size-4.5" />,
+				onItemClick: () => {
+					insertOrUpdateBlock(editor, {
+						type: "columnList",
+						children: [
+							{
+								type: "column",
+								children: [
+									{
+										type: "paragraph" as any,
+									},
+								],
+							},
+							{
+								type: "column",
+								children: [
+									{
+										type: "paragraph" as any,
+									},
+								],
+							},
+							{
+								type: "column",
+								children: [
+									{
+										type: "paragraph" as any,
+									},
+								],
+							},
+						],
+					});
+				},
+			},
+		);
+	}
+
+	return items;
+}
+
+export function getSlashMenuItems<
+	BSchema extends BlockSchema,
+	I extends InlineContentSchema,
+	S extends StyleSchema,
+>(
+	editor: BlockNoteEditor<BSchema, I, S>,
+	additionalItems: DefaultReactSuggestionItem[] = [],
+): DefaultReactSuggestionItem[] {
+	const defaultItems = getDefaultSlashMenuItems(editor).map((item) => {
+		const Icon = icons[item.key];
+		return {
+			...item,
+			icon: <Icon className="size-4.5" />,
+		};
+	});
+	const multiColumnItems = getMultiColumnSlashMenuItems(editor);
+	return [
+		...combineByGroup(defaultItems, multiColumnItems),
+		...additionalItems,
+	];
+}

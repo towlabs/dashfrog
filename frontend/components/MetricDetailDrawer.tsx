@@ -16,7 +16,6 @@ import {
 import { useTenantStore } from "@/src/stores/tenant";
 import type { Filter } from "@/src/types/filter";
 import type { Metric } from "@/src/types/metric";
-import { MetricAggregationLabel } from "@/src/types/metric";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 type MetricDetailDrawerProps = {
@@ -74,9 +73,7 @@ export function MetricDetailDrawer({
 				<DrawerHeader>
 					<DrawerTitle className="flex items-center justify-between">
 						<div className="space-y-2">
-							<div className="text-2xl font-bold">
-								{MetricAggregationLabel[metric.aggregation]} Of {metric.name}
-							</div>
+							<div className="text-2xl font-bold">{metric.prettyName}</div>
 						</div>
 						<DrawerClose asChild>
 							<Button variant="ghost" size="icon">

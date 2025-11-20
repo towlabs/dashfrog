@@ -95,18 +95,6 @@ export function FlowTable({
 		}
 	}, [tenant, timeWindow, filters]);
 
-	useEffect(() => {
-		console.log("timeWindow", timeWindow);
-	}, [timeWindow]);
-
-	useEffect(() => {
-		console.log("filters", filters);
-	}, [filters]);
-
-	useEffect(() => {
-		console.log("tenant", tenant);
-	}, [tenant]);
-
 	const handleFlowClick = (flow: Flow) => {
 		setSelectedFlow(flow);
 		setDetailOpen(true);

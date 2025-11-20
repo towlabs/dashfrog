@@ -6,11 +6,9 @@ import type { Label } from "@/src/types/label";
 interface LabelsState {
 	labels: Label[];
 	tenants: string[];
-	loadingLabels: boolean;
-	loadingTenants: boolean;
+	loading: boolean;
 	error: string | null;
-	fetchLabels: () => Promise<void>;
-	fetchTenants: () => Promise<void>;
+	fetchLabelsAndTenants: () => Promise<void>;
 }
 
 export const useLabelsStore = create<LabelsState>()(
@@ -18,25 +16,16 @@ export const useLabelsStore = create<LabelsState>()(
 		(set) => ({
 			labels: [],
 			tenants: [],
-			loadingLabels: false,
-			loadingTenants: false,
+			loading: false,
 			error: null,
 
-			fetchLabels: async () => {
-				set({ loadingLabels: true, error: null });
-				const response = await Labels.getAllLabels();
+			fetchLabelsAndTenants: async () => {
+				set({ loading: true, error: null });
+				const response = await Labels.getAll();
 				set({
-					labels: response,
-					loadingLabels: false,
-				});
-			},
-
-			fetchTenants: async () => {
-				set({ loadingTenants: true, error: null });
-				const response = await Labels.getAllTenants();
-				set({
-					tenants: response,
-					loadingTenants: false,
+					labels: response.labels,
+					tenants: response.tenants,
+					loading: false,
 				});
 			},
 		}),

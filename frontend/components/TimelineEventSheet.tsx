@@ -4,17 +4,16 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 import * as locales from "@blocknote/core/locales";
 import {
-	DragHandleMenu,
 	SideMenu,
 	SideMenuController,
-	SideMenuProps,
+	type SideMenuProps,
+	SuggestionMenuController,
 } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { CalendarIcon } from "lucide-react";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { Separator } from "@/components/ui/separator";
-
 import {
 	Sheet,
 	SheetContent,
@@ -24,10 +23,10 @@ import {
 } from "@/components/ui/sheet";
 import { formatTimeAgo } from "@/src/lib/formatters";
 import type { TimelineEvent } from "@/src/types/timeline";
-import { customEditor } from "@/src/utils/editor";
-import React from "react";
+import { customEditor, getSlashMenuItems } from "@/src/utils/editor";
 import { AddBlockButton } from "./ui/add-block";
 import { DragHandleButton } from "./ui/drag-block";
+import { SuggestionMenu } from "./ui/suggestion-menu";
 
 interface TimelineEventSheetProps {
 	event: TimelineEvent | null;
@@ -54,7 +53,7 @@ export function TimelineEventSheet({
 		return (
 			<SideMenu {...props}>
 				<AddBlockButton {...props} />
-				<DragHandleButton {...props} dragHandleMenu={DragHandleMenu} />
+				<DragHandleButton {...props} />
 			</SideMenu>
 		);
 	}, []);
@@ -96,7 +95,28 @@ export function TimelineEventSheet({
 
 				{/* BlockNote Editor */}
 				<div>
-					<BlockNoteView editor={editor} theme="light" sideMenu={false}>
+					<BlockNoteView
+						editor={editor}
+						theme="light"
+						sideMenu={false}
+						slashMenu={false}
+					>
+						<SuggestionMenuController
+							triggerCharacter="/"
+							suggestionMenuComponent={SuggestionMenu}
+							getItems={async (query: string) => {
+								// Simple filter matching title/aliases like defaults
+								const all = getSlashMenuItems(editor, []);
+								const q = query.trim().toLowerCase();
+								return q
+									? all.filter(
+											(i) =>
+												i.title?.toLowerCase().includes(q) ||
+												i.aliases?.some((a: string) => a.includes(q)),
+										)
+									: all;
+							}}
+						/>
 						<SideMenuController sideMenu={customSideMenu} />
 					</BlockNoteView>
 				</div>
