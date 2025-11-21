@@ -4,6 +4,7 @@ import type {
 	FlowHistory,
 	FlowHistoryEvent,
 	FlowHistoryStep,
+	FlowRunCount,
 } from "@/src/types/flow";
 
 /**
@@ -20,6 +21,10 @@ interface FlowApiResponse {
 	successCount: number;
 	pendingCount: number;
 	failedCount: number;
+	lastDurationInSeconds: number | null;
+	avgDurationInSeconds: number | null;
+	minDurationInSeconds: number | null;
+	maxDurationInSeconds: number | null;
 }
 
 interface FlowDetailsApiResponse {
@@ -58,18 +63,11 @@ interface FlowHistoryStepApiResponse {
  */
 function toFlow(apiFlow: FlowApiResponse): Flow {
 	return {
-		groupId: apiFlow.groupId,
-		name: apiFlow.name,
-		labels: apiFlow.labels,
-		lastRunStatus: apiFlow.lastRunStatus,
+		...apiFlow,
 		lastRunStartedAt: new Date(apiFlow.lastRunStartedAt),
 		lastRunEndedAt: apiFlow.lastRunEndedAt
 			? new Date(apiFlow.lastRunEndedAt)
 			: null,
-		runCount: apiFlow.runCount,
-		successCount: apiFlow.successCount,
-		pendingCount: apiFlow.pendingCount,
-		failedCount: apiFlow.failedCount,
 	};
 }
 
@@ -167,6 +165,38 @@ const Flows = {
 		}
 		const data = (await response.json()) as FlowDetailsApiResponse;
 		return toFlowHistory(data.history);
+	},
+
+	/**
+	 * Get flow run counts grouped by labels
+	 */
+	getFlowRunCounts: async (
+		tenant: string,
+		flowName: string,
+		start: Date,
+		end: Date,
+		labels: Filter[],
+	): Promise<FlowRunCount[]> => {
+		const response = await fetch(`/api/flows/run-counts`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				flow_name: flowName,
+				start: start.toISOString(),
+				end: end.toISOString(),
+				labels,
+				tenant,
+			}),
+		});
+		if (!response.ok) {
+			throw new Error(
+				`Failed to fetch flow run counts: ${response.statusText}`,
+			);
+		}
+		const data = (await response.json()) as FlowRunCount[];
+		return data;
 	},
 };
 

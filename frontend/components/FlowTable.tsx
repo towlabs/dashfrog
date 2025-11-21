@@ -260,7 +260,10 @@ export function FlowTable({
 								)}
 								{visibleColumns.lastDuration && (
 									<TableCell className="text-muted-foreground text-sm">
-										{formatDuration(flow.lastRunStartedAt, flow.lastRunEndedAt)}
+										{formatDuration({
+											startTime: flow.lastRunStartedAt,
+											endTime: flow.lastRunEndedAt,
+										})}
 									</TableCell>
 								)}
 								{visibleColumns.runCounts && (

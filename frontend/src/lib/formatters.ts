@@ -7,12 +7,22 @@ import {
 /**
  * Format duration between two dates
  */
-export function formatDuration(startTime: Date, endTime: Date | null): string {
-	if (!endTime) {
-		endTime = new Date();
+export function formatDuration({
+	seconds,
+	startTime,
+	endTime,
+}: {
+	seconds?: number | null;
+	startTime?: Date | null;
+	endTime?: Date | null;
+}): string {
+	if (!seconds) {
+		if (!startTime || !endTime) {
+			return "-";
+		}
+		seconds = differenceInSeconds(endTime, startTime);
 	}
-	const durationMs = differenceInMilliseconds(endTime, startTime);
-	const seconds = Math.floor(durationMs / 1000);
+
 	const minutes = Math.floor(seconds / 60);
 	const hours = Math.floor(minutes / 60);
 
@@ -25,7 +35,7 @@ export function formatDuration(startTime: Date, endTime: Date | null): string {
 	if (minutes > 0) {
 		return `${minutes}m ${seconds % 60}s`;
 	}
-	return `${seconds}s`;
+	return `${Math.round(seconds)}s`;
 }
 
 /**

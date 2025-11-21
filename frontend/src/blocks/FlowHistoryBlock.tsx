@@ -1,7 +1,15 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { ListCollapse } from "lucide-react";
+import {
+	CircleDot,
+	Clock,
+	Eye,
+	EyeOff,
+	ListCollapse,
+	Tags,
+	Timer,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
@@ -33,6 +41,21 @@ export const FlowHistoryBlock = createReactBlockSpec(
 			},
 			statusFilter: {
 				default: "all" as StatusFilter,
+			},
+			showLabels: {
+				default: true,
+			},
+			showStart: {
+				default: true,
+			},
+			showEnd: {
+				default: true,
+			},
+			showDuration: {
+				default: true,
+			},
+			showStatus: {
+				default: true,
 			},
 			blockFilters: {
 				default: "[]",
@@ -139,6 +162,23 @@ export const FlowHistoryBlock = createReactBlockSpec(
 				});
 			};
 
+			const handleColumnToggle = (
+				column:
+					| "showLabels"
+					| "showStart"
+					| "showEnd"
+					| "showDuration"
+					| "showStatus",
+				value: boolean,
+			) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						...props.block.props,
+						[column]: value,
+					},
+				});
+			};
+
 			const handleFiltersChange = (newFilters: Filter[]) => {
 				props.editor.updateBlock(props.block, {
 					props: {
@@ -167,7 +207,17 @@ export const FlowHistoryBlock = createReactBlockSpec(
 				}
 
 				return (
-					<FlowHistoryTable flowHistory={flowHistory} statusFilter={"all"} />
+					<FlowHistoryTable
+						flowHistory={flowHistory}
+						statusFilter={"all"}
+						visibleColumns={{
+							labels: props.block.props.showLabels,
+							start: props.block.props.showStart,
+							end: props.block.props.showEnd,
+							duration: props.block.props.showDuration,
+							status: props.block.props.showStatus,
+						}}
+					/>
 				);
 			};
 
@@ -197,6 +247,103 @@ export const FlowHistoryBlock = createReactBlockSpec(
 										selectedFlowName={flowName}
 										onFlowSelect={handleFlowSelect}
 									/>
+								</div>
+
+								<div className="space-y-1 mt-6">
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Columns
+									</h3>
+									<div className="space-y-1">
+										<div
+											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+											onClick={() =>
+												handleColumnToggle(
+													"showLabels",
+													!props.block.props.showLabels,
+												)
+											}
+										>
+											<div className="flex items-center gap-2">
+												<Tags className="size-4" strokeWidth={2.5} />
+												<span className="text-sm">Labels</span>
+											</div>
+											{props.block.props.showLabels ? (
+												<Eye className="size-4" strokeWidth={2.5} />
+											) : (
+												<EyeOff className="size-4" strokeWidth={2.5} />
+											)}
+										</div>
+										<div
+											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+											onClick={() =>
+												handleColumnToggle("showStart", !props.block.props.showStart)
+											}
+										>
+											<div className="flex items-center gap-2">
+												<Clock className="size-4" strokeWidth={2.5} />
+												<span className="text-sm">Start</span>
+											</div>
+											{props.block.props.showStart ? (
+												<Eye className="size-4" strokeWidth={2.5} />
+											) : (
+												<EyeOff className="size-4" strokeWidth={2.5} />
+											)}
+										</div>
+										<div
+											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+											onClick={() =>
+												handleColumnToggle("showEnd", !props.block.props.showEnd)
+											}
+										>
+											<div className="flex items-center gap-2">
+												<Clock className="size-4" strokeWidth={2.5} />
+												<span className="text-sm">End</span>
+											</div>
+											{props.block.props.showEnd ? (
+												<Eye className="size-4" strokeWidth={2.5} />
+											) : (
+												<EyeOff className="size-4" strokeWidth={2.5} />
+											)}
+										</div>
+										<div
+											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+											onClick={() =>
+												handleColumnToggle(
+													"showDuration",
+													!props.block.props.showDuration,
+												)
+											}
+										>
+											<div className="flex items-center gap-2">
+												<Timer className="size-4" strokeWidth={2.5} />
+												<span className="text-sm">Duration</span>
+											</div>
+											{props.block.props.showDuration ? (
+												<Eye className="size-4" strokeWidth={2.5} />
+											) : (
+												<EyeOff className="size-4" strokeWidth={2.5} />
+											)}
+										</div>
+										<div
+											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
+											onClick={() =>
+												handleColumnToggle(
+													"showStatus",
+													!props.block.props.showStatus,
+												)
+											}
+										>
+											<div className="flex items-center gap-2">
+												<CircleDot className="size-4" strokeWidth={2.5} />
+												<span className="text-sm">Status</span>
+											</div>
+											{props.block.props.showStatus ? (
+												<Eye className="size-4" strokeWidth={2.5} />
+											) : (
+												<EyeOff className="size-4" strokeWidth={2.5} />
+											)}
+										</div>
+									</div>
 								</div>
 
 								<div className="space-y-3 mt-6">

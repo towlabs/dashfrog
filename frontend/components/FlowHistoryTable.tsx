@@ -35,11 +35,28 @@ import type { FlowHistory } from "@/src/types/flow";
 type Props = {
 	flowHistory: FlowHistory[];
 	statusFilter: StatusFilter;
+	visibleColumns?: {
+		labels?: boolean;
+		start?: boolean;
+		end?: boolean;
+		duration?: boolean;
+		status?: boolean;
+	};
 };
 
 const ITEMS_PER_PAGE = 10;
 
-export function FlowHistoryTable({ flowHistory, statusFilter }: Props) {
+export function FlowHistoryTable({
+	flowHistory,
+	statusFilter,
+	visibleColumns = {
+		labels: true,
+		start: true,
+		end: true,
+		duration: true,
+		status: true,
+	},
+}: Props) {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
@@ -89,36 +106,46 @@ export function FlowHistoryTable({ flowHistory, statusFilter }: Props) {
 					<TableHeader>
 						<TableRow>
 							<TableHead className="w-8"></TableHead>
-							<TableHead>
-								<div className="flex items-center gap-2">
-									<Tags className="size-4" strokeWidth={2.5} />
-									<span>Labels</span>
-								</div>
-							</TableHead>
-							<TableHead>
-								<div className="flex items-center gap-2">
-									<Clock className="size-4" strokeWidth={2.5} />
-									<span>Start</span>
-								</div>
-							</TableHead>
-							<TableHead>
-								<div className="flex items-center gap-2">
-									<Clock className="size-4" strokeWidth={2.5} />
-									<span>End</span>
-								</div>
-							</TableHead>
-							<TableHead>
-								<div className="flex items-center gap-2">
-									<Timer className="size-4" strokeWidth={2.5} />
-									<span>Duration</span>
-								</div>
-							</TableHead>
-							<TableHead>
-								<div className="flex items-center gap-2">
-									<CircleDot className="size-4" strokeWidth={2.5} />
-									<span>Status</span>
-								</div>
-							</TableHead>
+							{visibleColumns.labels && (
+								<TableHead>
+									<div className="flex items-center gap-2">
+										<Tags className="size-4" strokeWidth={2.5} />
+										<span>Labels</span>
+									</div>
+								</TableHead>
+							)}
+							{visibleColumns.start && (
+								<TableHead>
+									<div className="flex items-center gap-2">
+										<Clock className="size-4" strokeWidth={2.5} />
+										<span>Start</span>
+									</div>
+								</TableHead>
+							)}
+							{visibleColumns.end && (
+								<TableHead>
+									<div className="flex items-center gap-2">
+										<Clock className="size-4" strokeWidth={2.5} />
+										<span>End</span>
+									</div>
+								</TableHead>
+							)}
+							{visibleColumns.duration && (
+								<TableHead>
+									<div className="flex items-center gap-2">
+										<Timer className="size-4" strokeWidth={2.5} />
+										<span>Duration</span>
+									</div>
+								</TableHead>
+							)}
+							{visibleColumns.status && (
+								<TableHead>
+									<div className="flex items-center gap-2">
+										<CircleDot className="size-4" strokeWidth={2.5} />
+										<span>Status</span>
+									</div>
+								</TableHead>
+							)}
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -138,54 +165,77 @@ export function FlowHistoryTable({ flowHistory, statusFilter }: Props) {
 												<ChevronRight className="size-4 text-muted-foreground" />
 											)}
 										</TableCell>
-										<TableCell>
-											<div
-												className="flex flex-wrap gap-1"
-												onClick={(e) => e.stopPropagation()}
-											>
-												{Object.entries(history.labels).map(([key, value]) => (
-													<LabelBadge
-														key={key}
-														labelKey={key}
-														labelValue={value as string}
-													/>
-												))}
-											</div>
-										</TableCell>
-										<TableCell className="text-muted-foreground text-sm">
-											<Tooltip>
-												<TooltipTrigger className="cursor-default">
-													{formatTimeAgo(history.startTime)}
-												</TooltipTrigger>
-												<TooltipContent>
-													{format(history.startTime, "PPpp")}
-												</TooltipContent>
-											</Tooltip>
-										</TableCell>
-										<TableCell className="text-muted-foreground text-sm">
-											{history.endTime ? (
+										{visibleColumns.labels && (
+											<TableCell>
+												<div
+													className="flex flex-wrap gap-1"
+													onClick={(e) => e.stopPropagation()}
+												>
+													{Object.entries(history.labels).map(([key, value]) => (
+														<LabelBadge
+															key={key}
+															labelKey={key}
+															labelValue={value as string}
+														/>
+													))}
+												</div>
+											</TableCell>
+										)}
+										{visibleColumns.start && (
+											<TableCell className="text-muted-foreground text-sm">
 												<Tooltip>
 													<TooltipTrigger className="cursor-default">
-														{formatTimeAgo(history.endTime)}
+														{formatTimeAgo(history.startTime)}
 													</TooltipTrigger>
 													<TooltipContent>
-														{format(history.endTime, "PPpp")}
+														{format(history.startTime, "PPpp")}
 													</TooltipContent>
 												</Tooltip>
-											) : (
-												"-"
-											)}
-										</TableCell>
-										<TableCell className="text-muted-foreground text-sm">
-											{formatDuration(history.startTime, history.endTime)}
-										</TableCell>
-										<TableCell>
-											<FlowStatus status={history.status} />
-										</TableCell>
+											</TableCell>
+										)}
+										{visibleColumns.end && (
+											<TableCell className="text-muted-foreground text-sm">
+												{history.endTime ? (
+													<Tooltip>
+														<TooltipTrigger className="cursor-default">
+															{formatTimeAgo(history.endTime)}
+														</TooltipTrigger>
+														<TooltipContent>
+															{format(history.endTime, "PPpp")}
+														</TooltipContent>
+													</Tooltip>
+												) : (
+													"-"
+												)}
+											</TableCell>
+										)}
+										{visibleColumns.duration && (
+											<TableCell className="text-muted-foreground text-sm">
+												{formatDuration({
+													startTime: history.startTime,
+													endTime: history.endTime,
+												})}
+											</TableCell>
+										)}
+										{visibleColumns.status && (
+											<TableCell>
+												<FlowStatus status={history.status} />
+											</TableCell>
+										)}
 									</TableRow>
 									{isExpanded && (
 										<TableRow key={`${rowIndex}-expanded`}>
-											<TableCell colSpan={7} className="bg-muted/30 p-0">
+											<TableCell
+												colSpan={
+													1 +
+													(visibleColumns.labels ? 1 : 0) +
+													(visibleColumns.start ? 1 : 0) +
+													(visibleColumns.end ? 1 : 0) +
+													(visibleColumns.duration ? 1 : 0) +
+													(visibleColumns.status ? 1 : 0)
+												}
+												className="bg-muted/30 p-0"
+											>
 												<div className="px-4">
 													<Waterfall
 														steps={history.steps}

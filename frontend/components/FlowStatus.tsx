@@ -8,7 +8,7 @@ interface FlowStatusProps {
 	className?: string;
 }
 
-const statusConfig = {
+export const statusConfig = {
 	success: {
 		label: "Success",
 		Icon: CheckCircle2,

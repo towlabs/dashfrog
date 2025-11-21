@@ -9,6 +9,7 @@ import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { FlowDetail } from "@/components/FlowDetail";
 import { FlowSelector } from "@/components/FlowSelector";
 import { LabelBadge } from "@/components/LabelBadge";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	Sheet,
@@ -73,6 +74,9 @@ export const HeatmapBlock = createReactBlockSpec(
 			flowName: {
 				default: "",
 			},
+			title: {
+				default: "",
+			},
 			blockFilters: {
 				default: "[]",
 			},
@@ -111,6 +115,7 @@ export const HeatmapBlock = createReactBlockSpec(
 			const [selectedDay, setSelectedDay] = useState<Date | null>(null);
 
 			const flowName = props.block.props.flowName as string;
+			const title = props.block.props.title as string;
 
 			// Parse block filters from JSON string
 			const blockFilters: Filter[] = useMemo(() => {
@@ -304,7 +309,7 @@ export const HeatmapBlock = createReactBlockSpec(
 										{/* Show flow name on first row */}
 										{index === 0 && (
 											<div className="text-m font-medium mb-1">
-												{flowName || "N/A"}
+												{title || flowName || "N/A"}
 											</div>
 										)}
 										<div className="flex items-center gap-2">
@@ -397,7 +402,7 @@ export const HeatmapBlock = createReactBlockSpec(
 								<div className="space-y-1">
 									{/* Show flow name on first row */}
 									<div className="text-m font-medium mb-1">
-										{flowName || "N/A"}
+										{title || flowName || "N/A"}
 									</div>
 									<div className="flex items-center gap-2">
 										<div className="flex gap-[2px] flex-1">
@@ -455,6 +460,24 @@ export const HeatmapBlock = createReactBlockSpec(
 							</SheetHeader>
 
 							<div className="mt-6 space-y-6">
+								<div className="space-y-3">
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Title
+									</h3>
+									<Input
+										placeholder="Optional title..."
+										value={title}
+										onChange={(e) => {
+											props.editor.updateBlock(props.block, {
+												props: {
+													...props.block.props,
+													title: e.target.value,
+												},
+											});
+										}}
+									/>
+								</div>
+
 								<div className="space-y-3">
 									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 										Flow

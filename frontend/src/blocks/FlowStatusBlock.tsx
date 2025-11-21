@@ -1,7 +1,8 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { ChartNoAxesGantt } from "lucide-react";
+import { ChartNoAxesGantt, Circle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import React from "react";
 import { useParams } from "react-router-dom";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
@@ -19,24 +20,33 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
+import { formatDuration } from "@/src/lib/formatters";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
-
-const flowStatusColors = {
-	success: "bg-[#5cb660]",
-	failure: "bg-[#e56458]",
-	running: "bg-[#2883df]",
-};
+import { statusConfig } from "@/components/FlowStatus";
+import { Separator } from "@/components/ui/separator";
 
 export const FlowStatusBlock = createReactBlockSpec(
 	{
@@ -50,6 +60,9 @@ export const FlowStatusBlock = createReactBlockSpec(
 			},
 			blockFilters: {
 				default: "[]",
+			},
+			displayMode: {
+				default: "status",
 			},
 		},
 		content: "none",
@@ -79,6 +92,9 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 			const flowName = props.block.props.flowName as string;
 			const title = props.block.props.title as string;
+			const displayMode =
+				(props.block.props.displayMode as "status" | "runCount" | "") ||
+				"status";
 
 			// Parse block filters from JSON string
 			const blockFilters: Filter[] = React.useMemo(() => {
@@ -161,19 +177,25 @@ export const FlowStatusBlock = createReactBlockSpec(
 					return (
 						<div className="outline-none flex flex-col gap-1">
 							<Card className="@container/card shadow-none">
-								<CardHeader>
-									<CardDescription className="text-xl font-semibold flex items-baseline gap-2">
-										<div
-											className={cn(
-												"w-2.5 h-2.5 rounded-full bg-muted-foreground",
-											)}
-										/>
-										{title || flowName || "N/A"}
+								<CardHeader className="pb-2 pt-2 pl-3">
+									<CardDescription className="text-xl relative font-semibold flex items-center gap-2">
+										<Badge
+											variant="outline"
+											className={
+												"text-muted-foreground px-1.5 gap-1.5 border-0 text-base"
+											}
+										>
+											<Circle
+												className={cn("size-5", "text-muted-foreground")}
+											/>
+											{title || flowName || "N/A"}
+										</Badge>
 									</CardDescription>
-									<CardTitle className="text-secondary-foreground text-sm font-normal">
-										No runs
-									</CardTitle>
 								</CardHeader>
+								<Separator />
+								<CardContent className="px-6 py-3 text-secondary-foreground">
+									No runs
+								</CardContent>
 								<CardFooter className="flex-col items-start gap-1.5 text-sm p-3 pt-0"></CardFooter>
 							</Card>
 						</div>
@@ -188,23 +210,49 @@ export const FlowStatusBlock = createReactBlockSpec(
 			};
 
 			const renderFlowHistory = (flow: Flow) => {
+				// Default "status" mode
+				const config = statusConfig[flow.lastRunStatus];
 				return (
 					<div
 						className="outline-none flex flex-col gap-1 group"
 						key={flow.groupId}
 					>
 						<Card className="@container/card shadow-none">
-							<CardHeader>
-								<CardDescription className="text-xl relative font-semibold flex items-baseline gap-2">
+							<CardHeader className="pb-2 pt-2 pl-3">
+								<CardDescription className="text-xl relative font-semibold flex items-center gap-2">
+									<TooltipProvider>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<Badge
+													variant="outline"
+													className={
+														"text-muted-foreground px-1.5 gap-1.5 border-0 text-base"
+													}
+												>
+													<config.Icon
+														className={cn("size-5", config.iconClass)}
+													/>
+													{title || flow.name}
+												</Badge>
+											</TooltipTrigger>
+											<TooltipContent>
+												{flow.lastRunStatus === "running" && (
+													<p>
+														Running since{" "}
+														{flow.lastRunStartedAt?.toLocaleString()}
+													</p>
+												)}
+												{flow.lastRunStatus !== "running" && (
+													<p>
+														Last run ended at{" "}
+														{flow.lastRunEndedAt?.toLocaleString()}
+													</p>
+												)}
+											</TooltipContent>
+										</Tooltip>
+									</TooltipProvider>
 									<div
-										className={cn(
-											"w-2.5 h-2.5 rounded-full",
-											flowStatusColors[flow.lastRunStatus],
-										)}
-									/>
-									{title || flowName}
-									<div
-										className="absolute right-0 -top-6 px-2 py-1.5 rounded-b-lg border border-t-0 bg-background group-hover:opacity-100 transition-opacity cursor-pointer z-10 flex items-center gap-1.5 opacity-0 shadow-xs"
+										className="absolute right-0 -top-2 px-2 py-1.5 rounded-b-lg border border-t-0 bg-background group-hover:opacity-100 transition-opacity cursor-pointer z-10 flex items-center gap-1.5 opacity-0 shadow-xs"
 										onClick={() => handleFlowClick(flow)}
 									>
 										<ChartNoAxesGantt className="size-4 text-muted-foreground" />
@@ -213,14 +261,97 @@ export const FlowStatusBlock = createReactBlockSpec(
 										</span>
 									</div>
 								</CardDescription>
-								<CardTitle className="text-secondary-foreground text-sm font-normal">
-									Duration:{" "}
-									{formatDuration(flow.lastRunStartedAt, flow.lastRunEndedAt)}
-									{flow.lastRunEndedAt && (
-										<> - {formatTimeAgo(flow.lastRunEndedAt)}</>
-									)}
-								</CardTitle>
 							</CardHeader>
+							<Separator />
+							<CardContent className="px-6 py-3">
+								{displayMode === "runCount" && (
+									<div className="grid grid-cols-2 sm:grid-cols-3">
+										{/* Success */}
+										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 px-6 py-2 text-left border-0">
+											<span className="text-muted-foreground text-xs flex items-center gap-2">
+												<div className="h-2 w-2 rounded-full bg-[#5cb660]" />
+												Success
+											</span>
+											<span className="text-lg leading-none font-bold sm:text-3xl">
+												{flow.successCount.toLocaleString()}
+											</span>
+										</div>
+
+										{/* Failed */}
+										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l ">
+											<span className="text-muted-foreground text-xs flex items-center gap-2">
+												<div className="h-2 w-2 rounded-full bg-[#e56458]" />
+												Failed
+											</span>
+											<span className="text-lg leading-none font-bold sm:text-3xl">
+												{flow.failedCount.toLocaleString()}
+											</span>
+										</div>
+
+										{/* Running */}
+										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l">
+											<span className="text-muted-foreground text-xs flex items-center gap-2">
+												<div className="h-2 w-2 rounded-full bg-[#2883df]" />
+												Running
+											</span>
+											<span className="text-lg leading-none font-bold sm:text-3xl">
+												{flow.pendingCount.toLocaleString()}
+											</span>
+										</div>
+									</div>
+								)}
+								{displayMode === "status" && (
+									<div className="grid grid-cols-4 sm:grid-cols-4">
+										{/* Success */}
+										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 px-6 py-2 text-left border-0">
+											<span className="text-muted-foreground text-xs flex items-center gap-2">
+												Last duration
+											</span>
+											<span className="text-lg leading-none font-bold sm:text-3xl">
+												{formatDuration({
+													seconds: flow.lastDurationInSeconds,
+												})}
+											</span>
+										</div>
+
+										{/* Failed */}
+										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l ">
+											<span className="text-muted-foreground text-xs flex items-center gap-2">
+												Average duration
+											</span>
+											<span className="text-lg leading-none font-bold sm:text-3xl">
+												{formatDuration({
+													seconds: flow.avgDurationInSeconds,
+												})}
+											</span>
+										</div>
+
+										{/* Running */}
+										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l">
+											<span className="text-muted-foreground text-xs flex items-center gap-2">
+												Min duration
+											</span>
+											<span className="text-lg leading-none font-bold sm:text-3xl">
+												{formatDuration({
+													seconds: flow.minDurationInSeconds,
+												})}
+											</span>
+										</div>
+
+										{/* Running */}
+										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l">
+											<span className="text-muted-foreground text-xs flex items-center gap-2">
+												Max duration
+											</span>
+											<span className="text-lg leading-none font-bold sm:text-3xl">
+												{formatDuration({
+													seconds: flow.maxDurationInSeconds,
+												})}
+											</span>
+										</div>
+									</div>
+								)}
+							</CardContent>
 							<CardFooter className="flex-col items-start gap-1.5 text-sm p-3 pt-0">
 								<div className="flex gap-1">
 									{Object.entries(flow.labels).map(([key, value]) => (
@@ -270,7 +401,50 @@ export const FlowStatusBlock = createReactBlockSpec(
 								</div>
 
 								<div className="space-y-3">
-									<Label className="text-sm font-medium">Flow</Label>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Display
+									</h3>
+									<TooltipProvider delayDuration={300}>
+										<Select
+											value={displayMode}
+											onValueChange={(value) => {
+												props.editor.updateBlock(props.block, {
+													props: {
+														...props.block.props,
+														displayMode: value,
+													},
+												});
+											}}
+										>
+											<SelectTrigger>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<SelectItem value="status">Duration</SelectItem>
+													</TooltipTrigger>
+													<TooltipContent side="right">
+														<p>Display flow duration across time period</p>
+													</TooltipContent>
+												</Tooltip>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<SelectItem value="runCount">Count</SelectItem>
+													</TooltipTrigger>
+													<TooltipContent side="right">
+														<p>Count of flow runs split by status</p>
+													</TooltipContent>
+												</Tooltip>
+											</SelectContent>
+										</Select>
+									</TooltipProvider>
+								</div>
+
+								<div className="space-y-3">
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Flow
+									</h3>
 									<FlowSelector
 										flows={flows}
 										flowsLoading={flowsLoading}

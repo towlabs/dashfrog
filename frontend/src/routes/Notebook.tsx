@@ -24,12 +24,15 @@ import {
 	BarChart3,
 	ChartLine,
 	ChevronRight,
+	History,
 	Home,
+	LayoutGrid,
 	ListChecks,
 	ListCollapse,
 	Logs,
 	RectangleEllipsis,
 	RectangleHorizontal,
+	Table2,
 	Table as TableIcon,
 } from "lucide-react";
 import React, { useEffect } from "react";
@@ -123,7 +126,21 @@ export default function NotebookPage() {
 		if (!notebook) return;
 
 		const timeoutId = setTimeout(() => {
-			editor.replaceBlocks(editor.document, notebook.blocks || []);
+			// Migrate old flowRunCount blocks to flowStatus with displayMode: "runCount"
+			const migratedBlocks = (notebook.blocks || []).map((block: any) => {
+				if (block.type === "flowRunCount") {
+					return {
+						...block,
+						type: "flowStatus",
+						props: {
+							...block.props,
+							displayMode: "runCount",
+						},
+					};
+				}
+				return block;
+			});
+			editor.replaceBlocks(editor.document, migratedBlocks as any);
 		});
 
 		return () => {
@@ -261,15 +278,16 @@ export default function NotebookPage() {
 										},
 
 										{
-											title: "Flows Listing",
+											title: "Flows Table",
 											onItemClick: () => {
 												insertOrUpdateBlock(editor, {
 													type: "flow",
 												});
 											},
 											group: "Flows",
-											subtext: "Table listing of flows",
-											icon: <ListChecks className="size-4.5" />,
+											subtext:
+												"List of all flows with information about their last run",
+											icon: <Table2 className="size-4.5" />,
 											aliases: [],
 										},
 										{
@@ -281,12 +299,12 @@ export default function NotebookPage() {
 												setOpenBlockSettings(block.id);
 											},
 											group: "Flows",
-											subtext: "Execution history for a specific flow",
-											icon: <ListCollapse className="size-4.5" />,
+											subtext: "List of all executions for a given flow",
+											icon: <History className="size-4.5" />,
 											aliases: [],
 										},
 										{
-											title: "Flow Status",
+											title: "Flow Card",
 											onItemClick: () => {
 												const block = insertOrUpdateBlock(editor, {
 													type: "flowStatus",
@@ -294,10 +312,10 @@ export default function NotebookPage() {
 												setOpenBlockSettings(block.id);
 											},
 											group: "Flows",
-											key: "flow_status",
-											subtext: "Status card for a specific flow",
+											subtext:
+												"Card showing key information about a specific flow",
 											icon: <RectangleEllipsis className="size-4.5" />,
-											aliases: [],
+											aliases: ["run counts", "flow run count"],
 										},
 										{
 											title: "Heatmap",
@@ -308,9 +326,8 @@ export default function NotebookPage() {
 												setOpenBlockSettings(block.id);
 											},
 											group: "Flows",
-											key: "flow_heatmap",
-											subtext: "Heatmap showing daily flow status",
-											icon: <BarChart3 className="size-4.5" />,
+											subtext: "Heatmap showing daily status for a given flow",
+											icon: <LayoutGrid className="size-4.5" />,
 											aliases: ["flow heatmap"],
 										},
 										{

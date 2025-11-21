@@ -11,6 +11,10 @@ export interface Flow {
 	successCount: number;
 	pendingCount: number;
 	failedCount: number;
+	lastDurationInSeconds: number | null;
+	avgDurationInSeconds: number | null;
+	minDurationInSeconds: number | null;
+	maxDurationInSeconds: number | null;
 }
 
 export interface FlowHistory {
@@ -34,4 +38,12 @@ export interface FlowHistoryStep {
 	startTime: Date;
 	endTime: Date | null;
 	status: "success" | "failure" | "running";
+}
+
+export interface FlowRunCount {
+	labels: Record<string, string>;
+	runCount: number;
+	successCount: number;
+	failedCount: number;
+	pendingCount: number;
 }
