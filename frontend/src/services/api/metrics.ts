@@ -56,12 +56,12 @@ const Metrics = {
 	 * Get metric history for a specific metric with labels
 	 */
 	getHistory: async (
-		_tenant: string,
+		tenant: string,
 		metricName: string,
 		spatialAggregation: MetricAggregation,
 		startTime: Date,
 		endTime: Date,
-		labels?: Filter[],
+		labels: Filter[],
 	): Promise<{
 		series: { labels: Record<string, string>; values: MetricHistoryPoint[] }[];
 	}> => {
@@ -72,10 +72,10 @@ const Metrics = {
 			},
 			body: JSON.stringify({
 				metric_name: metricName,
-				aggregation: spatialAggregation,
+				spatial_aggregation: spatialAggregation,
 				start_time: startTime.toISOString(),
 				end_time: endTime.toISOString(),
-				labels,
+				labels: [...labels, { label: "tenant", value: tenant }],
 			}),
 		});
 		const data = (await response.json()) as MetricHistoryResponse;
@@ -91,33 +91,30 @@ const Metrics = {
 	},
 
 	getScalars: async (
-		_tenant: string,
-		_metricName: string,
-		_unit: string | null,
-		_startTime: Date,
-		_endTime: Date,
-		_spatialAggregation: MetricAggregation,
-		_temporalAggregation: AggregationFunction,
-		_filters?: Filter[],
+		tenant: string,
+		metricName: string,
+		startTime: Date,
+		endTime: Date,
+		spatialAggregation: MetricAggregation,
+		temporalAggregation: AggregationFunction,
+		labels: Filter[],
 	): Promise<MetricScalarResponse> => {
-		return new Promise((resolve) => setTimeout(resolve, 300)).then(() => ({
-			scalars: [
-				{
-					labels: {
-						service: "api",
-						environment: "production",
-					},
-					value: 100,
-				},
-				// {
-				// 	labels: {
-				// 		service: "api",
-				// 		environment: "staging",
-				// 	},
-				// 	value: 200,
-				// },
-			],
-		}));
+		const response = await fetch(`/api/metrics/instant`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				metric_name: metricName,
+				spatial_aggregation: spatialAggregation,
+				temporal_aggregation: temporalAggregation,
+				start_time: startTime.toISOString(),
+				end_time: endTime.toISOString(),
+				labels: [...labels, { label: "tenant", value: tenant }],
+			}),
+		});
+		const data = (await response.json()) as MetricScalarResponse;
+		return data;
 	},
 };
 

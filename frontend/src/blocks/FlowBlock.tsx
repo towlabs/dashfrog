@@ -163,7 +163,7 @@ export const FlowBlock = createReactBlockSpec(
 
 								<div className="mt-6">
 									<div className="space-y-1">
-										<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+										<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 											Columns
 										</h3>
 										<div className="space-y-1">

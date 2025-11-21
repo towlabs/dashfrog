@@ -252,7 +252,9 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 							<div className="mt-6 space-y-6">
 								<div className="space-y-3">
-									<Label className="text-sm font-medium">Title</Label>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Title
+									</h3>
 									<Input
 										placeholder="Optional title..."
 										value={title}

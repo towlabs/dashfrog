@@ -97,7 +97,8 @@ export const DragHandleButton = <
 						blockType === "flowStatus" ||
 						blockType === "heatmap" ||
 						blockType === "metric" ||
-						blockType === "metricHistory") && (
+						blockType === "metricHistory" ||
+						blockType === "metricTable") && (
 						<DropdownMenuItem
 							className={"bn-menu-item py-1"}
 							onClick={() => {

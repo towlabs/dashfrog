@@ -456,7 +456,9 @@ export const HeatmapBlock = createReactBlockSpec(
 
 							<div className="mt-6 space-y-6">
 								<div className="space-y-3">
-									<Label className="text-sm font-medium">Flow</Label>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Flow
+									</h3>
 									<FlowSelector
 										flows={flows}
 										flowsLoading={flowsLoading}

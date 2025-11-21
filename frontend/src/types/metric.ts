@@ -20,11 +20,15 @@ export const getMetricAggregationLabel = (
 ) => {
 	switch (aggregation) {
 		case "p50":
+			return `50th percentile of ${prettyName}`;
 		case "p90":
+			return `90th percentile of ${prettyName}`;
 		case "p95":
+			return `95th percentile of ${prettyName}`;
 		case "p99":
+			return `99th percentile of ${prettyName}`;
 		case "increase":
-			return `${aggregation} of ${prettyName}`;
+			return `Increase of ${prettyName}`;
 		case "ratePerSecond":
 			return `Rate of ${prettyName} per second`;
 		case "ratePerMinute":

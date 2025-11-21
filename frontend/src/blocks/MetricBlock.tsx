@@ -31,6 +31,12 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Metrics } from "@/src/services/api/metrics";
 import { useLabelsStore } from "@/src/stores/labels";
@@ -43,6 +49,7 @@ import type {
 } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
+import React from "react";
 
 export const MetricBlock = createReactBlockSpec(
 	{
@@ -92,7 +99,6 @@ export const MetricBlock = createReactBlockSpec(
 			);
 			const labels = useLabelsStore((state) => state.labels);
 
-			const [selectedMetric, setSelectedMetric] = useState<Metric | null>(null);
 			const [scalarData, setScalarData] = useState<
 				{
 					labels: Record<string, string>;
@@ -126,16 +132,13 @@ export const MetricBlock = createReactBlockSpec(
 				[notebookFilters, blockFilters],
 			);
 
-			// Update selected metric when metricName or available metrics change
-			useEffect(() => {
-				if (!metricName || metrics.length === 0) {
-					setSelectedMetric(null);
-					return;
-				}
-
-				const metric = metrics.find((m) => m.name === metricName);
-				setSelectedMetric(metric || null);
-			}, [metricName, metrics]);
+			const selectedMetric = React.useMemo(() => {
+				return metrics.find(
+					(m) =>
+						m.prometheusName === metricName &&
+						m.aggregation === spatialAggregation,
+				);
+			}, [metricName, spatialAggregation, metrics]);
 
 			// Fetch scalar data when metric and aggregation are selected
 			useEffect(() => {
@@ -158,7 +161,6 @@ export const MetricBlock = createReactBlockSpec(
 						const response = await Metrics.getScalars(
 							tenantName,
 							selectedMetric.prometheusName,
-							selectedMetric.unit,
 							start,
 							end,
 							spatialAggregation,
@@ -197,12 +199,20 @@ export const MetricBlock = createReactBlockSpec(
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
 			const handleMetricSelect = (metric: Metric) => {
+				if (
+					metric.prometheusName === props.block.props.metricName &&
+					metric.aggregation === props.block.props.spatialAggregation
+				) {
+					return;
+				}
+
 				props.editor.updateBlock(props.block, {
 					props: {
 						...props.block.props,
 						metricName: metric.prometheusName,
 						spatialAggregation: metric.aggregation,
-						temporalAggregation: "last",
+						temporalAggregation:
+							metric.aggregation === "increase" ? "sum" : "avg",
 					},
 				});
 			};
@@ -373,7 +383,9 @@ export const MetricBlock = createReactBlockSpec(
 
 							<div className="mt-6 space-y-6">
 								<div className="space-y-3">
-									<Label className="text-sm font-medium">Title</Label>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Title
+									</h3>
 									<Input
 										placeholder="Optional title..."
 										value={title}
@@ -389,7 +401,9 @@ export const MetricBlock = createReactBlockSpec(
 								</div>
 
 								<div className="space-y-3">
-									<Label className="text-sm font-medium">Metric</Label>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Metric
+									</h3>
 									<MetricSelector
 										metrics={metrics}
 										metricsLoading={metricsLoading}
@@ -401,25 +415,49 @@ export const MetricBlock = createReactBlockSpec(
 
 								<div className="space-y-3">
 									<Label className="text-sm font-medium">Aggregation</Label>
-									<Select
-										value={temporalAggregation}
-										onValueChange={handleAggregationChange}
-									>
-										<SelectTrigger className="w-full">
-											<SelectValue placeholder="Select aggregation..." />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="last">
-												Last (Value at end of period)
-											</SelectItem>
-											<SelectItem value="sum">
-												Sum (Sum across period)
-											</SelectItem>
-											<SelectItem value="avg">
-												Average (Average across period)
-											</SelectItem>
-										</SelectContent>
-									</Select>
+									<TooltipProvider delayDuration={300}>
+										<Select
+											value={temporalAggregation}
+											onValueChange={handleAggregationChange}
+										>
+											<SelectTrigger className="w-full">
+												<SelectValue placeholder="Select aggregation..." />
+											</SelectTrigger>
+											<SelectContent>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<SelectItem value="last">Last</SelectItem>
+													</TooltipTrigger>
+													<TooltipContent side="right">
+														<p className="max-w-xs text-sm">
+															Returns the most recent value in the time window.
+														</p>
+													</TooltipContent>
+												</Tooltip>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<SelectItem value="sum">Sum</SelectItem>
+													</TooltipTrigger>
+													<TooltipContent side="right">
+														<p className="max-w-xs text-sm">
+															Adds up all values in the time window.
+														</p>
+													</TooltipContent>
+												</Tooltip>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<SelectItem value="avg">Average</SelectItem>
+													</TooltipTrigger>
+													<TooltipContent side="right">
+														<p className="max-w-xs text-sm">
+															Calculates the mean of all values in the time
+															window.
+														</p>
+													</TooltipContent>
+												</Tooltip>
+											</SelectContent>
+										</Select>
+									</TooltipProvider>
 								</div>
 
 								<div className="space-y-3">

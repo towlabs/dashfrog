@@ -30,6 +30,7 @@ import {
 	Logs,
 	RectangleEllipsis,
 	RectangleHorizontal,
+	Table as TableIcon,
 } from "lucide-react";
 import React, { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -43,6 +44,7 @@ import { FlowStatusBlock } from "../blocks/FlowStatusBlock";
 import { HeatmapBlock } from "../blocks/HeatmapBlock";
 import { MetricBlock } from "../blocks/MetricBlock";
 import { MetricHistoryBlock } from "../blocks/MetricHistoryBlock";
+import { MetricTableBlock } from "../blocks/MetricTableBlock";
 import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
@@ -97,6 +99,7 @@ export default function NotebookPage() {
 					heatmap: HeatmapBlock,
 					metric: MetricBlock,
 					metricHistory: MetricHistoryBlock,
+					metricTable: MetricTableBlock,
 				},
 			}),
 		),
@@ -337,6 +340,20 @@ export default function NotebookPage() {
 											subtext: "Chart showing metric history over time",
 											icon: <ChartLine className="size-4.5" />,
 											aliases: ["metric history"],
+										},
+										{
+											title: "Table",
+											onItemClick: () => {
+												const block = insertOrUpdateBlock(editor, {
+													type: "metricTable",
+												});
+												setOpenBlockSettings(block.id);
+											},
+											group: "Metrics",
+											key: "metric_table",
+											subtext: "Table displaying metric values with labels",
+											icon: <TableIcon className="size-4.5" />,
+											aliases: ["metric table"],
 										},
 									]);
 									const q = query.trim().toLowerCase();

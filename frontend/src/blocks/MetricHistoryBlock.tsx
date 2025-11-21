@@ -2,9 +2,10 @@
 
 import { createReactBlockSpec } from "@blocknote/react";
 import { ChartLine } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
+import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { MetricHistoryChart } from "@/components/MetricHistoryChart";
 import { MetricSelector } from "@/components/MetricSelector";
 import { Label } from "@/components/ui/label";
@@ -15,7 +16,9 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { type MetricHistoryPoint, Metrics } from "@/src/services/api/metrics";
+import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Filter } from "@/src/types/filter";
 import type { Metric, MetricAggregation } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 
@@ -28,6 +31,9 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			},
 			spatialAggregation: {
 				default: "" as MetricAggregation | "",
+			},
+			blockFilters: {
+				default: "[]",
 			},
 		},
 		content: "none",
@@ -45,13 +51,27 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			const openBlockSettings = useNotebooksStore(
 				(state) => state.openBlockSettings,
 			);
+			const labels = useLabelsStore((state) => state.labels);
 			const metrics = useNotebooksStore((state) => state.metrics);
 			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
 			const timeWindow = useNotebooksStore(
 				(state) => state.currentNotebook?.timeWindow,
 			);
-			const filters = useNotebooksStore(
+			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
+			);
+
+			const blockFilters: Filter[] = useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.blockFilters as string);
+				} catch {
+					return [];
+				}
+			}, [props.block.props.blockFilters]);
+
+			const filters = useMemo(
+				() => [...(notebookFilters || []), ...blockFilters],
+				[notebookFilters, blockFilters],
 			);
 
 			const [historyData, setHistoryData] = useState<{
@@ -129,6 +149,14 @@ export const MetricHistoryBlock = createReactBlockSpec(
 						...props.block.props,
 						metricName: metric.prometheusName,
 						spatialAggregation: metric.aggregation,
+					},
+				});
+			};
+
+			const handleFiltersChange = (newFilters: Filter[]) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						blockFilters: JSON.stringify(newFilters),
 					},
 				});
 			};
@@ -216,7 +244,9 @@ export const MetricHistoryBlock = createReactBlockSpec(
 
 							<div className="mt-6 space-y-6">
 								<div className="space-y-3">
-									<Label className="text-sm font-medium">Metric</Label>
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Metric
+									</h3>
 									<MetricSelector
 										metrics={metrics}
 										metricsLoading={metricsLoading}
@@ -225,6 +255,17 @@ export const MetricHistoryBlock = createReactBlockSpec(
 											selectedMetric?.aggregation ?? ""
 										}
 										onMetricSelect={handleMetricSelect}
+									/>
+								</div>
+
+								<div className="space-y-3 mt-6">
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Additional Filters
+									</h3>
+									<FilterBadgesEditor
+										availableLabels={labels}
+										filters={blockFilters}
+										onFiltersChange={handleFiltersChange}
 									/>
 								</div>
 							</div>
