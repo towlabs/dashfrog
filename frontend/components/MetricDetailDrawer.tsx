@@ -10,6 +10,7 @@ import {
 	DrawerTitle,
 } from "@/components/ui/drawer";
 import {
+	MetricHistoryPoint,
 	type MetricHistoryResponse,
 	Metrics,
 } from "@/src/services/api/metrics";
@@ -24,32 +25,32 @@ type MetricDetailDrawerProps = {
 	metric: Metric;
 	timeWindow: TimeWindow;
 	filters: Filter[];
+	tenantName: string;
 };
 
 export function MetricDetailDrawer({
 	open,
 	onOpenChange,
 	metric,
+	tenantName,
 	timeWindow,
 	filters,
 }: MetricDetailDrawerProps) {
-	const [historyData, setHistoryData] = useState<MetricHistoryResponse | null>(
-		null,
-	);
-	const [loading, setLoading] = useState(false);
-	const currentTenant = useTenantStore((state) => state.currentTenant);
+	const [historyData, setHistoryData] = useState<{
+		series: {
+			labels: Record<string, string>;
+			values: MetricHistoryPoint[];
+		}[];
+	}>({ series: [] });
 
 	useEffect(() => {
-		if (!open || !currentTenant) return;
-
 		const fetchHistory = async () => {
-			setLoading(true);
 			try {
 				const { start, end } = resolveTimeWindow(timeWindow);
 				const response = await Metrics.getHistory(
-					currentTenant,
-					metric.name,
-					metric.unit,
+					tenantName,
+					metric.prometheusName,
+					metric.aggregation,
 					start,
 					end,
 					filters,
@@ -57,13 +58,18 @@ export function MetricDetailDrawer({
 				setHistoryData(response);
 			} catch (error) {
 				console.error("Failed to fetch metric history:", error);
-			} finally {
-				setLoading(false);
+				setHistoryData({ series: [] });
 			}
 		};
 
 		void fetchHistory();
-	}, [metric, open, currentTenant, filters, timeWindow]);
+	}, [
+		tenantName,
+		metric.prometheusName,
+		metric.aggregation,
+		timeWindow,
+		filters,
+	]);
 
 	if (!metric) return null;
 
@@ -84,17 +90,11 @@ export function MetricDetailDrawer({
 				</DrawerHeader>
 
 				<div className="px-4 pb-10">
-					{loading ? (
-						<div className="rounded-lg border p-8 text-center text-muted-foreground">
-							<p>Loading metric history...</p>
-						</div>
-					) : historyData && historyData.series.length > 0 ? (
-						<MetricHistoryChart historyData={historyData} metric={metric} />
-					) : (
-						<div className="rounded-lg border p-8 text-center text-muted-foreground">
-							<p>No metric history data available</p>
-						</div>
-					)}
+					<MetricHistoryChart
+						historyData={historyData}
+						metric={metric}
+						timeWindow={timeWindow}
+					/>
 				</div>
 			</DrawerContent>
 		</Drawer>

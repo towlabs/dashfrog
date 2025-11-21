@@ -1,12 +1,13 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { RectangleHorizontal } from "lucide-react";
+import { ChartLine, RectangleHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { LabelBadge } from "@/components/LabelBadge";
+import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
 import { MetricSelector } from "@/components/MetricSelector";
 import {
 	Card,
@@ -106,6 +107,10 @@ export const MetricBlock = createReactBlockSpec(
 				}[]
 			>([]);
 			const [loading, setLoading] = useState(false);
+			const [detailOpen, setDetailOpen] = useState(false);
+			const [selectedLabels, setSelectedLabels] = useState<
+				Record<string, string>
+			>({});
 
 			const metricName = props.block.props.metricName as string;
 			const title = props.block.props.title as string;
@@ -235,6 +240,11 @@ export const MetricBlock = createReactBlockSpec(
 				});
 			};
 
+			const handleMetricClick = (labels: Record<string, string>) => {
+				setSelectedLabels(labels);
+				setDetailOpen(true);
+			};
+
 			const getHealthColor = (value: number): string => {
 				const min = healthMin ? Number.parseFloat(healthMin) : null;
 				const max = healthMax ? Number.parseFloat(healthMax) : null;
@@ -324,45 +334,57 @@ export const MetricBlock = createReactBlockSpec(
 					healthMin || healthMax ? getHealthColor(scalar.value) : "";
 
 				return (
-					<Card key={index} className="@container/card shadow-none">
-						<CardHeader>
-							<CardDescription>
-								{title || selectedMetric.prettyName}
-							</CardDescription>
-							<CardTitle
-								className={cn(
-									"text-2xl font-semibold @[250px]/card:text-3xl",
-									colorClass,
-								)}
-							>
-								{formatted.formattedValue}
-								{formatted.displayUnit && (
-									<span
-										className={cn(
-											"text-muted-foreground ml-2 text-xl",
-											colorClass,
-										)}
-									>
-										{formatted.displayUnit}
+					<div key={index} className="group">
+						<Card className="@container/card shadow-none">
+							<CardHeader className="relative">
+								<CardDescription>
+									{title ||
+										`${selectedMetric.prettyName} - ${temporalAggregation === "sum" ? "Total over time" : temporalAggregation === "avg" ? "Average over time" : "Last value"}`}
+								</CardDescription>
+								<CardTitle
+									className={cn(
+										"text-2xl font-semibold @[250px]/card:text-3xl",
+										colorClass,
+									)}
+								>
+									{formatted.formattedValue}
+									{formatted.displayUnit && (
+										<span
+											className={cn(
+												"text-muted-foreground ml-2 text-xl",
+												colorClass,
+											)}
+										>
+											{formatted.displayUnit}
+										</span>
+									)}
+								</CardTitle>
+								<div
+									className="absolute right-3 top-0 px-2 py-1.5 rounded-b-lg border border-t-0 bg-background group-hover:opacity-100 transition-opacity cursor-pointer z-10 flex items-center gap-1.5 opacity-0 shadow-xs"
+									onClick={() => handleMetricClick(scalar.labels)}
+								>
+									<ChartLine className="size-4 text-muted-foreground" />
+									<span className="text-xs text-muted-foreground whitespace-nowrap">
+										History
 									</span>
-								)}
-							</CardTitle>
-						</CardHeader>
-						<CardFooter className="flex-col items-start gap-1.5 text-sm p-3 pt-0">
-							{Object.keys(scalar.labels).length > 0 && (
-								<div className="flex gap-1 flex-wrap">
-									{Object.entries(scalar.labels).map(([key, value]) => (
-										<LabelBadge
-											key={`${key}-${value}`}
-											labelKey={key}
-											labelValue={value}
-											readonly
-										/>
-									))}
 								</div>
-							)}
-						</CardFooter>
-					</Card>
+							</CardHeader>
+							<CardFooter className="flex-col items-start gap-1.5 text-sm p-3 pt-0">
+								{Object.keys(scalar.labels).length > 0 && (
+									<div className="flex gap-1 flex-wrap">
+										{Object.entries(scalar.labels).map(([key, value]) => (
+											<LabelBadge
+												key={`${key}-${value}`}
+												labelKey={key}
+												labelValue={value}
+												readonly
+											/>
+										))}
+									</div>
+								)}
+							</CardFooter>
+						</Card>
+					</div>
 				);
 			};
 
@@ -510,6 +532,24 @@ export const MetricBlock = createReactBlockSpec(
 							</div>
 						</SheetContent>
 					</Sheet>
+
+					{/* Metric Detail Drawer */}
+					{selectedMetric && timeWindow && (
+						<MetricDetailDrawer
+							metric={selectedMetric}
+							tenantName={tenantName}
+							filters={[
+								...filters,
+								...Object.entries(selectedLabels).map(([key, value]) => ({
+									label: key,
+									value: value,
+								})),
+							]}
+							open={detailOpen}
+							timeWindow={timeWindow}
+							onOpenChange={setDetailOpen}
+						/>
+					)}
 				</>
 			);
 		},

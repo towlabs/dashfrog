@@ -79,7 +79,7 @@ export const MetricHistoryBlock = createReactBlockSpec(
 					labels: Record<string, string>;
 					values: MetricHistoryPoint[];
 				}[];
-			} | null>(null);
+			}>({ series: [] });
 			const [loading, setLoading] = useState(false);
 
 			const metricName = props.block.props.metricName as string;
@@ -103,7 +103,7 @@ export const MetricHistoryBlock = createReactBlockSpec(
 					timeWindow === undefined ||
 					filters === undefined
 				) {
-					setHistoryData(null);
+					setHistoryData({ series: [] });
 					return;
 				}
 
@@ -122,7 +122,7 @@ export const MetricHistoryBlock = createReactBlockSpec(
 						setHistoryData(response);
 					} catch (error) {
 						console.error("Failed to fetch metric history:", error);
-						setHistoryData(null);
+						setHistoryData({ series: [] });
 					} finally {
 						setLoading(false);
 					}
@@ -175,14 +175,6 @@ export const MetricHistoryBlock = createReactBlockSpec(
 					);
 				}
 
-				if (loading) {
-					return (
-						<div className="rounded-lg border p-8 text-center text-muted-foreground">
-							<p>Loading metric history...</p>
-						</div>
-					);
-				}
-
 				if (!selectedMetric) {
 					return (
 						<EmptyState
@@ -190,14 +182,6 @@ export const MetricHistoryBlock = createReactBlockSpec(
 							title="Metric not found"
 							description="The selected metric could not be loaded."
 						/>
-					);
-				}
-
-				if (!historyData || historyData.series.length === 0) {
-					return (
-						<div className="rounded-lg border p-8 text-center text-muted-foreground">
-							<p>No metric history data available</p>
-						</div>
 					);
 				}
 
