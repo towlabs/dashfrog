@@ -5,7 +5,12 @@ import { Metrics } from "@/src/services/api/metrics";
 import { Notebooks } from "@/src/services/api/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
-import type { Metric } from "@/src/types/metric";
+import type {
+	InstantAggregation,
+	InstantMetric,
+	RangeAggregation,
+	RangeMetric,
+} from "@/src/types/metric";
 import type { Notebook } from "@/src/types/notebook";
 
 // Debounce timeout storage (outside of Zustand state)
@@ -16,7 +21,8 @@ interface NotebooksState {
 	currentNotebook: Notebook | null;
 	flows: Flow[];
 	flowsLoading: boolean;
-	metrics: Metric[];
+	instantMetrics: InstantMetric[];
+	rangeMetrics: RangeMetric[];
 	metricsLoading: boolean;
 	loading: boolean;
 	error: string | null;
@@ -53,7 +59,8 @@ export const useNotebooksStore = create<NotebooksState>()(
 			notebookCreating: false,
 			flows: [],
 			flowsLoading: false,
-			metrics: [],
+			instantMetrics: [],
+			rangeMetrics: [],
 			metricsLoading: false,
 			loading: true,
 			error: null,
@@ -76,18 +83,24 @@ export const useNotebooksStore = create<NotebooksState>()(
 					const flows = await Flows.getByTenant(tenant, start, end, filters);
 					set({ flows, flowsLoading: false });
 				} catch (error) {
-					console.error("Failed to fetch flows:", error);
 					set({ flows: [], flowsLoading: false });
 				}
 			},
 			fetchMetrics: async () => {
 				set({ metricsLoading: true });
+				console.log("Fetching metrics");
 				try {
-					const response = await Metrics.list();
-					set({ metrics: response, metricsLoading: false });
+					const { instant, range } = await Metrics.list();
+					console.log("Metrics received from API:", instant, range);
+					set({
+						instantMetrics: instant,
+						rangeMetrics: range,
+						metricsLoading: false,
+					});
+					console.log("Metrics state updated successfully");
 				} catch (error) {
 					console.error("Failed to fetch metrics:", error);
-					set({ metrics: [], metricsLoading: false });
+					set({ instantMetrics: [], rangeMetrics: [], metricsLoading: false });
 				}
 			},
 			setCurrentNotebook: (tenant: string, notebookId: string) => {

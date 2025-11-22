@@ -17,29 +17,39 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { Metric, MetricAggregation } from "@/src/types/metric";
+import type {
+	RangeAggregation,
+	InstantAggregation,
+	RangeMetric,
+	InstantMetric,
+} from "@/src/types/metric";
 
-type MetricSelectorProps = {
-	metrics: Metric[];
+type RangeMetricSelectorProps = {
+	metrics: RangeMetric[];
 	metricsLoading: boolean;
-	selectedMetricName: string;
-	selectedSpatialAggregation: MetricAggregation | "";
-	onMetricSelect: (metric: Metric) => void;
+	selectedMetric: RangeMetric | null;
+	onMetricSelect: (metric: RangeMetric) => void;
 };
 
-export function MetricSelector({
+export function RangeMetricSelector({
 	metrics,
 	metricsLoading,
-	selectedMetricName,
-	selectedSpatialAggregation,
+	selectedMetric,
 	onMetricSelect,
-}: MetricSelectorProps) {
+}: RangeMetricSelectorProps) {
 	const [comboboxOpen, setComboboxOpen] = useState(false);
 
 	if (metricsLoading) {
@@ -55,7 +65,7 @@ export function MetricSelector({
 	}
 
 	// Group metrics by aggregation type
-	const groupedMetrics: Record<string, Metric[]> = {};
+	const groupedMetrics: Record<string, RangeMetric[]> = {};
 	for (const metric of metrics) {
 		const groupKey = getAggregationGroupKey(metric.aggregation);
 		if (!groupedMetrics[groupKey]) {
@@ -73,16 +83,7 @@ export function MetricSelector({
 					aria-expanded={comboboxOpen}
 					className="w-full justify-between"
 				>
-					{selectedMetricName
-						? (() => {
-								const metric = metrics.find(
-									(m) =>
-										m.prometheusName === selectedMetricName &&
-										m.aggregation === selectedSpatialAggregation,
-								);
-								return metric ? metric.prettyName : "Select a metric...";
-							})()
-						: "Select a metric..."}
+					{selectedMetric ? selectedMetric.prettyName : "Select a metric..."}
 					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 				</Button>
 			</PopoverTrigger>
@@ -126,8 +127,9 @@ export function MetricSelector({
 										<Check
 											className={cn(
 												"mr-2 h-4 w-4",
-												selectedMetricName === metric.prometheusName &&
-													selectedSpatialAggregation === metric.aggregation
+												selectedMetric?.prometheusName ===
+													metric.prometheusName &&
+													selectedMetric?.aggregation === metric.aggregation
 													? "opacity-100"
 													: "opacity-0",
 											)}
@@ -143,8 +145,152 @@ export function MetricSelector({
 	);
 }
 
+type InstantMetricSelectorProps = {
+	metrics: InstantMetric[];
+	metricsLoading: boolean;
+	selectedMetric: InstantMetric | null;
+	selectedShow: "last" | "avg" | null;
+	onMetricSelect: (metric: InstantMetric, show: "last" | "avg") => void;
+};
+
+export function InstantMetricSelector({
+	metrics,
+	metricsLoading,
+	selectedMetric,
+	selectedShow,
+	onMetricSelect,
+}: InstantMetricSelectorProps) {
+	const [comboboxOpen, setComboboxOpen] = useState(false);
+
+	if (metricsLoading) {
+		return (
+			<div className="text-sm text-muted-foreground">Loading metrics...</div>
+		);
+	}
+
+	if (metrics.length === 0) {
+		return (
+			<div className="text-sm text-muted-foreground">No metrics available</div>
+		);
+	}
+
+	// Group metrics by aggregation type
+	const groupedMetrics: Record<string, InstantMetric[]> = {};
+	for (const metric of metrics) {
+		const groupKey = getAggregationGroupKey(metric.aggregation);
+		if (!groupedMetrics[groupKey]) {
+			groupedMetrics[groupKey] = [];
+		}
+		groupedMetrics[groupKey].push(metric);
+	}
+
+	const showMultipleOptions = selectedMetric && selectedMetric.show.length > 1;
+
+	return (
+		<div className="space-y-3">
+			<Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal={true}>
+				<PopoverTrigger asChild>
+					<Button
+						variant="outline"
+						role="combobox"
+						aria-expanded={comboboxOpen}
+						className="w-full justify-between"
+					>
+						{selectedMetric ? selectedMetric.prettyName : "Select a metric..."}
+						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+					</Button>
+				</PopoverTrigger>
+				<PopoverContent className="w-[400px] p-0">
+					<Command>
+						<CommandInput placeholder="Search metrics..." />
+						<CommandList>
+							<CommandEmpty>No metric found.</CommandEmpty>
+							{Object.entries(groupedMetrics).map(
+								([groupKey, groupMetrics]) => (
+									<CommandGroup
+										key={groupKey}
+										heading={
+											<div className="flex items-center gap-1.5">
+												<span>{getAggregationGroupLabel(groupKey)}</span>
+												<TooltipProvider delayDuration={300}>
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<HelpCircle className="size-3 text-muted-foreground" />
+														</TooltipTrigger>
+														<TooltipContent side="right">
+															<p className="max-w-xs text-sm">
+																{getAggregationGroupDescription(groupKey)}
+															</p>
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											</div>
+										}
+									>
+										{groupMetrics.map((metric) => (
+											<CommandItem
+												key={`${metric.prometheusName}-${metric.aggregation}`}
+												value={metric.prettyName}
+												onSelect={() => {
+													const defaultShow =
+														metric.show.length > 0 ? metric.show[0] : "last";
+													onMetricSelect(metric, defaultShow);
+													setComboboxOpen(false);
+												}}
+												className="flex items-center justify-between"
+											>
+												<span>{metric.prettyName}</span>
+												<Check
+													className={cn(
+														"mr-2 h-4 w-4",
+														selectedMetric?.prometheusName ===
+															metric.prometheusName &&
+															selectedMetric?.aggregation === metric.aggregation
+															? "opacity-100"
+															: "opacity-0",
+													)}
+												/>
+											</CommandItem>
+										))}
+									</CommandGroup>
+								),
+							)}
+						</CommandList>
+					</Command>
+				</PopoverContent>
+			</Popover>
+
+			{showMultipleOptions && (
+				<div className="space-y-2">
+					<label className="text-sm font-medium">Show</label>
+					<Select
+						value={selectedShow || selectedMetric.show[0]}
+						onValueChange={(value: "last" | "avg") => {
+							onMetricSelect(selectedMetric, value);
+						}}
+					>
+						<SelectTrigger className="w-full">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{selectedMetric.show.includes("last") && (
+								<SelectItem value="last">Last</SelectItem>
+							)}
+							{selectedMetric.show.includes("avg") && (
+								<SelectItem value="avg">Average</SelectItem>
+							)}
+						</SelectContent>
+					</Select>
+				</div>
+			)}
+		</div>
+	);
+}
+
 // Helper functions for grouping
-function getAggregationGroupKey(aggregation: MetricAggregation): string {
+function getAggregationGroupKey(
+	aggregation: RangeAggregation | InstantAggregation,
+): string {
 	if (aggregation === "increase") return "increase";
 	if (aggregation.startsWith("rate")) return "rate";
 	if (aggregation.startsWith("p")) return "percentile";

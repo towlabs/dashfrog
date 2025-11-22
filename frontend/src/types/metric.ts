@@ -3,55 +3,47 @@ export interface MetricValue {
 	value: number;
 }
 
-export type MetricAggregation =
-	| "increase"
+export type RangeAggregation =
+	| "ratePerSecond"
+	| "ratePerMinute"
+	| "ratePerHour"
+	| "ratePerDay"
+	| "p50"
+	| "p90"
+	| "p95"
+	| "p99";
+export type InstantAggregation =
+	| "ratePerSecond"
+	| "ratePerMinute"
+	| "ratePerHour"
+	| "ratePerDay"
 	| "p50"
 	| "p90"
 	| "p95"
 	| "p99"
-	| "ratePerSecond"
-	| "ratePerMinute"
-	| "ratePerHour"
-	| "ratePerDay";
+	| "increase";
 
-export const getMetricAggregationLabel = (
-	aggregation: MetricAggregation,
-	prettyName: string,
-) => {
-	switch (aggregation) {
-		case "p50":
-			return `50th percentile of ${prettyName}`;
-		case "p90":
-			return `90th percentile of ${prettyName}`;
-		case "p95":
-			return `95th percentile of ${prettyName}`;
-		case "p99":
-			return `99th percentile of ${prettyName}`;
-		case "increase":
-			return `Increase of ${prettyName}`;
-		case "ratePerSecond":
-			return `Rate of ${prettyName} per second`;
-		case "ratePerMinute":
-			return `Rate of ${prettyName} per minute`;
-		case "ratePerHour":
-			return `Rate of ${prettyName} per hour`;
-		case "ratePerDay":
-			return `Rate of ${prettyName} per day`;
-		default:
-			return prettyName;
-	}
-};
-
-export type AggregationFunction = "last" | "sum" | "avg";
-
-export interface Metric {
+export interface RangeMetric {
 	name: string;
 	prometheusName: string;
 	prettyName: string;
 	labels: string[];
 	unit: string | null;
-	aggregation: MetricAggregation;
 	type: "counter" | "histogram";
+	aggregation: RangeAggregation;
+	show: ("last" | "avg")[];
+}
+
+export interface InstantMetric {
+	name: string;
+	prometheusName: string;
+	prettyName: string;
+	labels: string[];
+	unit: string | null;
+	type: "counter" | "histogram";
+	aggregation: InstantAggregation;
+	rangeAggregation: RangeAggregation;
+	show: ("last" | "avg")[];
 }
 
 export interface MetricHistory {

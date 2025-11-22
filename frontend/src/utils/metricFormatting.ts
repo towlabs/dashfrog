@@ -1,4 +1,4 @@
-import type { MetricAggregation } from "@/src/types/metric";
+import { InstantAggregation, RangeAggregation } from "../types/metric";
 
 /**
  * Round a number to a maximum of 2 decimal places (not fixed)
@@ -16,7 +16,7 @@ export function roundToMax2(num: number): number {
 export function formatMetricValue(
 	value: number,
 	unit?: string,
-	aggregation?: MetricAggregation,
+	aggregation?: InstantAggregation | RangeAggregation,
 ): { formattedValue: string; displayUnit: string } {
 	let displayValue = value;
 	let displayUnit = "";

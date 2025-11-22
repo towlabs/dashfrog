@@ -9,15 +9,20 @@ import {
 	ChartLegend,
 	ChartTooltip,
 } from "@/components/ui/chart";
-import type { Metric, MetricHistory } from "@/src/types/metric";
+import type {
+	MetricHistory,
+	RangeAggregation,
+	RangeMetric,
+} from "@/src/types/metric";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
+import React from "react";
 
 type MetricHistoryChartProps = {
 	historyData: {
 		series: { labels: Record<string, string>; values: MetricHistory[] }[];
 	};
-	metric: Metric;
+	metric: RangeMetric;
 	timeWindow: TimeWindow;
 };
 
@@ -129,54 +134,59 @@ export function MetricHistoryChart({
 	);
 
 	// Transform data for chart - merge all series by timestamp
-	const chartData = sortedTimestamps.map((timestampMs) => {
-		const timestamp = new Date(timestampMs);
-		let timestampStr: string;
-		if (timeFormat === "time") {
-			timestampStr = timestamp.toLocaleTimeString("en-US", {
-				hour: "2-digit",
-				minute: "2-digit",
-			});
-		} else if (timeFormat === "datetime") {
-			timestampStr = timestamp.toLocaleString("en-US", {
-				month: "short",
-				day: "numeric",
-				hour: "2-digit",
-				minute: "2-digit",
-			});
-		} else {
-			timestampStr = timestamp.toLocaleDateString("en-US", {
-				month: "short",
-				day: "numeric",
-			});
-		}
+	const chartData = React.useMemo(
+		() =>
+			sortedTimestamps.map((timestampMs) => {
+				if (!metric) return [];
+				const timestamp = new Date(timestampMs);
+				let timestampStr: string;
+				if (timeFormat === "time") {
+					timestampStr = timestamp.toLocaleTimeString("en-US", {
+						hour: "2-digit",
+						minute: "2-digit",
+					});
+				} else if (timeFormat === "datetime") {
+					timestampStr = timestamp.toLocaleString("en-US", {
+						month: "short",
+						day: "numeric",
+						hour: "2-digit",
+						minute: "2-digit",
+					});
+				} else {
+					timestampStr = timestamp.toLocaleDateString("en-US", {
+						month: "short",
+						day: "numeric",
+					});
+				}
 
-		const dataPoint: Record<string, string | number> = {
-			timestamp: timestampStr,
-		};
+				const dataPoint: Record<string, string | number> = {
+					timestamp: timestampStr,
+				};
 
-		// Add value for each series at this timestamp
-		for (let i = 0; i < historyData.series.length; i++) {
-			const series = historyData.series[i];
-			const seriesLabel = getSeriesLabel(series.labels);
-			const point = series.values.find(
-				(p) => p.timestamp.getTime() === timestampMs,
-			);
-			if (point) {
-				const { formattedValue } = formatMetricValue(
-					point.value,
-					metric.unit ?? undefined,
-					metric.aggregation,
-				);
-				// Parse back to number for chart (removes commas)
-				dataPoint[seriesLabel] = Number.parseFloat(
-					formattedValue.replace(/,/g, ""),
-				);
-			}
-		}
+				// Add value for each series at this timestamp
+				for (let i = 0; i < historyData.series.length; i++) {
+					const series = historyData.series[i];
+					const seriesLabel = getSeriesLabel(series.labels);
+					const point = series.values.find(
+						(p) => p.timestamp.getTime() === timestampMs,
+					);
+					if (point) {
+						const { formattedValue } = formatMetricValue(
+							point.value,
+							metric.unit ?? undefined,
+							metric.aggregation,
+						);
+						// Parse back to number for chart (removes commas)
+						dataPoint[seriesLabel] = Number.parseFloat(
+							formattedValue.replace(/,/g, ""),
+						);
+					}
+				}
 
-		return dataPoint;
-	});
+				return dataPoint;
+			}),
+		[historyData.series, metric, timeFormat, sortedTimestamps, getSeriesLabel],
+	);
 
 	// Build chart config for all series
 	const chartConfig: ChartConfig = {};
@@ -197,11 +207,10 @@ export function MetricHistoryChart({
 		};
 	}
 
-	const { displayUnit } = formatMetricValue(
-		0,
-		metric.unit ?? undefined,
-		metric.aggregation,
-	);
+	const { displayUnit } = React.useMemo(() => {
+		if (!metric) return { displayUnit: undefined };
+		return formatMetricValue(0, metric.unit ?? undefined, metric.aggregation);
+	}, [metric]);
 
 	// Custom tooltip component with colored squares
 	const CustomTooltip = useMemo(() => {

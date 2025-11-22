@@ -21,7 +21,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Metrics } from "@/src/services/api/metrics";
 import type { Filter } from "@/src/types/filter";
-import type { Metric } from "@/src/types/metric";
+import type {
+	InstantAggregation,
+	Metric,
+	RangeAggregation,
+} from "@/src/types/metric";
 import type { TimeWindow } from "@/src/types/timewindow";
 
 type MetricsTableProps = {
@@ -37,11 +41,16 @@ export function MetricsTable({
 	timeWindow,
 	filters,
 }: MetricsTableProps) {
-	const [metrics, setMetrics] = useState<Metric[]>([]);
+	const [instantMetrics, setInstantMetrics] = useState<
+		Metric<InstantAggregation>[]
+	>([]);
+	const [rangeMetrics, setRangeMetrics] = useState<Metric<RangeAggregation>[]>(
+		[],
+	);
 	const [loading, setLoading] = useState(true);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [selectedMetric, setSelectedMetric] = useState<{
-		metric: Metric;
+		metric: Metric<RangeAggregation | InstantAggregation>;
 	} | null>(null);
 	const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -49,11 +58,13 @@ export function MetricsTable({
 		const fetchMetrics = async () => {
 			setLoading(true);
 			try {
-				const response = await Metrics.list();
-				setMetrics(response);
+				const { instant, range } = await Metrics.list();
+				setInstantMetrics(instant);
+				setRangeMetrics(range);
 			} catch (error) {
 				console.error("Failed to fetch metrics:", error);
-				setMetrics([]);
+				setInstantMetrics([]);
+				setRangeMetrics([]);
 			} finally {
 				setLoading(false);
 			}
@@ -64,7 +75,9 @@ export function MetricsTable({
 		}
 	}, [tenant]);
 
-	const handleRowClick = (metric: Metric) => {
+	const handleRowClick = (
+		metric: Metric<RangeAggregation | InstantAggregation>,
+	) => {
 		setSelectedMetric({ metric });
 		setDrawerOpen(true);
 	};

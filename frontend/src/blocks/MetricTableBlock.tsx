@@ -15,7 +15,6 @@ import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { LabelBadge } from "@/components/LabelBadge";
-import { MetricSelector } from "@/components/MetricSelector";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -52,12 +51,7 @@ import { Metrics } from "@/src/services/api/metrics";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import type {
-	AggregationFunction,
-	Metric,
-	MetricAggregation,
-	MetricValue,
-} from "@/src/types/metric";
+import type { MetricValue } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
 import React from "react";
@@ -68,13 +62,6 @@ export const MetricTableBlock = createReactBlockSpec(
 		propSchema: {
 			metricName: {
 				default: "",
-			},
-
-			spatialAggregation: {
-				default: "" as MetricAggregation | "",
-			},
-			temporalAggregation: {
-				default: "last" as AggregationFunction,
 			},
 			blockFilters: {
 				default: "[]",

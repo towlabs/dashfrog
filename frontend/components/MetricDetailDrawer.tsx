@@ -16,13 +16,13 @@ import {
 } from "@/src/services/api/metrics";
 import { useTenantStore } from "@/src/stores/tenant";
 import type { Filter } from "@/src/types/filter";
-import type { Metric } from "@/src/types/metric";
+import type { RangeAggregation, RangeMetric } from "@/src/types/metric";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 type MetricDetailDrawerProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	metric: Metric;
+	metric: RangeMetric;
 	timeWindow: TimeWindow;
 	filters: Filter[];
 	tenantName: string;

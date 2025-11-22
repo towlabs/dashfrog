@@ -1,10 +1,10 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
 import type { Filter } from "@/src/types/filter";
 import {
-	type AggregationFunction,
-	getMetricAggregationLabel,
-	type Metric,
-	type MetricAggregation,
+	InstantAggregation,
+	InstantMetric,
+	RangeAggregation,
+	RangeMetric,
 } from "@/src/types/metric";
 
 const MetricsAPI = NewRestAPI(`api`);
@@ -38,17 +38,20 @@ const Metrics = {
 	/**
 	 * Get metrics for a specific tenant with optional time range and filters
 	 */
-	list: async () => {
+	list: async (): Promise<{
+		instant: InstantMetric[];
+		range: RangeMetric[];
+	}> => {
 		const response = await fetch(`/api/metrics/search`, {
 			method: "GET",
 			headers: {
 				"Content-Type": "application/json",
 			},
 		});
-		const data = (await response.json()).map((m: Metric) => ({
-			...m,
-			prettyName: `${getMetricAggregationLabel(m.aggregation, m.prettyName)}`,
-		})) as Metric[];
+		console.log("Metrics response");
+		const data = await response.json();
+		console.log("Metrics parsed");
+
 		return data;
 	},
 
@@ -58,7 +61,7 @@ const Metrics = {
 	getHistory: async (
 		tenant: string,
 		metricName: string,
-		spatialAggregation: MetricAggregation,
+		aggregation: RangeAggregation,
 		startTime: Date,
 		endTime: Date,
 		labels: Filter[],
@@ -72,7 +75,7 @@ const Metrics = {
 			},
 			body: JSON.stringify({
 				metric_name: metricName,
-				spatial_aggregation: spatialAggregation,
+				aggregation,
 				start_time: startTime.toISOString(),
 				end_time: endTime.toISOString(),
 				labels: [...labels, { label: "tenant", value: tenant }],
@@ -95,8 +98,8 @@ const Metrics = {
 		metricName: string,
 		startTime: Date,
 		endTime: Date,
-		spatialAggregation: MetricAggregation,
-		temporalAggregation: AggregationFunction,
+		aggregation: InstantAggregation,
+		show: "last" | "avg",
 		labels: Filter[],
 	): Promise<MetricScalarResponse> => {
 		const response = await fetch(`/api/metrics/instant`, {
@@ -106,8 +109,8 @@ const Metrics = {
 			},
 			body: JSON.stringify({
 				metric_name: metricName,
-				spatial_aggregation: spatialAggregation,
-				temporal_aggregation: temporalAggregation,
+				aggregation,
+				show,
 				start_time: startTime.toISOString(),
 				end_time: endTime.toISOString(),
 				labels: [...labels, { label: "tenant", value: tenant }],
