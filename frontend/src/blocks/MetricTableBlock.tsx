@@ -4,27 +4,21 @@ import { createReactBlockSpec } from "@blocknote/react";
 import {
 	BarChart3,
 	CaseUpper,
+	ChartLine,
 	Eye,
 	EyeOff,
 	Hash,
 	Table as TableIcon,
 	Tags,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { LabelBadge } from "@/components/LabelBadge";
+import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
+import { InstantMetricSelector } from "@/components/MetricSelector";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import {
 	Sheet,
 	SheetContent,
@@ -40,21 +34,18 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { Metrics } from "@/src/services/api/metrics";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import type { MetricValue } from "@/src/types/metric";
+import type { InstantMetric } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
-import React from "react";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export const MetricTableBlock = createReactBlockSpec(
 	{
@@ -62,6 +53,15 @@ export const MetricTableBlock = createReactBlockSpec(
 		propSchema: {
 			metricName: {
 				default: "",
+			},
+			title: {
+				default: "",
+			},
+			aggregation: {
+				default: "",
+			},
+			show: {
+				default: "last" as "last" | "avg",
 			},
 			blockFilters: {
 				default: "[]",
@@ -92,7 +92,8 @@ export const MetricTableBlock = createReactBlockSpec(
 				(state) => state.openBlockSettings,
 			);
 			const labels = useLabelsStore((state) => state.labels);
-			const metrics = useNotebooksStore((state) => state.metrics);
+			const instantMetrics = useNotebooksStore((state) => state.instantMetrics);
+			const rangeMetrics = useNotebooksStore((state) => state.rangeMetrics);
 			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
 			const timeWindow = useNotebooksStore(
 				(state) => state.currentNotebook?.timeWindow,
@@ -114,70 +115,78 @@ export const MetricTableBlock = createReactBlockSpec(
 				[notebookFilters, blockFilters],
 			);
 
-			const [metricValues, setMetricValues] = useState<MetricValue[] | null>(
-				null,
-			);
+			const [scalarData, setScalarData] = useState<
+				{
+					labels: Record<string, string>;
+					value: number;
+				}[]
+			>([]);
 			const [loading, setLoading] = useState(false);
+			const [detailOpen, setDetailOpen] = useState(false);
+			const [selectedLabels, setSelectedLabels] = useState<
+				Record<string, string>
+			>({});
 
 			const metricName = props.block.props.metricName as string;
-			const spatialAggregation = props.block.props.spatialAggregation as
-				| MetricAggregation
-				| "";
-			const temporalAggregation = props.block.props
-				.temporalAggregation as AggregationFunction;
+			const title = props.block.props.title as string;
+			const aggregation = props.block.props.aggregation as string;
+			const show = props.block.props.show as "last" | "avg";
 			const showMetricColumn = props.block.props.showMetricColumn as boolean;
 			const showLabelsColumn = props.block.props.showLabelsColumn as boolean;
 			const showValueColumn = props.block.props.showValueColumn as boolean;
 
 			const selectedMetric = React.useMemo(() => {
-				return metrics.find(
+				return instantMetrics.find(
 					(m) =>
-						m.prometheusName === metricName &&
-						m.aggregation === spatialAggregation,
+						m.prometheusName === metricName && m.aggregation === aggregation,
 				);
-			}, [metricName, spatialAggregation, metrics]);
+			}, [metricName, aggregation, instantMetrics]);
 
-			// Fetch metric values
+			const rangeMetric = React.useMemo(() => {
+				if (!selectedMetric) return null;
+				return rangeMetrics.find(
+					(m) =>
+						m.aggregation === selectedMetric.rangeAggregation &&
+						m.prometheusName === selectedMetric.prometheusName,
+				);
+			}, [selectedMetric, rangeMetrics]);
+
+			// Fetch scalar data when metric and aggregation are selected
 			useEffect(() => {
 				if (
 					!tenantName ||
 					!selectedMetric ||
-					!timeWindow ||
-					!temporalAggregation
+					timeWindow === undefined ||
+					filters === undefined
 				) {
+					setScalarData([]);
 					return;
 				}
 
-				const fetchMetricValues = async () => {
+				const fetchScalar = async () => {
 					setLoading(true);
 					try {
 						const { start, end } = resolveTimeWindow(timeWindow);
-						const values = await Metrics.getScalars(
+						const response = await Metrics.getScalars(
 							tenantName,
 							selectedMetric.prometheusName,
 							start,
 							end,
 							selectedMetric.aggregation,
-							temporalAggregation,
+							show,
 							filters,
 						);
-						setMetricValues(values.scalars);
+						setScalarData(response.scalars);
 					} catch (error) {
-						console.error("Error fetching metric values:", error);
-						setMetricValues(null);
+						console.error("Failed to fetch metric scalar:", error);
+						setScalarData([]);
 					} finally {
 						setLoading(false);
 					}
 				};
 
-				void fetchMetricValues();
-			}, [
-				tenantName,
-				selectedMetric,
-				timeWindow,
-				temporalAggregation,
-				filters,
-			]);
+				void fetchScalar();
+			}, [tenantName, selectedMetric, show, timeWindow, filters]);
 
 			if (!tenantName) {
 				return (
@@ -191,22 +200,23 @@ export const MetricTableBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleMetricSelect = (metric: Metric) => {
+			const handleMetricSelect = (
+				metric: InstantMetric,
+				newShow: "last" | "avg",
+			) => {
 				props.editor.updateBlock(props.block, {
 					props: {
 						...props.block.props,
 						metricName: metric.prometheusName,
-						spatialAggregation: metric.aggregation,
+						aggregation: metric.aggregation,
+						show: newShow,
 					},
 				});
 			};
 
-			const handleAggregationChange = (value: string) => {
-				props.editor.updateBlock(props.block, {
-					props: {
-						temporalAggregation: value as AggregationFunction,
-					},
-				});
+			const handleMetricClick = (labels: Record<string, string>) => {
+				setSelectedLabels(labels);
+				setDetailOpen(true);
 			};
 
 			const handleFiltersChange = (newFilters: Filter[]) => {
@@ -265,7 +275,7 @@ export const MetricTableBlock = createReactBlockSpec(
 					);
 				}
 
-				if (!metricValues || metricValues.length === 0) {
+				if (scalarData.length === 0) {
 					return (
 						<div className="rounded-lg border p-8 text-center text-muted-foreground">
 							<p>No data available</p>
@@ -303,36 +313,65 @@ export const MetricTableBlock = createReactBlockSpec(
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{metricValues.map((mv, idx) => {
+								{scalarData.map((scalar, idx) => {
 									const { formattedValue, displayUnit } = formatMetricValue(
-										mv.value,
+										scalar.value,
 										selectedMetric.unit ?? undefined,
 										selectedMetric.aggregation,
 									);
 									return (
-										<TableRow key={idx}>
+										<TableRow key={idx} className="group">
 											{showMetricColumn && (
-												<TableCell className="font-medium">
-													{selectedMetric.prettyName}
+												<TableCell className="group-hover:opacity-100 transition-opacity">
+													<div className="relative flex items-center">
+														<span className="font-medium">
+															{title || selectedMetric.prettyName}
+														</span>
+														<Tooltip>
+															<TooltipTrigger asChild>
+																<div
+																	className="absolute -right-3 -top-2 px-2 py-1.5 rounded-b-lg border border-t-0 bg-background group-hover:opacity-100 transition-opacity cursor-pointer z-10 flex items-center gap-1 opacity-0 shadow-xs "
+																	onClick={() =>
+																		handleMetricClick(scalar.labels)
+																	}
+																>
+																	<ChartLine className="size-3.5 text-muted-foreground" />
+																	<span className="text-xs text-muted-foreground">
+																		History
+																	</span>
+																</div>
+															</TooltipTrigger>
+															<TooltipContent>
+																<p>View metric history</p>
+															</TooltipContent>
+														</Tooltip>
+													</div>
 												</TableCell>
 											)}
 											{showLabelsColumn && (
 												<TableCell>
 													<div className="flex flex-wrap gap-1">
-														{Object.entries(mv.labels).map(([key, value]) => (
-															<LabelBadge
-																key={`${key}-${value}`}
-																labelKey={key}
-																labelValue={value}
-															/>
-														))}
+														{Object.entries(scalar.labels).map(
+															([key, value]) => (
+																<LabelBadge
+																	key={`${key}-${value}`}
+																	labelKey={key}
+																	labelValue={value}
+																	readonly
+																/>
+															),
+														)}
 													</div>
 												</TableCell>
 											)}
 											{showValueColumn && (
 												<TableCell>
-													{formattedValue}
-													{displayUnit && ` ${displayUnit}`}
+													<div className="flex items-center gap-2">
+														<span>
+															{formattedValue}
+															{displayUnit && ` ${displayUnit}`}
+														</span>
+													</div>
 												</TableCell>
 											)}
 										</TableRow>
@@ -362,72 +401,33 @@ export const MetricTableBlock = createReactBlockSpec(
 							<div className="mt-6 space-y-6">
 								<div className="space-y-3">
 									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-										Metric
+										Title
 									</h3>
-									<MetricSelector
-										metrics={metrics}
-										metricsLoading={metricsLoading}
-										selectedMetricName={metricName}
-										selectedSpatialAggregation={spatialAggregation}
-										onMetricSelect={handleMetricSelect}
+									<Input
+										placeholder="Optional title..."
+										value={title}
+										onChange={(e) => {
+											props.editor.updateBlock(props.block, {
+												props: {
+													...props.block.props,
+													title: e.target.value,
+												},
+											});
+										}}
 									/>
 								</div>
 
 								<div className="space-y-3">
 									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-										Aggregation
+										Metric
 									</h3>
-									<TooltipProvider delayDuration={300}>
-										<Select
-											value={temporalAggregation}
-											onValueChange={handleAggregationChange}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Select aggregation..." />
-											</SelectTrigger>
-											<SelectContent>
-												<Tooltip>
-													<TooltipTrigger asChild>
-														<SelectItem value="last">
-															Last (Value at end of period)
-														</SelectItem>
-													</TooltipTrigger>
-													<TooltipContent side="right">
-														<p className="max-w-xs text-sm">
-															Returns the most recent value in the time window.
-															Best for gauges and current state metrics.
-														</p>
-													</TooltipContent>
-												</Tooltip>
-												<Tooltip>
-													<TooltipTrigger asChild>
-														<SelectItem value="sum">
-															Sum (Sum across period)
-														</SelectItem>
-													</TooltipTrigger>
-													<TooltipContent side="right">
-														<p className="max-w-xs text-sm">
-															Adds up all values in the time window. Best for
-															counter metrics and total counts.
-														</p>
-													</TooltipContent>
-												</Tooltip>
-												<Tooltip>
-													<TooltipTrigger asChild>
-														<SelectItem value="avg">
-															Average (Average across period)
-														</SelectItem>
-													</TooltipTrigger>
-													<TooltipContent side="right">
-														<p className="max-w-xs text-sm">
-															Calculates the mean of all values in the time
-															window. Best for smoothing out fluctuations.
-														</p>
-													</TooltipContent>
-												</Tooltip>
-											</SelectContent>
-										</Select>
-									</TooltipProvider>
+									<InstantMetricSelector
+										metrics={instantMetrics}
+										metricsLoading={metricsLoading}
+										selectedMetric={selectedMetric ?? null}
+										selectedShow={show}
+										onMetricSelect={handleMetricSelect}
+									/>
 								</div>
 
 								<div className="space-y-3">
@@ -499,6 +499,24 @@ export const MetricTableBlock = createReactBlockSpec(
 							</div>
 						</SheetContent>
 					</Sheet>
+
+					{/* Metric Detail Drawer */}
+					{rangeMetric && timeWindow && (
+						<MetricDetailDrawer
+							metric={rangeMetric}
+							tenantName={tenantName}
+							filters={[
+								...filters,
+								...Object.entries(selectedLabels).map(([key, value]) => ({
+									label: key,
+									value: value,
+								})),
+							]}
+							open={detailOpen}
+							timeWindow={timeWindow}
+							onOpenChange={setDetailOpen}
+						/>
+					)}
 				</>
 			);
 		},

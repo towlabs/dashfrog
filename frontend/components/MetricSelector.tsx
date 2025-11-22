@@ -300,9 +300,9 @@ function getAggregationGroupKey(
 function getAggregationGroupLabel(groupKey: string): string {
 	switch (groupKey) {
 		case "increase":
-			return "Increase";
+			return "Total";
 		case "rate":
-			return "Rate";
+			return "Rates";
 		case "percentile":
 			return "Percentiles";
 		default:
@@ -313,7 +313,7 @@ function getAggregationGroupLabel(groupKey: string): string {
 function getAggregationGroupDescription(groupKey: string): string {
 	switch (groupKey) {
 		case "increase":
-			return "Shows the total increase of a counter metric over the selected time window. For exmple: number of new users, number of cancelled orders, etc.";
+			return "Shows the total increase of a counter metric over the selected time window. For example: number of new users, number of cancelled orders, etc.";
 		case "rate":
 			return "Shows the rate of change per time unit (second, minute, hour, or day). For example: number of requests per second, number of errors per minute, etc.";
 		case "percentile":
