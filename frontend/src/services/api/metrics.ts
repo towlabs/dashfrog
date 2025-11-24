@@ -48,9 +48,7 @@ const Metrics = {
 				"Content-Type": "application/json",
 			},
 		});
-		console.log("Metrics response");
 		const data = await response.json();
-		console.log("Metrics parsed");
 
 		return data;
 	},

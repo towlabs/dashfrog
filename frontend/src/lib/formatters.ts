@@ -22,6 +22,7 @@ export function formatDuration({
 		}
 		seconds = differenceInSeconds(endTime, startTime);
 	}
+	seconds = Math.round(seconds);
 
 	const minutes = Math.floor(seconds / 60);
 	const hours = Math.floor(minutes / 60);
@@ -35,7 +36,7 @@ export function formatDuration({
 	if (minutes > 0) {
 		return `${minutes}m ${seconds % 60}s`;
 	}
-	return `${Math.round(seconds)}s`;
+	return `${seconds}s`;
 }
 
 /**

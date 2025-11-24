@@ -21,11 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Metrics } from "@/src/services/api/metrics";
 import type { Filter } from "@/src/types/filter";
-import type {
-	InstantAggregation,
-	Metric,
-	RangeAggregation,
-} from "@/src/types/metric";
+import type { InstantAggregation, RangeAggregation } from "@/src/types/metric";
 import type { TimeWindow } from "@/src/types/timewindow";
 
 type MetricsTableProps = {

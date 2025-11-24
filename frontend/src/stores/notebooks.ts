@@ -88,16 +88,13 @@ export const useNotebooksStore = create<NotebooksState>()(
 			},
 			fetchMetrics: async () => {
 				set({ metricsLoading: true });
-				console.log("Fetching metrics");
 				try {
 					const { instant, range } = await Metrics.list();
-					console.log("Metrics received from API:", instant, range);
 					set({
 						instantMetrics: instant,
 						rangeMetrics: range,
 						metricsLoading: false,
 					});
-					console.log("Metrics state updated successfully");
 				} catch (error) {
 					console.error("Failed to fetch metrics:", error);
 					set({ instantMetrics: [], rangeMetrics: [], metricsLoading: false });

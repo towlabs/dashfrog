@@ -35,7 +35,7 @@ import {
 	Table2,
 	Table as TableIcon,
 } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { TenantControls } from "@/components/TenantControls";
 import { AddBlockButton } from "@/components/ui/add-block";
@@ -84,6 +84,9 @@ export default function NotebookPage() {
 		(state) => state.openBlockSettings,
 	);
 
+	const [initialized, setInitialized] = useState(false);
+	const [mounted, setMounted] = useState(false);
+
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
 
@@ -119,33 +122,22 @@ export default function NotebookPage() {
 		extensions: [],
 	});
 
+	editor.onMount(() => {
+		setMounted(true);
+	});
+
 	useEffect(() => {
 		if (!tenant || !notebookId || notebooksAreLoading) return;
 		setCurrentTenant(tenant);
 		const notebook = setCurrentNotebook(tenant, notebookId);
 		if (!notebook) return;
 
-		const timeoutId = setTimeout(() => {
-			// Migrate old flowRunCount blocks to flowStatus with displayMode: "runCount"
-			const migratedBlocks = (notebook.blocks || []).map((block: any) => {
-				if (block.type === "flowRunCount") {
-					return {
-						...block,
-						type: "flowStatus",
-						props: {
-							...block.props,
-							displayMode: "runCount",
-						},
-					};
-				}
-				return block;
-			});
-			editor.replaceBlocks(editor.document, migratedBlocks as any);
-		});
+		setInitialized(false);
 
-		return () => {
-			clearTimeout(timeoutId);
-		};
+		if (!mounted) return;
+
+		editor.replaceBlocks(editor.document, (notebook.blocks || []) as any);
+		setInitialized(true);
 	}, [
 		notebookId,
 		tenant,
@@ -153,6 +145,7 @@ export default function NotebookPage() {
 		editor,
 		notebooksAreLoading,
 		setCurrentTenant,
+		mounted,
 	]);
 
 	useEffect(() => {
@@ -164,7 +157,7 @@ export default function NotebookPage() {
 
 	// Save editor content changes (debounced in store)
 	useEditorChange((editor) => {
-		if (tenantName && currentNotebook && !notebookCreating) {
+		if (tenantName && currentNotebook && !notebookCreating && initialized) {
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			updateNotebook(tenantName, currentNotebook, {
 				blocks: editor.document as Block[],
@@ -216,182 +209,6 @@ export default function NotebookPage() {
 		[openBlockSettings],
 	);
 
-	const renderNotebook = React.useCallback(
-		(notebook: Notebook) => {
-			return (
-				<div className="mx-auto py-12">
-					{/* Title - Editable */}
-					<div className="mx-32">
-						<input
-							type="text"
-							value={notebook.title}
-							onChange={(e) => {
-								updateNotebook(tenantName, notebook, {
-									title: e.target.value,
-								});
-							}}
-							placeholder="Untitled"
-							className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground"
-						/>
-
-						{/* Description - Editable */}
-						<input
-							type="text"
-							value={notebook.description}
-							onChange={(e) => {
-								updateNotebook(tenantName, notebook, {
-									description: e.target.value,
-								});
-							}}
-							placeholder="Add a description..."
-							className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground"
-						/>
-					</div>
-
-					{/* BlockNote Editor */}
-					<div className="mx-19 mb-32">
-						<BlockNoteView
-							editor={editor}
-							// key={notebook.id}
-							theme="light"
-							slashMenu={false}
-							sideMenu={false}
-							// tableHandles={false}
-						>
-							<SuggestionMenuController
-								triggerCharacter="/"
-								suggestionMenuComponent={SuggestionMenu}
-								getItems={async (query: string) => {
-									// Simple filter matching title/aliases like defaults
-									const all = getSlashMenuItems(editor, [
-										{
-											title: "Events",
-											onItemClick: () => {
-												insertOrUpdateBlock(editor, {
-													type: "timeline",
-												});
-											},
-											group: "Timeline",
-											subtext: "Table listing of timeline events",
-											icon: <Logs className="size-4.5" />,
-											aliases: ["timeline"],
-										},
-
-										{
-											title: "Flows Table",
-											onItemClick: () => {
-												insertOrUpdateBlock(editor, {
-													type: "flow",
-												});
-											},
-											group: "Flows",
-											subtext:
-												"List of all flows with information about their last run",
-											icon: <Table2 className="size-4.5" />,
-											aliases: [],
-										},
-										{
-											title: "Flow History",
-											onItemClick: () => {
-												const block = insertOrUpdateBlock(editor, {
-													type: "flowHistory",
-												});
-												setOpenBlockSettings(block.id);
-											},
-											group: "Flows",
-											subtext: "List of all executions for a given flow",
-											icon: <History className="size-4.5" />,
-											aliases: [],
-										},
-										{
-											title: "Flow Card",
-											onItemClick: () => {
-												const block = insertOrUpdateBlock(editor, {
-													type: "flowStatus",
-												});
-												setOpenBlockSettings(block.id);
-											},
-											group: "Flows",
-											subtext:
-												"Card showing key information about a specific flow",
-											icon: <RectangleEllipsis className="size-4.5" />,
-											aliases: ["run counts", "flow run count"],
-										},
-										{
-											title: "Heatmap",
-											onItemClick: () => {
-												const block = insertOrUpdateBlock(editor, {
-													type: "heatmap",
-												});
-												setOpenBlockSettings(block.id);
-											},
-											group: "Flows",
-											subtext: "Heatmap showing daily status for a given flow",
-											icon: <LayoutGrid className="size-4.5" />,
-											aliases: ["flow heatmap"],
-										},
-										{
-											title: "Number",
-											onItemClick: () => {
-												const block = insertOrUpdateBlock(editor, {
-													type: "metric",
-												});
-												setOpenBlockSettings(block.id);
-											},
-											group: "Metrics",
-											key: "metric_number",
-											subtext: "Display a metric value",
-											icon: <RectangleHorizontal className="size-4.5" />,
-											aliases: ["metric"],
-										},
-										{
-											title: "Chart",
-											onItemClick: () => {
-												const block = insertOrUpdateBlock(editor, {
-													type: "metricHistory",
-												});
-												setOpenBlockSettings(block.id);
-											},
-											group: "Metrics",
-											key: "metric_chart",
-											subtext: "Chart showing metric history over time",
-											icon: <ChartLine className="size-4.5" />,
-											aliases: ["metric history"],
-										},
-										{
-											title: "Table",
-											onItemClick: () => {
-												const block = insertOrUpdateBlock(editor, {
-													type: "metricTable",
-												});
-												setOpenBlockSettings(block.id);
-											},
-											group: "Metrics",
-											key: "metric_table",
-											subtext: "Table displaying metric values with labels",
-											icon: <TableIcon className="size-4.5" />,
-											aliases: ["metric table"],
-										},
-									]);
-									const q = query.trim().toLowerCase();
-									return q
-										? all.filter(
-												(i) =>
-													i.title?.toLowerCase().includes(q) ||
-													i.aliases?.some((a: string) => a.includes(q)),
-											)
-										: all;
-								}}
-							/>
-							<SideMenuController sideMenu={customSideMenu} />
-						</BlockNoteView>
-					</div>
-				</div>
-			);
-		},
-		[tenantName, editor, setOpenBlockSettings, updateNotebook, customSideMenu],
-	);
-
 	return (
 		<div className="flex-1 flex flex-col h-screen">
 			<div className="flex items-center justify-between gap-4 px-8 py-3">
@@ -431,9 +248,174 @@ export default function NotebookPage() {
 
 			{/* Notebook Content */}
 			<div className="flex-1 overflow-y-auto">
-				{currentNotebook &&
-					!notebookCreating &&
-					renderNotebook(currentNotebook)}
+				{currentNotebook && !notebookCreating && (
+					<div className="mx-auto py-12">
+						{/* Title - Editable */}
+						<div className="mx-32">
+							<input
+								type="text"
+								value={currentNotebook.title}
+								onChange={(e) => {
+									updateNotebook(tenantName, currentNotebook, {
+										title: e.target.value,
+									});
+								}}
+								placeholder="Untitled"
+								className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground"
+							/>
+
+							{/* Description - Editable */}
+							<input
+								type="text"
+								value={currentNotebook.description}
+								onChange={(e) => {
+									updateNotebook(tenantName, currentNotebook, {
+										description: e.target.value,
+									});
+								}}
+								placeholder="Add a description..."
+								className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground"
+							/>
+						</div>
+
+						{/* BlockNote Editor */}
+						<div className="mx-19 mb-32">
+							<BlockNoteView
+								editor={editor}
+								// key={notebook.id}
+								theme="light"
+								slashMenu={false}
+								sideMenu={false}
+								// tableHandles={false}
+							>
+								<SuggestionMenuController
+									triggerCharacter="/"
+									suggestionMenuComponent={SuggestionMenu}
+									getItems={async (query: string) => {
+										// Simple filter matching title/aliases like defaults
+										const all = getSlashMenuItems(editor, [
+											{
+												title: "Events",
+												onItemClick: () => {
+													insertOrUpdateBlock(editor, {
+														type: "timeline",
+													});
+												},
+												group: "Timeline",
+												subtext: "Table listing of timeline events",
+												icon: <Logs className="size-4.5" />,
+												aliases: ["timeline"],
+											},
+
+											{
+												title: "Flows Table",
+												onItemClick: () => {
+													insertOrUpdateBlock(editor, {
+														type: "flow",
+													});
+												},
+												group: "Flows",
+												subtext:
+													"List of all flows with information about their last run",
+												icon: <Table2 className="size-4.5" />,
+												aliases: [],
+											},
+											{
+												title: "Flow History",
+												onItemClick: () => {
+													const block = insertOrUpdateBlock(editor, {
+														type: "flowHistory",
+													});
+													setOpenBlockSettings(block.id);
+												},
+												group: "Flows",
+												subtext: "List of all executions for a given flow",
+												icon: <History className="size-4.5" />,
+												aliases: [],
+											},
+											{
+												title: "Flow Card",
+												onItemClick: () => {
+													const block = insertOrUpdateBlock(editor, {
+														type: "flowStatus",
+													});
+													setOpenBlockSettings(block.id);
+												},
+												group: "Flows",
+												subtext:
+													"Card showing key information about a specific flow",
+												icon: <RectangleEllipsis className="size-4.5" />,
+												aliases: ["run counts", "flow run count"],
+											},
+											{
+												title: "Heatmap",
+												onItemClick: () => {
+													const block = insertOrUpdateBlock(editor, {
+														type: "heatmap",
+													});
+													setOpenBlockSettings(block.id);
+												},
+												group: "Flows",
+												subtext:
+													"Heatmap showing daily status for a given flow",
+												icon: <LayoutGrid className="size-4.5" />,
+												aliases: ["flow heatmap"],
+											},
+											{
+												title: "Number",
+												onItemClick: () => {
+													const block = insertOrUpdateBlock(editor, {
+														type: "metric",
+													});
+													setOpenBlockSettings(block.id);
+												},
+												group: "Metrics",
+												subtext: "Display a metric value",
+												icon: <RectangleHorizontal className="size-4.5" />,
+												aliases: ["metric"],
+											},
+											{
+												title: "Chart",
+												onItemClick: () => {
+													const block = insertOrUpdateBlock(editor, {
+														type: "metricHistory",
+													});
+													setOpenBlockSettings(block.id);
+												},
+												group: "Metrics",
+												subtext: "Chart showing metric history over time",
+												icon: <ChartLine className="size-4.5" />,
+												aliases: ["metric history"],
+											},
+											{
+												title: "Table",
+												onItemClick: () => {
+													const block = insertOrUpdateBlock(editor, {
+														type: "metricTable",
+													});
+													setOpenBlockSettings(block.id);
+												},
+												group: "Metrics",
+												subtext: "Table displaying metric values with labels",
+												icon: <TableIcon className="size-4.5" />,
+												aliases: ["metric table"],
+											},
+										]);
+										const q = query.trim().toLowerCase();
+										return q
+											? all.filter(
+													(i) =>
+														i.title?.toLowerCase().includes(q) ||
+														i.aliases?.some((a: string) => a.includes(q)),
+												)
+											: all;
+									}}
+								/>
+								<SideMenuController sideMenu={customSideMenu} />
+							</BlockNoteView>
+						</div>
+					</div>
+				)}
 				{(!currentNotebook || notebookCreating) && (
 					<div className="mx-auto py-12">
 						<div className="mx-32 space-y-4">

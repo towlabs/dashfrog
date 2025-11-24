@@ -1,5 +1,7 @@
 import type { Filter } from "@/src/types/filter";
 import type { TimelineEvent } from "@/src/types/timeline";
+import { Block } from "@blocknote/core/types/src/blocks";
+import { parseJSON } from "date-fns";
 
 /**
  * Raw timeline event response from backend API (snake_case)
@@ -12,6 +14,7 @@ interface TimelineEventApiResponse {
 	markdown: string;
 	eventDt: string; // ISO date string from backend
 	labels: Record<string, string>;
+	blocks: Block[] | null;
 }
 
 type TimelineApiResponse = TimelineEventApiResponse[];
@@ -23,18 +26,8 @@ type TimelineApiResponse = TimelineEventApiResponse[];
 function toTimelineEvent(apiEvent: TimelineEventApiResponse): TimelineEvent {
 	return {
 		...apiEvent,
-		eventDt: new Date(apiEvent.eventDt),
+		eventDt: parseJSON(apiEvent.eventDt),
 	};
-}
-
-/**
- * Process timeline events from API
- * Converts API response format to JavaScript conventions
- */
-function _processTimelineEvents(
-	apiEvents: TimelineEventApiResponse[],
-): TimelineEvent[] {
-	return apiEvents.map((apiEvent) => toTimelineEvent(apiEvent));
 }
 
 const Timeline = {
@@ -61,6 +54,16 @@ const Timeline = {
 		});
 		const data = (await response.json()) as TimelineApiResponse;
 		return data.map(toTimelineEvent);
+	},
+
+	update: async (event: TimelineEvent, blocks: Block[]) => {
+		await fetch(`/api/timeline/${event.id}/blocks`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ blocks }),
+		});
 	},
 };
 

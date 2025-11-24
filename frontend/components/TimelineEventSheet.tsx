@@ -8,10 +8,11 @@ import {
 	SideMenuController,
 	type SideMenuProps,
 	SuggestionMenuController,
+	useEditorChange,
 } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { CalendarIcon } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -27,6 +28,8 @@ import { customEditor, getSlashMenuItems } from "@/src/utils/editor";
 import { AddBlockButton } from "./ui/add-block";
 import { DragHandleButton } from "./ui/drag-block";
 import { SuggestionMenu } from "./ui/suggestion-menu";
+import { Timeline } from "@/src/services/api";
+import { Block } from "@blocknote/core";
 
 interface TimelineEventSheetProps {
 	event: TimelineEvent | null;
@@ -39,6 +42,8 @@ export function TimelineEventSheet({
 	open,
 	onOpenChange,
 }: TimelineEventSheetProps) {
+	const [initialized, setInitialized] = useState(false);
+
 	// Create BlockNote editor instance
 	const editor = customEditor({
 		initialContent: undefined,
@@ -58,11 +63,22 @@ export function TimelineEventSheet({
 		);
 	}, []);
 
+	// Save editor content changes (debounced in store)
+	useEditorChange((editor) => {
+		if (initialized && event) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			void Timeline.update(event, editor.document as Block[]);
+		}
+	}, editor);
+
 	useEffect(() => {
-		const blocks = editor.tryParseMarkdownToBlocks(event?.markdown || "");
-		if (!blocks) return;
+		if (!event) return;
+		const blocks =
+			event.blocks ?? editor.tryParseMarkdownToBlocks(event?.markdown || "");
+		setInitialized(false);
 		editor.replaceBlocks(editor.document, blocks);
-	}, [event?.markdown, editor]);
+		setInitialized(true);
+	}, [event, editor]);
 	if (!event) return null;
 
 	return (

@@ -42,13 +42,14 @@ export function FlowDetail({
 	const [loading, setLoading] = useState(true);
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: recompute when time we open the sheet
+	const { start, end } = useMemo(() => resolveTimeWindow(timeWindow), [open]);
 	// Fetch detailed flow when filters or time window change
 	useEffect(() => {
-		if (!currentTenant) return;
+		if (!currentTenant || !open) return;
 
 		const fetchFlowHistory = async () => {
 			setLoading(true);
-			const { start, end } = resolveTimeWindow(timeWindow);
 			try {
 				const response = await Flows.getFlowHistory(
 					currentTenant,
@@ -74,7 +75,7 @@ export function FlowDetail({
 		setStatusFilter(status);
 
 		void fetchFlowHistory();
-	}, [currentTenant, flowName, labels, timeWindow]);
+	}, [currentTenant, flowName, labels, start, end, open]);
 
 	const failedCount = useMemo(
 		() => flowHistory.filter((f) => f.status === "failure").length,

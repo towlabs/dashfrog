@@ -6,6 +6,7 @@ import type {
 	FlowHistoryStep,
 	FlowRunCount,
 } from "@/src/types/flow";
+import { parseJSON } from "date-fns";
 
 /**
  * Raw flow response from backend API (snake_case)
@@ -64,9 +65,9 @@ interface FlowHistoryStepApiResponse {
 function toFlow(apiFlow: FlowApiResponse): Flow {
 	return {
 		...apiFlow,
-		lastRunStartedAt: new Date(apiFlow.lastRunStartedAt),
+		lastRunStartedAt: parseJSON(apiFlow.lastRunStartedAt),
 		lastRunEndedAt: apiFlow.lastRunEndedAt
-			? new Date(apiFlow.lastRunEndedAt)
+			? parseJSON(apiFlow.lastRunEndedAt)
 			: null,
 	};
 }
@@ -79,7 +80,7 @@ function toFlowHistoryEvent(
 ): FlowHistoryEvent {
 	return {
 		...apiEvent,
-		eventDt: new Date(apiEvent.eventDt),
+		eventDt: parseJSON(apiEvent.eventDt),
 	};
 }
 
@@ -91,8 +92,8 @@ function toFlowHistoryStep(
 ): FlowHistoryStep {
 	return {
 		...apiStep,
-		startTime: new Date(apiStep.startTime),
-		endTime: apiStep.endTime ? new Date(apiStep.endTime) : null,
+		startTime: parseJSON(apiStep.startTime),
+		endTime: apiStep.endTime ? parseJSON(apiStep.endTime) : null,
 	};
 }
 
@@ -104,8 +105,8 @@ function toFlowHistory(
 ): FlowHistory[] {
 	return apiFlowHistory.map((h) => ({
 		...h,
-		startTime: new Date(h.startTime),
-		endTime: h.endTime ? new Date(h.endTime) : null,
+		startTime: parseJSON(h.startTime),
+		endTime: h.endTime ? parseJSON(h.endTime) : null,
 		events: h.events.map(toFlowHistoryEvent),
 		steps: h.steps.map(toFlowHistoryStep),
 	}));
