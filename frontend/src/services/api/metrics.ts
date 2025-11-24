@@ -5,6 +5,7 @@ import {
 	InstantMetric,
 	RangeAggregation,
 	RangeMetric,
+	Show,
 } from "@/src/types/metric";
 
 const MetricsAPI = NewRestAPI(`api`);
@@ -97,7 +98,7 @@ const Metrics = {
 		startTime: Date,
 		endTime: Date,
 		aggregation: InstantAggregation,
-		show: "last" | "avg",
+		show: Show,
 		labels: Filter[],
 	): Promise<MetricScalarResponse> => {
 		const response = await fetch(`/api/metrics/instant`, {

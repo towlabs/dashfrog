@@ -38,7 +38,8 @@ import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 type Props = {
 	tenant: string;
-	timeWindow: TimeWindow;
+	startDate: Date;
+	endDate: Date;
 	filters: Filter[];
 	visibleColumns?: {
 		name?: boolean;
@@ -55,7 +56,8 @@ const ITEMS_PER_PAGE = 14;
 
 export function FlowTable({
 	tenant,
-	timeWindow,
+	startDate,
+	endDate,
 	filters,
 	visibleColumns = {
 		name: true,
@@ -67,7 +69,7 @@ export function FlowTable({
 		runCounts: true,
 	},
 }: Props) {
-	const [flows, setFlows] = useState<Flow[]>([]);
+	const [flows, setFlows] = useState<Flow[] | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null);
@@ -77,11 +79,10 @@ export function FlowTable({
 		const fetchFlows = async () => {
 			setLoading(true);
 			try {
-				const { start, end } = resolveTimeWindow(timeWindow);
 				const fetchedFlows = await Flows.getByTenant(
 					tenant,
-					start,
-					end,
+					startDate,
+					endDate,
 					filters,
 				);
 				setFlows(fetchedFlows);
@@ -93,17 +94,17 @@ export function FlowTable({
 		if (tenant) {
 			void fetchFlows();
 		}
-	}, [tenant, timeWindow, filters]);
+	}, [tenant, startDate, endDate, filters]);
 
 	const handleFlowClick = (flow: Flow) => {
 		setSelectedFlow(flow);
 		setDetailOpen(true);
 	};
 
-	const totalPages = Math.ceil(flows.length / ITEMS_PER_PAGE);
+	const totalPages = Math.ceil(flows?.length || 0 / ITEMS_PER_PAGE);
 	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 	const endIndex = startIndex + ITEMS_PER_PAGE;
-	const paginatedFlows = flows.slice(startIndex, endIndex);
+	const paginatedFlows = flows?.slice(startIndex, endIndex) || [];
 
 	const handlePreviousPage = () => {
 		setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -113,7 +114,7 @@ export function FlowTable({
 		setCurrentPage((prev) => Math.min(totalPages, prev + 1));
 	};
 
-	if (loading) {
+	if (loading && flows === null) {
 		return <TableSkeleton columns={6} rows={5} />;
 	}
 
@@ -293,7 +294,7 @@ export function FlowTable({
 							</TableRow>
 						);
 					})}
-					{flows.length === 0 && (
+					{flows?.length === 0 && (
 						<TableRow>
 							<TableCell
 								colSpan={Object.keys(visibleColumns).length}
@@ -318,7 +319,8 @@ export function FlowTable({
 					labels={selectedFlow.labels}
 					flowName={selectedFlow.name}
 					open={detailOpen}
-					timeWindow={timeWindow}
+					startDate={startDate}
+					endDate={endDate}
 					onOpenChange={setDetailOpen}
 				/>
 			)}

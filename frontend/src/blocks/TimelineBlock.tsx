@@ -46,9 +46,8 @@ export const TimelineBlock = createReactBlockSpec(
 			const closeBlockSettings = useNotebooksStore(
 				(state) => state.closeBlockSettings,
 			);
-			const timeWindow = useNotebooksStore(
-				(state) => state.currentNotebook?.timeWindow,
-			);
+			const startDate = useNotebooksStore((state) => state.startDate);
+			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
@@ -103,13 +102,15 @@ export const TimelineBlock = createReactBlockSpec(
 			};
 
 			return (
-				timeWindow !== undefined &&
+				startDate !== null &&
+				endDate !== null &&
 				filters !== undefined && (
 					<>
 						<div className="outline-none min-w-0 flex-1">
 							<Timeline
 								tenant={tenantName}
-								timeWindow={timeWindow}
+								startDate={startDate}
+								endDate={endDate}
 								filters={filters}
 								visibleColumns={{
 									event: props.block.props.showEvent,

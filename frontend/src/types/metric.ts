@@ -22,6 +22,7 @@ export type InstantAggregation =
 	| "p95"
 	| "p99"
 	| "increase";
+export type Show = "last" | "avg" | "min" | "max";
 
 export interface RangeMetric {
 	name: string;
@@ -31,7 +32,7 @@ export interface RangeMetric {
 	unit: string | null;
 	type: "counter" | "histogram";
 	aggregation: RangeAggregation;
-	show: ("last" | "avg")[];
+	show: Show[];
 }
 
 export interface InstantMetric {
@@ -43,7 +44,7 @@ export interface InstantMetric {
 	type: "counter" | "histogram";
 	aggregation: InstantAggregation;
 	rangeAggregation: RangeAggregation;
-	show: ("last" | "avg")[];
+	show: Show[];
 }
 
 export interface MetricHistory {

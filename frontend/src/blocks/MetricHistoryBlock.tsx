@@ -54,9 +54,8 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			const labels = useLabelsStore((state) => state.labels);
 			const rangeMetrics = useNotebooksStore((state) => state.rangeMetrics);
 			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
-			const timeWindow = useNotebooksStore(
-				(state) => state.currentNotebook?.timeWindow,
-			);
+			const startDate = useNotebooksStore((state) => state.startDate);
+			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
@@ -99,7 +98,8 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				if (
 					!tenantName ||
 					!selectedMetric ||
-					timeWindow === undefined ||
+					!startDate ||
+					!endDate ||
 					filters === undefined
 				) {
 					setHistoryData({ series: [] });
@@ -109,13 +109,12 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				const fetchHistory = async () => {
 					setLoading(true);
 					try {
-						const { start, end } = resolveTimeWindow(timeWindow);
 						const response = await Metrics.getHistory(
 							tenantName,
 							selectedMetric.prometheusName,
 							selectedMetric.aggregation,
-							start,
-							end,
+							startDate,
+							endDate,
 							filters,
 						);
 						setHistoryData(response);
@@ -128,7 +127,7 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				};
 
 				void fetchHistory();
-			}, [tenantName, selectedMetric, timeWindow, filters]);
+			}, [tenantName, selectedMetric, startDate, endDate, filters]);
 
 			if (!tenantName) {
 				return (
@@ -174,7 +173,7 @@ export const MetricHistoryBlock = createReactBlockSpec(
 					);
 				}
 
-				if (!timeWindow) {
+				if (!startDate || !endDate) {
 					return (
 						<div className="rounded-lg border p-8 text-center text-muted-foreground">
 							<p>No time window configured</p>
@@ -194,7 +193,8 @@ export const MetricHistoryBlock = createReactBlockSpec(
 						<MetricHistoryChart
 							historyData={historyData}
 							metric={selectedMetric ?? null}
-							timeWindow={timeWindow}
+							startDate={startDate}
+							endDate={endDate}
 						/>
 					</div>
 				);

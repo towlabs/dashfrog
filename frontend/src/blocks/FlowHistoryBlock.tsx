@@ -78,15 +78,16 @@ export const FlowHistoryBlock = createReactBlockSpec(
 			);
 			const flows = useNotebooksStore((state) => state.flows);
 			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
-			const timeWindow = useNotebooksStore(
-				(state) => state.currentNotebook?.timeWindow,
-			);
+			const startDate = useNotebooksStore((state) => state.startDate);
+			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
 			const labels = useLabelsStore((state) => state.labels);
 
-			const [flowHistory, setFlowHistory] = useState<FlowHistory[]>([]);
+			const [flowHistory, setFlowHistory] = useState<FlowHistory[] | null>(
+				null,
+			);
 			const [loading, setLoading] = useState(false);
 
 			const flowName = props.block.props.flowName as string;
@@ -112,7 +113,8 @@ export const FlowHistoryBlock = createReactBlockSpec(
 					if (
 						!tenantName ||
 						!flowName ||
-						timeWindow === undefined ||
+						startDate === null ||
+						endDate === null ||
 						filters === undefined
 					) {
 						setFlowHistory([]);
@@ -121,12 +123,11 @@ export const FlowHistoryBlock = createReactBlockSpec(
 
 					setLoading(true);
 					try {
-						const { start, end } = resolveTimeWindow(timeWindow);
 						const response = await Flows.getFlowHistory(
 							tenantName,
 							flowName,
-							start,
-							end,
+							startDate,
+							endDate,
 							filters,
 						);
 						setFlowHistory(response);
@@ -139,7 +140,7 @@ export const FlowHistoryBlock = createReactBlockSpec(
 				};
 
 				void fetchFlowHistory();
-			}, [tenantName, flowName, timeWindow, filters]);
+			}, [tenantName, flowName, startDate, endDate, filters]);
 
 			if (!tenantName) {
 				return (
@@ -202,13 +203,13 @@ export const FlowHistoryBlock = createReactBlockSpec(
 					);
 				}
 
-				if (loading) {
+				if (loading && flowHistory === null) {
 					return <TableSkeleton columns={6} rows={5} />;
 				}
 
 				return (
 					<FlowHistoryTable
-						flowHistory={flowHistory}
+						flowHistory={flowHistory || []}
 						statusFilter={"all"}
 						visibleColumns={{
 							labels: props.block.props.showLabels,
@@ -243,7 +244,6 @@ export const FlowHistoryBlock = createReactBlockSpec(
 									</h3>
 									<FlowSelector
 										flows={flows}
-										flowsLoading={flowsLoading}
 										selectedFlowName={flowName}
 										onFlowSelect={handleFlowSelect}
 									/>
@@ -276,7 +276,10 @@ export const FlowHistoryBlock = createReactBlockSpec(
 										<div
 											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
 											onClick={() =>
-												handleColumnToggle("showStart", !props.block.props.showStart)
+												handleColumnToggle(
+													"showStart",
+													!props.block.props.showStart,
+												)
 											}
 										>
 											<div className="flex items-center gap-2">
@@ -292,7 +295,10 @@ export const FlowHistoryBlock = createReactBlockSpec(
 										<div
 											className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-accent cursor-pointer"
 											onClick={() =>
-												handleColumnToggle("showEnd", !props.block.props.showEnd)
+												handleColumnToggle(
+													"showEnd",
+													!props.block.props.showEnd,
+												)
 											}
 										>
 											<div className="flex items-center gap-2">

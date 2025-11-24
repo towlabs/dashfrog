@@ -78,10 +78,11 @@ export const FlowStatusBlock = createReactBlockSpec(
 				(state) => state.closeBlockSettings,
 			);
 			const flows = useNotebooksStore((state) => state.flows);
-			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
 			const currentNotebook = useNotebooksStore(
 				(state) => state.currentNotebook,
 			);
+			const startDate = useNotebooksStore((state) => state.startDate);
+			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
@@ -160,19 +161,6 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 			// Render content based on state
 			const renderContent = () => {
-				if (flowsLoading) {
-					return (
-						<Card className="@container/card shadow-none">
-							<CardHeader>
-								<Skeleton className="h-4 w-64" />
-							</CardHeader>
-							<CardContent className="space-y-4">
-								<Skeleton className="h-4 w-48" />
-							</CardContent>
-						</Card>
-					);
-				}
-
 				if (selectedFlows.length === 0) {
 					return (
 						<div className="outline-none flex flex-col gap-1">
@@ -447,7 +435,6 @@ export const FlowStatusBlock = createReactBlockSpec(
 									</h3>
 									<FlowSelector
 										flows={flows}
-										flowsLoading={flowsLoading}
 										selectedFlowName={flowName}
 										onFlowSelect={handleFlowSelect}
 									/>
@@ -468,15 +455,19 @@ export const FlowStatusBlock = createReactBlockSpec(
 					</Sheet>
 
 					{/* Flow Detail Sheet */}
-					{currentNotebook && selectedFlow && (
-						<FlowDetail
-							labels={selectedFlow.labels}
-							flowName={selectedFlow.name}
-							open={detailOpen}
-							timeWindow={currentNotebook.timeWindow}
-							onOpenChange={setDetailOpen}
-						/>
-					)}
+					{currentNotebook &&
+						selectedFlow &&
+						startDate !== null &&
+						endDate !== null && (
+							<FlowDetail
+								labels={selectedFlow.labels}
+								flowName={selectedFlow.name}
+								open={detailOpen}
+								startDate={startDate}
+								endDate={endDate}
+								onOpenChange={setDetailOpen}
+							/>
+						)}
 				</>
 			);
 		},

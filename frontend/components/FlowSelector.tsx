@@ -20,24 +20,16 @@ import type { Flow } from "@/src/types/flow";
 
 interface FlowSelectorProps {
 	flows: Flow[];
-	flowsLoading: boolean;
 	selectedFlowName: string;
 	onFlowSelect: (flowName: string) => void;
 }
 
 export function FlowSelector({
 	flows,
-	flowsLoading,
 	selectedFlowName,
 	onFlowSelect,
 }: FlowSelectorProps) {
 	const [comboboxOpen, setComboboxOpen] = useState(false);
-
-	if (flowsLoading) {
-		return (
-			<div className="text-sm text-muted-foreground">Loading flows...</div>
-		);
-	}
 
 	if (flows.length === 0) {
 		return (

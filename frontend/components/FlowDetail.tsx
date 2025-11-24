@@ -24,7 +24,8 @@ import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 export interface FlowDetailProps {
 	flowName: string;
 	open: boolean;
-	timeWindow: TimeWindow;
+	startDate: Date;
+	endDate: Date;
 	labels: Record<string, string>;
 	onOpenChange: (open: boolean) => void;
 }
@@ -32,18 +33,18 @@ export interface FlowDetailProps {
 export function FlowDetail({
 	flowName,
 	open,
-	timeWindow,
+	startDate,
+	endDate,
 	labels,
 	onOpenChange,
 }: FlowDetailProps) {
 	const currentTenant = useTenantStore((state) => state.currentTenant);
 	// Local state for detailed flow data
-	const [flowHistory, setFlowHistory] = useState<FlowHistory[]>([]);
+	const [flowHistory, setFlowHistory] = useState<FlowHistory[] | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: recompute when time we open the sheet
-	const { start, end } = useMemo(() => resolveTimeWindow(timeWindow), [open]);
 	// Fetch detailed flow when filters or time window change
 	useEffect(() => {
 		if (!currentTenant || !open) return;
@@ -54,8 +55,8 @@ export function FlowDetail({
 				const response = await Flows.getFlowHistory(
 					currentTenant,
 					flowName,
-					start,
-					end,
+					startDate,
+					endDate,
 					Object.entries(labels).map(([key, value]) => ({
 						label: key,
 						value: value,
@@ -75,21 +76,21 @@ export function FlowDetail({
 		setStatusFilter(status);
 
 		void fetchFlowHistory();
-	}, [currentTenant, flowName, labels, start, end, open]);
+	}, [currentTenant, flowName, labels, startDate, endDate, open]);
 
 	const failedCount = useMemo(
-		() => flowHistory.filter((f) => f.status === "failure").length,
+		() => flowHistory?.filter((f) => f.status === "failure").length || 0,
 		[flowHistory],
 	);
 	const successCount = useMemo(
-		() => flowHistory.filter((f) => f.status === "success").length,
+		() => flowHistory?.filter((f) => f.status === "success").length || 0,
 		[flowHistory],
 	);
 	const pendingCount = useMemo(
-		() => flowHistory.filter((f) => f.status === "running").length,
+		() => flowHistory?.filter((f) => f.status === "running").length || 0,
 		[flowHistory],
 	);
-	const runCount = useMemo(() => flowHistory.length, [flowHistory]);
+	const runCount = useMemo(() => flowHistory?.length || 0, [flowHistory]);
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
@@ -106,7 +107,7 @@ export function FlowDetail({
 							</SheetDescription>
 						</div>
 						<div className="flex">
-							{loading ? (
+							{loading && flowHistory === null ? (
 								<FlowStatusButtonsSkeleton />
 							) : (
 								flowName && (
@@ -128,11 +129,11 @@ export function FlowDetail({
 					<div className="flex flex-col h-full gap-2">
 						{/* Flow History Table - Scrollable */}
 						<div className="flex-1 overflow-y-auto">
-							{loading ? (
+							{loading && flowHistory === null ? (
 								<TableSkeleton columns={6} rows={10} />
 							) : (
 								<FlowHistoryTable
-									flowHistory={flowHistory}
+									flowHistory={flowHistory || []}
 									statusFilter={statusFilter}
 								/>
 							)}

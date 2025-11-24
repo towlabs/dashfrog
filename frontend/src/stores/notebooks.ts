@@ -5,16 +5,15 @@ import { Metrics } from "@/src/services/api/metrics";
 import { Notebooks } from "@/src/services/api/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
-import type {
-	InstantAggregation,
-	InstantMetric,
-	RangeAggregation,
-	RangeMetric,
-} from "@/src/types/metric";
+import type { InstantMetric, RangeMetric } from "@/src/types/metric";
 import type { Notebook } from "@/src/types/notebook";
+import { resolveTimeWindow } from "@/src/types/timewindow";
 
 // Debounce timeout storage (outside of Zustand state)
 let saveTimeout: NodeJS.Timeout | null = null;
+
+// Time window refresh interval (outside of Zustand state)
+let timeWindowInterval: NodeJS.Timeout | null = null;
 
 interface NotebooksState {
 	notebooks: Record<string, Notebook[]>; // Keyed by tenant
@@ -28,6 +27,8 @@ interface NotebooksState {
 	error: string | null;
 	settingsOpenBlockId: string | null;
 	notebookCreating: boolean;
+	startDate: Date | null;
+	endDate: Date | null;
 	setCurrentNotebook: (tenant: string, notebookId: string) => Notebook | null;
 	openBlockSettings: (blockId: string) => void;
 	closeBlockSettings: () => void;
@@ -49,6 +50,7 @@ interface NotebooksState {
 		notebook: Omit<Notebook, "id" | "timeWindow" | "filters">,
 	) => Notebook;
 	deleteNotebook: (tenant: string, notebookId: string) => Promise<void>;
+	stopTimeWindowRefresh: () => void;
 }
 
 export const useNotebooksStore = create<NotebooksState>()(
@@ -65,6 +67,8 @@ export const useNotebooksStore = create<NotebooksState>()(
 			loading: true,
 			error: null,
 			settingsOpenBlockId: null,
+			startDate: null,
+			endDate: null,
 
 			openBlockSettings: (blockId: string) => {
 				set({ settingsOpenBlockId: blockId });
@@ -105,9 +109,30 @@ export const useNotebooksStore = create<NotebooksState>()(
 					(get().notebooks[tenant] || []).find((nb) => nb.id === notebookId) ||
 					null;
 				if (!currentNotebook) return null;
-				set({
-					currentNotebook,
-				});
+
+				// Clear any existing interval
+				if (timeWindowInterval) {
+					clearInterval(timeWindowInterval);
+				}
+
+				// Helper to update dates based on time window
+				const updateDates = () => {
+					const notebook = get().currentNotebook;
+					if (!notebook?.timeWindow) {
+						set({ startDate: null, endDate: null });
+						return;
+					}
+					const { start, end } = resolveTimeWindow(notebook.timeWindow);
+					set({ startDate: start, endDate: end });
+				};
+
+				set({ currentNotebook });
+
+				// Update immediately and start refresh interval (every 5s)
+				updateDates();
+				if (currentNotebook?.timeWindow?.type === "relative") {
+					timeWindowInterval = setInterval(updateDates, 5000);
+				}
 
 				return currentNotebook;
 			},
@@ -202,6 +227,13 @@ export const useNotebooksStore = create<NotebooksState>()(
 						[tenant]: tenantNotebooks.filter((nb) => nb.id !== notebookId),
 					},
 				});
+			},
+
+			stopTimeWindowRefresh: () => {
+				if (timeWindowInterval) {
+					clearInterval(timeWindowInterval);
+					timeWindowInterval = null;
+				}
 			},
 		}),
 		{ name: "notebooks" },

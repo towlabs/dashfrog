@@ -24,12 +24,14 @@ import { Timeline as TimelineAPI } from "@/src/services/api/timeline";
 import type { Filter } from "@/src/types/filter";
 import type { TimelineEvent } from "@/src/types/timeline";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
+import { useNotebooksStore } from "@/src/stores/notebooks";
 
 const ITEMS_PER_PAGE = 14;
 
 type TimelineProps = {
 	tenant: string;
-	timeWindow: TimeWindow;
+	startDate: Date;
+	endDate: Date;
 	filters: Filter[];
 	visibleColumns?: {
 		event?: boolean;
@@ -40,11 +42,12 @@ type TimelineProps = {
 
 export function Timeline({
 	tenant,
-	timeWindow,
+	startDate,
+	endDate,
 	filters,
 	visibleColumns = { event: true, labels: true, time: true },
 }: TimelineProps) {
-	const [events, setEvents] = useState<TimelineEvent[]>([]);
+	const [events, setEvents] = useState<TimelineEvent[] | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [selectedEvent, setSelectedEvent] = useState<TimelineEvent | null>(
@@ -56,11 +59,10 @@ export function Timeline({
 		const fetchTimeline = async () => {
 			setLoading(true);
 			try {
-				const { start, end } = resolveTimeWindow(timeWindow);
 				const timelineEvents = await TimelineAPI.getByTenant(
 					tenant,
-					start,
-					end,
+					startDate,
+					endDate,
 					filters,
 				);
 				setEvents(timelineEvents);
@@ -75,22 +77,22 @@ export function Timeline({
 		if (tenant) {
 			void fetchTimeline();
 		}
-	}, [tenant, timeWindow, filters]);
+	}, [tenant, startDate, endDate, filters]);
 
 	const handleEventClick = (event: TimelineEvent) => {
 		setSelectedEvent(event);
 		setSheetOpen(true);
 	};
 
-	if (loading) {
+	if (loading && events === null) {
 		return <TableSkeleton columns={4} rows={10} />;
 	}
 
 	// Pagination calculations
-	const totalPages = Math.ceil(events.length / ITEMS_PER_PAGE);
+	const totalPages = Math.ceil(events?.length || 0 / ITEMS_PER_PAGE);
 	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 	const endIndex = startIndex + ITEMS_PER_PAGE;
-	const paginatedEvents = events.slice(startIndex, endIndex);
+	const paginatedEvents = events?.slice(startIndex, endIndex) || [];
 
 	const handlePreviousPage = () => {
 		setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -178,7 +180,7 @@ export function Timeline({
 						</TableRow>
 					))}
 
-					{events.length === 0 && (
+					{events?.length === 0 && (
 						<TableRow>
 							<TableCell
 								colSpan={Object.keys(visibleColumns).length}

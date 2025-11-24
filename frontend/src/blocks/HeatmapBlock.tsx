@@ -29,6 +29,7 @@ import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { FlowHistory } from "@/src/types/flow";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
+import React from "react";
 
 interface DayData {
 	date: Date;
@@ -87,12 +88,13 @@ export const HeatmapBlock = createReactBlockSpec(
 		render: (props) => {
 			const { tenant } = useParams<{ tenant: string }>();
 			const tenantName = tenant ? decodeURIComponent(tenant) : "";
-			const timeWindow = useNotebooksStore(
-				(state) => state.currentNotebook?.timeWindow,
-			);
+			const startDate = useNotebooksStore((state) => state.startDate);
+			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
+			const flows = useNotebooksStore((state) => state.flows);
+			const labels = useLabelsStore((state) => state.labels);
 			const settingsOpenBlockId = useNotebooksStore(
 				(state) => state.settingsOpenBlockId,
 			);
@@ -100,13 +102,11 @@ export const HeatmapBlock = createReactBlockSpec(
 				(state) => state.closeBlockSettings,
 			);
 
-			const flows = useNotebooksStore((state) => state.flows);
-			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
-			const labels = useLabelsStore((state) => state.labels);
-
 			const [loading, setLoading] = useState(false);
 
-			const [flowHistories, setFlowHistories] = useState<FlowHistory[]>([]);
+			const [flowHistories, setFlowHistories] = useState<FlowHistory[] | null>(
+				null,
+			);
 			const [labelGroups, setLabelGroups] = useState<LabelGroupData[]>([]);
 			const [detailOpen, setDetailOpen] = useState(false);
 			const [selectedLabels, setSelectedLabels] = useState<
@@ -116,6 +116,7 @@ export const HeatmapBlock = createReactBlockSpec(
 
 			const flowName = props.block.props.flowName as string;
 			const title = props.block.props.title as string;
+			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
 			// Parse block filters from JSON string
 			const blockFilters: Filter[] = useMemo(() => {
@@ -140,13 +141,24 @@ export const HeatmapBlock = createReactBlockSpec(
 				end.setHours(23, 59, 59, 999);
 				return { type: "absolute", metadata: { start, end } };
 			}, [selectedDay]);
-
+			// Get days to display (from start to end of time window)
+			const days = React.useMemo(() => {
+				if (startDate === null || endDate === null) return [];
+				let startDay = startDate;
+				const days: Date[] = [startDay];
+				while (startDay < endDate) {
+					startDay = addDays(startDay, 1);
+					days.push(startDay);
+				}
+				return days;
+			}, [startDate, endDate]);
 			// Fetch flow histories when flow is selected
 			useEffect(() => {
 				if (
 					!tenantName ||
 					!flowName ||
-					timeWindow === undefined ||
+					startDate === null ||
+					endDate === null ||
 					filters === undefined
 				) {
 					setFlowHistories([]);
@@ -157,12 +169,11 @@ export const HeatmapBlock = createReactBlockSpec(
 				const fetchFlowHistories = async () => {
 					setLoading(true);
 					try {
-						const { start, end } = resolveTimeWindow(timeWindow);
 						const response = await Flows.getFlowHistory(
 							tenantName,
 							flowName,
-							start,
-							end,
+							startDate,
+							endDate,
 							filters,
 						);
 						setFlowHistories(response);
@@ -175,7 +186,7 @@ export const HeatmapBlock = createReactBlockSpec(
 				};
 
 				void fetchFlowHistories();
-			}, [tenantName, flowName, timeWindow, filters]);
+			}, [tenantName, flowName, startDate, endDate, filters]);
 
 			// Process flow histories into label groups
 			useEffect(() => {
@@ -234,15 +245,13 @@ export const HeatmapBlock = createReactBlockSpec(
 				);
 			}
 
-			if (timeWindow === undefined) {
+			if (startDate === null || endDate === null) {
 				return (
 					<div className="p-4 border rounded-lg">
 						<div className="text-sm text-muted-foreground"></div>
 					</div>
 				);
 			}
-
-			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
 			const handleDayClick = (labels: Record<string, string>, day: Date) => {
 				setSelectedLabels(labels);
@@ -268,19 +277,9 @@ export const HeatmapBlock = createReactBlockSpec(
 				});
 			};
 
-			// Get days to display (from start to end of time window)
-			const { start, end } = resolveTimeWindow(timeWindow);
-			let startDay = start;
-			const days: Date[] = [startDay];
-
-			while (startDay < end) {
-				startDay = addDays(startDay, 1);
-				days.push(startDay);
-			}
-
 			// Render content based on state
 			const renderContent = () => {
-				if (loading) {
+				if (loading && flowHistories === null) {
 					return (
 						<div className="space-y-2">
 							<div className="h-5 w-32 bg-muted rounded animate-pulse" />
@@ -484,7 +483,6 @@ export const HeatmapBlock = createReactBlockSpec(
 									</h3>
 									<FlowSelector
 										flows={flows}
-										flowsLoading={flowsLoading}
 										selectedFlowName={flowName}
 										onFlowSelect={handleFlowSelect}
 									/>
@@ -510,7 +508,8 @@ export const HeatmapBlock = createReactBlockSpec(
 							labels={selectedLabels}
 							flowName={flowName}
 							open={detailOpen}
-							timeWindow={selectedTimeWindow}
+							startDate={startDate}
+							endDate={endDate}
 							onOpenChange={setDetailOpen}
 						/>
 					)}

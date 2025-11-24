@@ -17,7 +17,11 @@ export default function LayoutClient({
 
 	// Load labels on app startup
 	React.useEffect(() => {
-		void fetchLabelsAndTenants();
+		// fetch every 5 seconds
+		const interval = setInterval(() => {
+			void fetchLabelsAndTenants();
+		}, 5000);
+		return () => clearInterval(interval);
 	}, [fetchLabelsAndTenants]);
 
 	return (

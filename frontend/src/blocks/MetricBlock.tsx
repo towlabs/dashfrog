@@ -47,6 +47,7 @@ import type {
 	InstantAggregation,
 	InstantMetric,
 	RangeAggregation,
+	Show,
 } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
@@ -66,7 +67,7 @@ export const MetricBlock = createReactBlockSpec(
 				default: "" as InstantAggregation | "",
 			},
 			show: {
-				default: "last" as "last" | "avg",
+				default: "last" as Show,
 			},
 			healthMin: {
 				default: "",
@@ -93,20 +94,20 @@ export const MetricBlock = createReactBlockSpec(
 			const instantMetrics = useNotebooksStore((state) => state.instantMetrics);
 			const rangeMetrics = useNotebooksStore((state) => state.rangeMetrics);
 			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
-			const timeWindow = useNotebooksStore(
-				(state) => state.currentNotebook?.timeWindow,
-			);
+
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
 			const labels = useLabelsStore((state) => state.labels);
-
+			const startDate = useNotebooksStore((state) => state.startDate);
+			const endDate = useNotebooksStore((state) => state.endDate);
 			const [scalarData, setScalarData] = useState<
-				{
-					labels: Record<string, string>;
-					value: number;
-				}[]
-			>([]);
+				| {
+						labels: Record<string, string>;
+						value: number;
+				  }[]
+				| null
+			>(null);
 			const [loading, setLoading] = useState(false);
 			const [detailOpen, setDetailOpen] = useState(false);
 			const [selectedLabels, setSelectedLabels] = useState<
@@ -120,7 +121,7 @@ export const MetricBlock = createReactBlockSpec(
 				| "";
 			const healthMin = props.block.props.healthMin as string;
 			const healthMax = props.block.props.healthMax as string;
-			const show = props.block.props.show as "last" | "avg";
+			const show = props.block.props.show as Show;
 			// Parse block filters from JSON string
 			const blockFilters: Filter[] = useMemo(() => {
 				try {
@@ -157,7 +158,8 @@ export const MetricBlock = createReactBlockSpec(
 				if (
 					!tenantName ||
 					!selectedMetric ||
-					timeWindow === undefined ||
+					startDate === null ||
+					endDate === null ||
 					filters === undefined
 				) {
 					setScalarData([]);
@@ -167,12 +169,11 @@ export const MetricBlock = createReactBlockSpec(
 				const fetchScalar = async () => {
 					setLoading(true);
 					try {
-						const { start, end } = resolveTimeWindow(timeWindow);
 						const response = await Metrics.getScalars(
 							tenantName,
 							selectedMetric.prometheusName,
-							start,
-							end,
+							startDate,
+							endDate,
 							selectedMetric.aggregation,
 							show,
 							filters,
@@ -187,7 +188,7 @@ export const MetricBlock = createReactBlockSpec(
 				};
 
 				void fetchScalar();
-			}, [tenantName, selectedMetric, show, timeWindow, filters]);
+			}, [tenantName, selectedMetric, show, startDate, endDate, filters]);
 
 			if (!tenantName) {
 				return (
@@ -201,10 +202,7 @@ export const MetricBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleMetricSelect = (
-				metric: InstantMetric,
-				show: "last" | "avg",
-			) => {
+			const handleMetricSelect = (metric: InstantMetric, show: Show) => {
 				props.editor.updateBlock(props.block, {
 					props: {
 						...props.block.props,
@@ -261,7 +259,7 @@ export const MetricBlock = createReactBlockSpec(
 					);
 				}
 
-				if (metricsLoading || loading) {
+				if ((metricsLoading || loading) && scalarData === null) {
 					return (
 						<Card className="@container/card shadow-none">
 							<CardHeader>
@@ -285,7 +283,7 @@ export const MetricBlock = createReactBlockSpec(
 					);
 				}
 
-				if (scalarData.length === 0) {
+				if (scalarData === null || scalarData.length === 0) {
 					return (
 						<EmptyState
 							icon={RectangleHorizontal}
@@ -412,7 +410,6 @@ export const MetricBlock = createReactBlockSpec(
 									</h3>
 									<InstantMetricSelector
 										metrics={instantMetrics}
-										metricsLoading={metricsLoading}
 										selectedMetric={selectedMetric ?? null}
 										selectedShow={show}
 										onMetricSelect={handleMetricSelect}
@@ -471,7 +468,7 @@ export const MetricBlock = createReactBlockSpec(
 					</Sheet>
 
 					{/* Metric Detail Drawer */}
-					{rangeMetric && timeWindow && (
+					{rangeMetric && startDate !== null && endDate !== null && (
 						<MetricDetailDrawer
 							metric={rangeMetric}
 							tenantName={tenantName}
@@ -483,7 +480,8 @@ export const MetricBlock = createReactBlockSpec(
 								})),
 							]}
 							open={detailOpen}
-							timeWindow={timeWindow}
+							startDate={startDate}
+							endDate={endDate}
 							onOpenChange={setDetailOpen}
 						/>
 					)}

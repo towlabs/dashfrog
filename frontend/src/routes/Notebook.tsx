@@ -83,7 +83,8 @@ export default function NotebookPage() {
 	const openBlockSettings = useNotebooksStore(
 		(state) => state.openBlockSettings,
 	);
-
+	const startDate = useNotebooksStore((state) => state.startDate);
+	const endDate = useNotebooksStore((state) => state.endDate);
 	const [initialized, setInitialized] = useState(false);
 	const [mounted, setMounted] = useState(false);
 
@@ -149,11 +150,16 @@ export default function NotebookPage() {
 	]);
 
 	useEffect(() => {
-		if (!tenant || timeWindow === undefined || filters === undefined) return;
-		const { start, end } = resolveTimeWindow(timeWindow);
-		void fetchFlows(tenant, start, end, filters);
+		if (
+			!tenant ||
+			startDate === null ||
+			endDate === null ||
+			filters === undefined
+		)
+			return;
+		void fetchFlows(tenant, startDate, endDate, filters);
 		void fetchMetrics();
-	}, [tenant, fetchFlows, fetchMetrics, timeWindow, filters]);
+	}, [tenant, fetchFlows, fetchMetrics, startDate, endDate, filters]);
 
 	// Save editor content changes (debounced in store)
 	useEditorChange((editor) => {

@@ -23,7 +23,8 @@ type MetricDetailDrawerProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	metric: RangeMetric;
-	timeWindow: TimeWindow;
+	startDate: Date;
+	endDate: Date;
 	filters: Filter[];
 	tenantName: string;
 };
@@ -33,7 +34,8 @@ export function MetricDetailDrawer({
 	onOpenChange,
 	metric,
 	tenantName,
-	timeWindow,
+	startDate,
+	endDate,
 	filters,
 }: MetricDetailDrawerProps) {
 	const [historyData, setHistoryData] = useState<{
@@ -46,13 +48,12 @@ export function MetricDetailDrawer({
 	useEffect(() => {
 		const fetchHistory = async () => {
 			try {
-				const { start, end } = resolveTimeWindow(timeWindow);
 				const response = await Metrics.getHistory(
 					tenantName,
 					metric.prometheusName,
 					metric.aggregation,
-					start,
-					end,
+					startDate,
+					endDate,
 					filters,
 				);
 				setHistoryData(response);
@@ -67,7 +68,8 @@ export function MetricDetailDrawer({
 		tenantName,
 		metric.prometheusName,
 		metric.aggregation,
-		timeWindow,
+		startDate,
+		endDate,
 		filters,
 	]);
 
@@ -93,7 +95,8 @@ export function MetricDetailDrawer({
 					<MetricHistoryChart
 						historyData={historyData}
 						metric={metric}
-						timeWindow={timeWindow}
+						startDate={startDate}
+						endDate={endDate}
 					/>
 				</div>
 			</DrawerContent>

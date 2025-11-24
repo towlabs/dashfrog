@@ -35,6 +35,7 @@ import type {
 	InstantAggregation,
 	RangeMetric,
 	InstantMetric,
+	Show,
 } from "@/src/types/metric";
 
 type RangeMetricSelectorProps = {
@@ -147,26 +148,18 @@ export function RangeMetricSelector({
 
 type InstantMetricSelectorProps = {
 	metrics: InstantMetric[];
-	metricsLoading: boolean;
 	selectedMetric: InstantMetric | null;
-	selectedShow: "last" | "avg" | null;
-	onMetricSelect: (metric: InstantMetric, show: "last" | "avg") => void;
+	selectedShow: Show | null;
+	onMetricSelect: (metric: InstantMetric, show: Show) => void;
 };
 
 export function InstantMetricSelector({
 	metrics,
-	metricsLoading,
 	selectedMetric,
 	selectedShow,
 	onMetricSelect,
 }: InstantMetricSelectorProps) {
 	const [comboboxOpen, setComboboxOpen] = useState(false);
-
-	if (metricsLoading) {
-		return (
-			<div className="text-sm text-muted-foreground">Loading metrics...</div>
-		);
-	}
 
 	if (metrics.length === 0) {
 		return (
@@ -265,7 +258,7 @@ export function InstantMetricSelector({
 					<label className="text-sm font-medium">Show</label>
 					<Select
 						value={selectedShow || selectedMetric.show[0]}
-						onValueChange={(value: "last" | "avg") => {
+						onValueChange={(value: Show) => {
 							onMetricSelect(selectedMetric, value);
 						}}
 					>
@@ -278,6 +271,12 @@ export function InstantMetricSelector({
 							)}
 							{selectedMetric.show.includes("avg") && (
 								<SelectItem value="avg">Average</SelectItem>
+							)}
+							{selectedMetric.show.includes("min") && (
+								<SelectItem value="min">Minimum</SelectItem>
+							)}
+							{selectedMetric.show.includes("max") && (
+								<SelectItem value="max">Maximum</SelectItem>
 							)}
 						</SelectContent>
 					</Select>

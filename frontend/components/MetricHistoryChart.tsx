@@ -22,21 +22,20 @@ type MetricHistoryChartProps = {
 	historyData: {
 		series: { labels: Record<string, string>; values: MetricHistory[] }[];
 	};
-	metric: RangeMetric;
-	timeWindow: TimeWindow;
+	metric: RangeMetric | null;
+	startDate: Date;
+	endDate: Date;
 };
 
 export function MetricHistoryChart({
 	historyData,
 	metric,
-	timeWindow,
+	startDate,
+	endDate,
 }: MetricHistoryChartProps) {
 	// Track which series are visible
 	const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 	const [hoveredSeries, setHoveredSeries] = useState<string | null>(null);
-
-	// Get the full time window range
-	const { start: windowStart, end: windowEnd } = resolveTimeWindow(timeWindow);
 
 	// Get all unique timestamps across all series that have data
 	const dataTimestamps = new Set<number>();
@@ -70,7 +69,7 @@ export function MetricHistoryChart({
 
 	// Calculate time window duration to determine appropriate date format
 	const getTimeFormat = () => {
-		const duration = windowEnd.getTime() - windowStart.getTime();
+		const duration = endDate.getTime() - startDate.getTime();
 		const hours = duration / (1000 * 60 * 60);
 
 		if (hours <= 1) {

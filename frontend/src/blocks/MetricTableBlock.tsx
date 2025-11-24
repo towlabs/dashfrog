@@ -38,7 +38,7 @@ import { Metrics } from "@/src/services/api/metrics";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import type { InstantMetric } from "@/src/types/metric";
+import type { InstantMetric, Show } from "@/src/types/metric";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
 import {
@@ -61,7 +61,7 @@ export const MetricTableBlock = createReactBlockSpec(
 				default: "",
 			},
 			show: {
-				default: "last" as "last" | "avg",
+				default: "last" as Show,
 			},
 			blockFilters: {
 				default: "[]",
@@ -95,9 +95,8 @@ export const MetricTableBlock = createReactBlockSpec(
 			const instantMetrics = useNotebooksStore((state) => state.instantMetrics);
 			const rangeMetrics = useNotebooksStore((state) => state.rangeMetrics);
 			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
-			const timeWindow = useNotebooksStore(
-				(state) => state.currentNotebook?.timeWindow,
-			);
+			const startDate = useNotebooksStore((state) => state.startDate);
+			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
@@ -116,11 +115,12 @@ export const MetricTableBlock = createReactBlockSpec(
 			);
 
 			const [scalarData, setScalarData] = useState<
-				{
-					labels: Record<string, string>;
-					value: number;
-				}[]
-			>([]);
+				| {
+						labels: Record<string, string>;
+						value: number;
+				  }[]
+				| null
+			>(null);
 			const [loading, setLoading] = useState(false);
 			const [detailOpen, setDetailOpen] = useState(false);
 			const [selectedLabels, setSelectedLabels] = useState<
@@ -130,7 +130,7 @@ export const MetricTableBlock = createReactBlockSpec(
 			const metricName = props.block.props.metricName as string;
 			const title = props.block.props.title as string;
 			const aggregation = props.block.props.aggregation as string;
-			const show = props.block.props.show as "last" | "avg";
+			const show = props.block.props.show as Show;
 			const showMetricColumn = props.block.props.showMetricColumn as boolean;
 			const showLabelsColumn = props.block.props.showLabelsColumn as boolean;
 			const showValueColumn = props.block.props.showValueColumn as boolean;
@@ -156,7 +156,8 @@ export const MetricTableBlock = createReactBlockSpec(
 				if (
 					!tenantName ||
 					!selectedMetric ||
-					timeWindow === undefined ||
+					!startDate ||
+					!endDate ||
 					filters === undefined
 				) {
 					setScalarData([]);
@@ -166,12 +167,11 @@ export const MetricTableBlock = createReactBlockSpec(
 				const fetchScalar = async () => {
 					setLoading(true);
 					try {
-						const { start, end } = resolveTimeWindow(timeWindow);
 						const response = await Metrics.getScalars(
 							tenantName,
 							selectedMetric.prometheusName,
-							start,
-							end,
+							startDate,
+							endDate,
 							selectedMetric.aggregation,
 							show,
 							filters,
@@ -186,7 +186,7 @@ export const MetricTableBlock = createReactBlockSpec(
 				};
 
 				void fetchScalar();
-			}, [tenantName, selectedMetric, show, timeWindow, filters]);
+			}, [tenantName, selectedMetric, show, startDate, endDate, filters]);
 
 			if (!tenantName) {
 				return (
@@ -200,10 +200,7 @@ export const MetricTableBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleMetricSelect = (
-				metric: InstantMetric,
-				newShow: "last" | "avg",
-			) => {
+			const handleMetricSelect = (metric: InstantMetric, newShow: Show) => {
 				props.editor.updateBlock(props.block, {
 					props: {
 						...props.block.props,
@@ -257,7 +254,7 @@ export const MetricTableBlock = createReactBlockSpec(
 					);
 				}
 
-				if (loading) {
+				if (loading && scalarData === null) {
 					return (
 						<div className="space-y-2">
 							<Skeleton className="h-10 w-full" />
@@ -275,7 +272,7 @@ export const MetricTableBlock = createReactBlockSpec(
 					);
 				}
 
-				if (scalarData.length === 0) {
+				if (scalarData?.length === 0) {
 					return (
 						<div className="rounded-lg border p-8 text-center text-muted-foreground">
 							<p>No data available</p>
@@ -313,7 +310,7 @@ export const MetricTableBlock = createReactBlockSpec(
 								</TableRow>
 							</TableHeader>
 							<TableBody>
-								{scalarData.map((scalar, idx) => {
+								{(scalarData || []).map((scalar, idx) => {
 									const { formattedValue, displayUnit } = formatMetricValue(
 										scalar.value,
 										selectedMetric.unit ?? undefined,
@@ -423,7 +420,6 @@ export const MetricTableBlock = createReactBlockSpec(
 									</h3>
 									<InstantMetricSelector
 										metrics={instantMetrics}
-										metricsLoading={metricsLoading}
 										selectedMetric={selectedMetric ?? null}
 										selectedShow={show}
 										onMetricSelect={handleMetricSelect}
@@ -501,7 +497,7 @@ export const MetricTableBlock = createReactBlockSpec(
 					</Sheet>
 
 					{/* Metric Detail Drawer */}
-					{rangeMetric && timeWindow && (
+					{rangeMetric && startDate !== null && endDate !== null && (
 						<MetricDetailDrawer
 							metric={rangeMetric}
 							tenantName={tenantName}
@@ -513,7 +509,8 @@ export const MetricTableBlock = createReactBlockSpec(
 								})),
 							]}
 							open={detailOpen}
-							timeWindow={timeWindow}
+							startDate={startDate}
+							endDate={endDate}
 							onOpenChange={setDetailOpen}
 						/>
 					)}
