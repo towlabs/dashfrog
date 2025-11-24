@@ -53,7 +53,7 @@ export function RangeMetricSelector({
 }: RangeMetricSelectorProps) {
 	const [comboboxOpen, setComboboxOpen] = useState(false);
 
-	if (metricsLoading) {
+	if (metricsLoading && metrics.length === 0) {
 		return (
 			<div className="text-sm text-muted-foreground">Loading metrics...</div>
 		);

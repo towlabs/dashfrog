@@ -102,12 +102,12 @@ export function FlowHistoryTable({
 	return (
 		<TooltipProvider>
 			<div className="space-y-4">
-				<Table>
+				<Table className="table-fixed">
 					<TableHeader>
 						<TableRow>
 							<TableHead className="w-8"></TableHead>
 							{visibleColumns.labels && (
-								<TableHead>
+								<TableHead className="w-auto">
 									<div className="flex items-center gap-2">
 										<Tags className="size-4" strokeWidth={2.5} />
 										<span>Labels</span>
@@ -115,7 +115,7 @@ export function FlowHistoryTable({
 								</TableHead>
 							)}
 							{visibleColumns.start && (
-								<TableHead>
+								<TableHead className="w-36">
 									<div className="flex items-center gap-2">
 										<Clock className="size-4" strokeWidth={2.5} />
 										<span>Start</span>
@@ -123,7 +123,7 @@ export function FlowHistoryTable({
 								</TableHead>
 							)}
 							{visibleColumns.end && (
-								<TableHead>
+								<TableHead className="w-36">
 									<div className="flex items-center gap-2">
 										<Clock className="size-4" strokeWidth={2.5} />
 										<span>End</span>
@@ -131,7 +131,7 @@ export function FlowHistoryTable({
 								</TableHead>
 							)}
 							{visibleColumns.duration && (
-								<TableHead>
+								<TableHead className="w-24">
 									<div className="flex items-center gap-2">
 										<Timer className="size-4" strokeWidth={2.5} />
 										<span>Duration</span>
@@ -139,7 +139,7 @@ export function FlowHistoryTable({
 								</TableHead>
 							)}
 							{visibleColumns.status && (
-								<TableHead>
+								<TableHead className="w-24">
 									<div className="flex items-center gap-2">
 										<CircleDot className="size-4" strokeWidth={2.5} />
 										<span>Status</span>

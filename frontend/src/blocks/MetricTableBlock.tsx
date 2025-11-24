@@ -282,11 +282,11 @@ export const MetricTableBlock = createReactBlockSpec(
 
 				return (
 					<div className="space-y-4">
-						<Table>
+						<Table className="table-fixed">
 							<TableHeader>
 								<TableRow>
 									{showMetricColumn && (
-										<TableHead>
+										<TableHead className="w-48">
 											<div className="flex items-center gap-2">
 												<CaseUpper strokeWidth={2.5} className="size-4" />{" "}
 												Metric
@@ -294,14 +294,14 @@ export const MetricTableBlock = createReactBlockSpec(
 										</TableHead>
 									)}
 									{showLabelsColumn && (
-										<TableHead>
+										<TableHead className="w-auto">
 											<div className="flex items-center gap-2">
 												<Tags strokeWidth={2.5} className="size-4" /> Labels
 											</div>
 										</TableHead>
 									)}
 									{showValueColumn && (
-										<TableHead>
+										<TableHead className="w-32">
 											<div className="flex items-center gap-2">
 												<Hash strokeWidth={2.5} className="size-4" /> Value
 											</div>

@@ -120,11 +120,11 @@ export function FlowTable({
 
 	return (
 		<>
-			<Table>
+			<Table className="table-fixed">
 				<TableHeader>
 					<TableRow>
 						{visibleColumns.name && (
-							<TableHead>
+							<TableHead className="w-48">
 								<div className="flex items-center gap-2">
 									<CaseUpper className="size-4" strokeWidth={2.5} />
 									<span>Name</span>
@@ -132,7 +132,7 @@ export function FlowTable({
 							</TableHead>
 						)}
 						{visibleColumns.labels && (
-							<TableHead>
+							<TableHead className="w-auto">
 								<div className="flex items-center gap-2">
 									<Tags className="size-4" strokeWidth={2.5} />
 									<span>Labels</span>
@@ -140,7 +140,7 @@ export function FlowTable({
 							</TableHead>
 						)}
 						{visibleColumns.lastStatus && (
-							<TableHead>
+							<TableHead className="w-24">
 								<div className="flex items-center gap-2">
 									<CircleDot className="size-4" strokeWidth={2.5} />
 									<span>Last Status</span>
@@ -148,7 +148,7 @@ export function FlowTable({
 							</TableHead>
 						)}
 						{visibleColumns.lastStart && (
-							<TableHead>
+							<TableHead className="w-36">
 								<div className="flex items-center gap-2">
 									<Clock className="size-4" strokeWidth={2.5} />
 									<span>Last Start</span>
@@ -156,7 +156,7 @@ export function FlowTable({
 							</TableHead>
 						)}
 						{visibleColumns.lastEnd && (
-							<TableHead>
+							<TableHead className="w-36">
 								<div className="flex items-center gap-2">
 									<Clock className="size-4" strokeWidth={2.5} />
 									<span>Last End</span>
@@ -164,7 +164,7 @@ export function FlowTable({
 							</TableHead>
 						)}
 						{visibleColumns.lastDuration && (
-							<TableHead>
+							<TableHead className="w-28">
 								<div className="flex items-center gap-2">
 									<Timer className="size-4" strokeWidth={2.5} />
 									<span>Last Duration</span>
@@ -172,7 +172,7 @@ export function FlowTable({
 							</TableHead>
 						)}
 						{visibleColumns.runCounts && (
-							<TableHead>
+							<TableHead className="w-28">
 								<div className="flex items-center gap-2">
 									<Hash className="size-4" strokeWidth={2.5} />
 									<span>Run Counts</span>
