@@ -37,6 +37,9 @@ import type {
 	InstantMetric,
 	Show,
 } from "@/src/types/metric";
+import { FilterBadgesEditor } from "./FilterBadgesEditor";
+import { useLabelsStore } from "@/src/stores/labels";
+import { Filter } from "@/src/types/filter";
 
 type RangeMetricSelectorProps = {
 	metrics: RangeMetric[];
@@ -150,15 +153,20 @@ type InstantMetricSelectorProps = {
 	metrics: InstantMetric[];
 	selectedMetric: InstantMetric | null;
 	selectedShow: Show | null;
+	blockFilters: Filter[];
 	onMetricSelect: (metric: InstantMetric, show: Show) => void;
+	onFiltersChange: (filters: Filter[]) => void;
 };
 
 export function InstantMetricSelector({
 	metrics,
 	selectedMetric,
 	selectedShow,
+	blockFilters,
 	onMetricSelect,
+	onFiltersChange,
 }: InstantMetricSelectorProps) {
+	const labels = useLabelsStore((state) => state.labels);
 	const [comboboxOpen, setComboboxOpen] = useState(false);
 
 	if (metrics.length === 0) {
@@ -180,7 +188,7 @@ export function InstantMetricSelector({
 	const showMultipleOptions = selectedMetric && selectedMetric.show.length > 1;
 
 	return (
-		<div className="space-y-3">
+		<div className="space-y-2">
 			<Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal={true}>
 				<PopoverTrigger asChild>
 					<Button
@@ -255,33 +263,102 @@ export function InstantMetricSelector({
 
 			{showMultipleOptions && (
 				<div className="space-y-2">
-					<label className="text-sm font-medium">Show</label>
-					<Select
-						value={selectedShow || selectedMetric.show[0]}
-						onValueChange={(value: Show) => {
-							onMetricSelect(selectedMetric, value);
-						}}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{selectedMetric.show.includes("last") && (
-								<SelectItem value="last">Last</SelectItem>
-							)}
-							{selectedMetric.show.includes("avg") && (
-								<SelectItem value="avg">Average</SelectItem>
-							)}
-							{selectedMetric.show.includes("min") && (
-								<SelectItem value="min">Minimum</SelectItem>
-							)}
-							{selectedMetric.show.includes("max") && (
-								<SelectItem value="max">Maximum</SelectItem>
-							)}
-						</SelectContent>
-					</Select>
+					<div className="flex items-center gap-1.5">
+						<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+							Aggregation
+						</h3>
+						<TooltipProvider delayDuration={300}>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<HelpCircle className="size-3 text-muted-foreground cursor-help" />
+								</TooltipTrigger>
+								<TooltipContent side="right">
+									<p className="max-w-xs text-sm">
+										How to aggregate the metric values over the selected time
+										window
+									</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					</div>
+					<TooltipProvider delayDuration={300}>
+						<Select
+							value={selectedShow || selectedMetric.show[0]}
+							onValueChange={(value: Show) => {
+								onMetricSelect(selectedMetric, value);
+							}}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{selectedMetric.show.includes("last") && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<SelectItem value="last">Last value</SelectItem>
+										</TooltipTrigger>
+										<TooltipContent side="right">
+											<p className="max-w-xs text-sm">
+												Returns the most recent value in the time window
+											</p>
+										</TooltipContent>
+									</Tooltip>
+								)}
+								{selectedMetric.show.includes("avg") && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<SelectItem value="avg">Average over time</SelectItem>
+										</TooltipTrigger>
+										<TooltipContent side="right">
+											<p className="max-w-xs text-sm">
+												Calculates the mean of all values in the time window
+											</p>
+										</TooltipContent>
+									</Tooltip>
+								)}
+								{selectedMetric.show.includes("min") && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<SelectItem value="min">Minimum over time</SelectItem>
+										</TooltipTrigger>
+										<TooltipContent side="right">
+											<p className="max-w-xs text-sm">
+												Returns the lowest value in the time window
+											</p>
+										</TooltipContent>
+									</Tooltip>
+								)}
+								{selectedMetric.show.includes("max") && (
+									<Tooltip>
+										<TooltipTrigger asChild>
+											<SelectItem value="max">Maximum over time</SelectItem>
+										</TooltipTrigger>
+										<TooltipContent side="right">
+											<p className="max-w-xs text-sm">
+												Returns the highest value in the time window
+											</p>
+										</TooltipContent>
+									</Tooltip>
+								)}
+							</SelectContent>
+						</Select>
+					</TooltipProvider>
 				</div>
 			)}
+
+			<div className="space-y-2">
+				<div className="flex gap-2 flex-col">
+					<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+						Additional Filters
+					</h3>
+
+					<FilterBadgesEditor
+						availableLabels={labels}
+						filters={blockFilters}
+						onFiltersChange={onFiltersChange}
+					/>
+				</div>
+			</div>
 		</div>
 	);
 }

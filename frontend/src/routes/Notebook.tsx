@@ -21,6 +21,7 @@ import {
 	withMultiColumn,
 } from "@blocknote/xl-multi-column";
 import {
+	BadgePercent,
 	BarChart3,
 	ChartLine,
 	ChevronRight,
@@ -32,6 +33,7 @@ import {
 	Logs,
 	RectangleEllipsis,
 	RectangleHorizontal,
+	SquarePercent,
 	Table2,
 	Table as TableIcon,
 } from "lucide-react";
@@ -47,6 +49,7 @@ import { FlowStatusBlock } from "../blocks/FlowStatusBlock";
 import { HeatmapBlock } from "../blocks/HeatmapBlock";
 import { MetricBlock } from "../blocks/MetricBlock";
 import { MetricHistoryBlock } from "../blocks/MetricHistoryBlock";
+import { MetricRatioBlock } from "../blocks/MetricRatioBlock";
 import { MetricTableBlock } from "../blocks/MetricTableBlock";
 import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
@@ -106,6 +109,7 @@ export default function NotebookPage() {
 					heatmap: HeatmapBlock,
 					metric: MetricBlock,
 					metricHistory: MetricHistoryBlock,
+					metricRatio: MetricRatioBlock,
 					metricTable: MetricTableBlock,
 				},
 			}),
@@ -376,7 +380,8 @@ export default function NotebookPage() {
 													setOpenBlockSettings(block.id);
 												},
 												group: "Metrics",
-												subtext: "Display a metric value",
+												subtext:
+													"Display a metric value aggregated across time window",
 												icon: <RectangleHorizontal className="size-4.5" />,
 												aliases: ["metric"],
 											},
@@ -392,6 +397,20 @@ export default function NotebookPage() {
 												subtext: "Chart showing metric history over time",
 												icon: <ChartLine className="size-4.5" />,
 												aliases: ["metric history"],
+											},
+											{
+												title: "Ratio",
+												onItemClick: () => {
+													const block = insertOrUpdateBlock(editor, {
+														type: "metricRatio",
+													});
+													setOpenBlockSettings(block.id);
+												},
+												group: "Metrics",
+												subtext:
+													"Display ratio/percentage between two metric filters",
+												icon: <SquarePercent className="size-4.5" />,
+												aliases: ["metric ratio", "percentage"],
 											},
 											{
 												title: "Table",

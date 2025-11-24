@@ -423,6 +423,8 @@ export const MetricTableBlock = createReactBlockSpec(
 										selectedMetric={selectedMetric ?? null}
 										selectedShow={show}
 										onMetricSelect={handleMetricSelect}
+										blockFilters={blockFilters}
+										onFiltersChange={handleFiltersChange}
 									/>
 								</div>
 
@@ -480,17 +482,6 @@ export const MetricTableBlock = createReactBlockSpec(
 											)}
 										</div>
 									</div>
-								</div>
-
-								<div className="space-y-3 mt-6">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-										Additional Filters
-									</h3>
-									<FilterBadgesEditor
-										availableLabels={labels}
-										filters={blockFilters}
-										onFiltersChange={handleFiltersChange}
-									/>
 								</div>
 							</div>
 						</SheetContent>

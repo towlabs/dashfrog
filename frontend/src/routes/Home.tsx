@@ -39,7 +39,7 @@ export default function HomePage() {
 
 			{/* Tenant Table */}
 			<div>
-				{loading ? (
+				{loading && !tenants ? (
 					<TableSkeleton columns={1} rows={5} />
 				) : tenants.length === 0 ? (
 					<EmptyState

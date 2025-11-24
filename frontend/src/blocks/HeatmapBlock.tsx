@@ -104,9 +104,7 @@ export const HeatmapBlock = createReactBlockSpec(
 
 			const [loading, setLoading] = useState(false);
 
-			const [flowHistories, setFlowHistories] = useState<FlowHistory[] | null>(
-				null,
-			);
+			const [flowHistories, setFlowHistories] = useState<FlowHistory[]>([]);
 			const [labelGroups, setLabelGroups] = useState<LabelGroupData[]>([]);
 			const [detailOpen, setDetailOpen] = useState(false);
 			const [selectedLabels, setSelectedLabels] = useState<
