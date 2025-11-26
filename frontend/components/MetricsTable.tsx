@@ -6,6 +6,7 @@ import { LabelBadge } from "@/components/LabelBadge";
 import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
 import { SimplePagination } from "@/components/SimplePagination";
 import { TableSkeleton } from "@/components/TableSkeleton";
+import { addDays } from "date-fns";
 import {
 	Table,
 	TableBody,
@@ -21,45 +22,34 @@ import {
 } from "@/components/ui/tooltip";
 import { Metrics } from "@/src/services/api/metrics";
 import type { Filter } from "@/src/types/filter";
-import type { InstantAggregation, RangeAggregation } from "@/src/types/metric";
-import type { TimeWindow } from "@/src/types/timewindow";
+import type { RangeMetric } from "@/src/types/metric";
 
 type MetricsTableProps = {
 	tenant: string;
-	timeWindow: TimeWindow;
+	startDate: Date;
+	endDate: Date;
 	filters: Filter[];
 };
 
 const ITEMS_PER_PAGE = 14;
 
-export function MetricsTable({
-	tenant,
-	timeWindow,
-	filters,
-}: MetricsTableProps) {
-	const [instantMetrics, setInstantMetrics] = useState<
-		Metric<InstantAggregation>[]
-	>([]);
-	const [rangeMetrics, setRangeMetrics] = useState<Metric<RangeAggregation>[]>(
-		[],
-	);
+export function MetricsTable({ tenant }: MetricsTableProps) {
+	const [rangeMetrics, setRangeMetrics] = useState<RangeMetric[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [currentPage, setCurrentPage] = useState(1);
-	const [selectedMetric, setSelectedMetric] = useState<{
-		metric: Metric<RangeAggregation | InstantAggregation>;
-	} | null>(null);
 	const [drawerOpen, setDrawerOpen] = useState(false);
+	const [selectedMetric, setSelectedMetric] = useState<RangeMetric | null>(
+		null,
+	);
 
 	useEffect(() => {
 		const fetchMetrics = async () => {
 			setLoading(true);
 			try {
-				const { instant, range } = await Metrics.list();
-				setInstantMetrics(instant);
+				const { range } = await Metrics.list();
 				setRangeMetrics(range);
 			} catch (error) {
 				console.error("Failed to fetch metrics:", error);
-				setInstantMetrics([]);
 				setRangeMetrics([]);
 			} finally {
 				setLoading(false);
@@ -71,17 +61,10 @@ export function MetricsTable({
 		}
 	}, [tenant]);
 
-	const handleRowClick = (
-		metric: Metric<RangeAggregation | InstantAggregation>,
-	) => {
-		setSelectedMetric({ metric });
-		setDrawerOpen(true);
-	};
-
-	const totalPages = Math.ceil(metrics.length / ITEMS_PER_PAGE);
+	const totalPages = Math.ceil(rangeMetrics.length / ITEMS_PER_PAGE);
 	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 	const endIndex = startIndex + ITEMS_PER_PAGE;
-	const paginatedRows = metrics.slice(startIndex, endIndex);
+	const paginatedRows = rangeMetrics.slice(startIndex, endIndex);
 
 	const handlePreviousPage = () => {
 		setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -89,6 +72,11 @@ export function MetricsTable({
 
 	const handleNextPage = () => {
 		setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+	};
+
+	const handleRowClick = (metric: RangeMetric) => {
+		setSelectedMetric(metric);
+		setDrawerOpen(true);
 	};
 
 	if (loading) {
@@ -101,9 +89,13 @@ export function MetricsTable({
 				<MetricDetailDrawer
 					open={drawerOpen}
 					onOpenChange={setDrawerOpen}
-					metric={selectedMetric.metric}
-					timeWindow={timeWindow}
-					filters={filters}
+					metric={selectedMetric}
+					tenantName={tenant}
+					startDate={new Date()}
+					endDate={addDays(new Date(), -7)}
+					filters={[]}
+					groupBy={selectedMetric.labels}
+					groupByFn={selectedMetric.groupBy[0]}
 				/>
 			)}
 			<Table>
@@ -144,7 +136,7 @@ export function MetricsTable({
 													>
 														<ChartLine className="size-4 text-muted-foreground" />
 														<span className="text-xs text-muted-foreground ">
-															Values
+															History
 														</span>
 													</div>
 												</TooltipTrigger>
@@ -155,7 +147,7 @@ export function MetricsTable({
 										</div>
 									</TableCell>
 									<TableCell>
-										<div className="flex gap-1">
+										<div className="flex flex-wrap gap-1">
 											{metric.labels.map((label) => (
 												<LabelBadge key={label} labelKey={label} readonly />
 											))}
