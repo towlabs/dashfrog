@@ -47,3 +47,8 @@ export interface FlowRunCount {
 	failedCount: number;
 	pendingCount: number;
 }
+
+export interface StaticFlow {
+	name: string;
+	labels: Record<string, string>;
+}
