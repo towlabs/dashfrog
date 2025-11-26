@@ -9,11 +9,7 @@ import {
 	ChartLegend,
 	ChartTooltip,
 } from "@/components/ui/chart";
-import type {
-	MetricHistory,
-	RangeAggregation,
-	RangeMetric,
-} from "@/src/types/metric";
+import type { MetricHistory, RangeMetric, GroupByFn } from "@/src/types/metric";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
 import React from "react";
@@ -36,7 +32,9 @@ export function MetricHistoryChart({
 	// Track which series are visible
 	const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
 	const [hoveredSeries, setHoveredSeries] = useState<string | null>(null);
-
+	const hasLabels = useMemo(() => {
+		return historyData.series.some((s) => Object.keys(s.labels).length > 0);
+	}, [historyData.series]);
 	// Get all unique timestamps across all series that have data
 	const dataTimestamps = new Set<number>();
 	for (const series of historyData.series) {
@@ -173,7 +171,7 @@ export function MetricHistoryChart({
 						const { formattedValue } = formatMetricValue(
 							point.value,
 							metric.unit ?? undefined,
-							metric.aggregation,
+							metric.transform,
 						);
 						// Parse back to number for chart (removes commas)
 						dataPoint[seriesLabel] = Number.parseFloat(
@@ -208,7 +206,7 @@ export function MetricHistoryChart({
 
 	const { displayUnit } = React.useMemo(() => {
 		if (!metric) return { displayUnit: undefined };
-		return formatMetricValue(0, metric.unit ?? undefined, metric.aggregation);
+		return formatMetricValue(0, metric.unit ?? undefined, metric.transform);
 	}, [metric]);
 
 	// Custom tooltip component with colored squares
@@ -323,7 +321,8 @@ export function MetricHistoryChart({
 					}}
 				/>
 				<ChartTooltip content={<CustomTooltip />} />
-				<ChartLegend content={<CustomLegend />} />
+
+				{hasLabels && <ChartLegend content={<CustomLegend />} />}
 				{historyData.series.map((series, i) => {
 					const seriesLabel = getSeriesLabel(series.labels);
 					const isHidden = hiddenSeries.has(seriesLabel);

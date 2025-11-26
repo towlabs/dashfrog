@@ -1,4 +1,4 @@
-import { InstantAggregation, RangeAggregation } from "../types/metric";
+import { Transform } from "../types/metric";
 
 /**
  * Round a number to a maximum of 2 decimal places (not fixed)
@@ -16,7 +16,7 @@ export function roundToMax2(num: number): number {
 export function formatMetricValue(
 	value: number,
 	unit?: string,
-	aggregation?: InstantAggregation | RangeAggregation,
+	transform?: Transform | null,
 ): { formattedValue: string; displayUnit: string } {
 	let displayValue = value;
 	let displayUnit = "";
@@ -46,14 +46,14 @@ export function formatMetricValue(
 	}
 
 	// Handle rate aggregations
-	if (aggregation?.startsWith("rate")) {
-		if (aggregation === "ratePerSecond") {
+	if (transform?.startsWith("rate")) {
+		if (transform === "ratePerSecond") {
 			displayUnit = `${unit || "events"}/s`;
-		} else if (aggregation === "ratePerMinute") {
+		} else if (transform === "ratePerMinute") {
 			displayUnit = `${unit || "events"}/min`;
-		} else if (aggregation === "ratePerHour") {
+		} else if (transform === "ratePerHour") {
 			displayUnit = `${unit || "events"}/h`;
-		} else if (aggregation === "ratePerDay") {
+		} else if (transform === "ratePerDay") {
 			displayUnit = `${unit || "events"}/day`;
 		}
 	}

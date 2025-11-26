@@ -20,7 +20,7 @@ import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import { resolveTimeWindow } from "@/src/types/timewindow";
-import { RangeAggregation, RangeMetric } from "../types/metric";
+import { GroupByFn, RangeMetric, Transform } from "../types/metric";
 
 export const MetricHistoryBlock = createReactBlockSpec(
 	{
@@ -29,8 +29,14 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			metricName: {
 				default: "",
 			},
-			aggregation: {
-				default: "" as RangeAggregation | "",
+			transform: {
+				default: "" as Transform | "",
+			},
+			groupBy: {
+				default: "[]",
+			},
+			groupByFn: {
+				default: "sum" as GroupByFn,
 			},
 			blockFilters: {
 				default: "[]",
@@ -82,16 +88,23 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			const [loading, setLoading] = useState(false);
 
 			const metricName = props.block.props.metricName as string;
-			const aggregation = props.block.props.aggregation as
-				| RangeAggregation
-				| "";
+			const transform = props.block.props.transform as Transform | "";
+			const groupBy: string[] = useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.groupBy as string);
+				} catch {
+					return [];
+				}
+			}, [props.block.props.groupBy]);
+			const groupByFn = props.block.props.groupByFn as GroupByFn;
 
 			const selectedMetric = React.useMemo(() => {
 				return rangeMetrics.find(
 					(m) =>
-						m.prometheusName === metricName && m.aggregation === aggregation,
+						m.prometheusName === metricName &&
+						m.transform === (transform || null),
 				);
-			}, [metricName, aggregation, rangeMetrics]);
+			}, [metricName, transform, rangeMetrics]);
 
 			// Fetch metric history when metric is selected
 			useEffect(() => {
@@ -112,10 +125,12 @@ export const MetricHistoryBlock = createReactBlockSpec(
 						const response = await Metrics.getHistory(
 							tenantName,
 							selectedMetric.prometheusName,
-							selectedMetric.aggregation,
+							selectedMetric.transform,
 							startDate,
 							endDate,
 							filters,
+							groupBy,
+							groupByFn,
 						);
 						setHistoryData(response);
 					} catch (error) {
@@ -127,7 +142,15 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				};
 
 				void fetchHistory();
-			}, [tenantName, selectedMetric, startDate, endDate, filters]);
+			}, [
+				tenantName,
+				selectedMetric,
+				startDate,
+				endDate,
+				filters,
+				groupBy,
+				groupByFn,
+			]);
 
 			if (!tenantName) {
 				return (
@@ -146,7 +169,7 @@ export const MetricHistoryBlock = createReactBlockSpec(
 					props: {
 						...props.block.props,
 						metricName: metric.prometheusName,
-						aggregation: metric.aggregation,
+						transform: metric.transform || "",
 					},
 				});
 			};

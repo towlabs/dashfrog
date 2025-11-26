@@ -16,7 +16,7 @@ import {
 } from "@/src/services/api/metrics";
 import { useTenantStore } from "@/src/stores/tenant";
 import type { Filter } from "@/src/types/filter";
-import type { RangeAggregation, RangeMetric } from "@/src/types/metric";
+import type { RangeMetric } from "@/src/types/metric";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 type MetricDetailDrawerProps = {
@@ -51,10 +51,12 @@ export function MetricDetailDrawer({
 				const response = await Metrics.getHistory(
 					tenantName,
 					metric.prometheusName,
-					metric.aggregation,
+					metric.transform,
 					startDate,
 					endDate,
 					filters,
+					metric.labels,
+					metric.groupBy[0],
 				);
 				setHistoryData(response);
 			} catch (error) {
@@ -67,10 +69,12 @@ export function MetricDetailDrawer({
 	}, [
 		tenantName,
 		metric.prometheusName,
-		metric.aggregation,
 		startDate,
 		endDate,
 		filters,
+		metric.groupBy,
+		metric.transform,
+		metric.labels,
 	]);
 
 	if (!metric) return null;

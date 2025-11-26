@@ -53,13 +53,13 @@ export function LabelBadge({
 				<PopoverTrigger asChild>
 					<Badge
 						variant="secondary"
-						className="gap-1 cursor-pointer hover:bg-secondary/80 transition-all duration-200 border-0 h-6 px-3 text-muted-foreground"
+						className="gap-1 cursor-pointer hover:bg-secondary/80 transition-all duration-200 border-0 h-6 px-3 text-muted-foreground flex items-center"
 					>
 						{labelKey}
 						{labelValue && `: ${labelValue}`}
 						{onRemove && (
 							<X
-								className="h-3 w-3 cursor-pointer hover:text-destructive"
+								className="h-3 w-3 cursor-pointer hover:text-destructive mt-[2px]"
 								onClick={(e) => {
 									e.stopPropagation();
 									onRemove();

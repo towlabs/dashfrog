@@ -3,7 +3,7 @@ export interface MetricValue {
 	value: number;
 }
 
-export type RangeAggregation =
+export type Transform =
 	| "ratePerSecond"
 	| "ratePerMinute"
 	| "ratePerHour"
@@ -12,17 +12,9 @@ export type RangeAggregation =
 	| "p90"
 	| "p95"
 	| "p99";
-export type InstantAggregation =
-	| "ratePerSecond"
-	| "ratePerMinute"
-	| "ratePerHour"
-	| "ratePerDay"
-	| "p50"
-	| "p90"
-	| "p95"
-	| "p99"
-	| "increase";
-export type Show = "last" | "avg" | "min" | "max";
+export type TimeAggregation = "last" | "avg" | "min" | "max" | "match";
+export type GroupByFn = "sum" | "avg" | "min" | "max";
+export type MetricType = "counter" | "histogram" | "gauge";
 
 export interface RangeMetric {
 	name: string;
@@ -30,9 +22,9 @@ export interface RangeMetric {
 	prettyName: string;
 	labels: string[];
 	unit: string | null;
-	type: "counter" | "histogram";
-	aggregation: RangeAggregation;
-	show: Show[];
+	type: MetricType;
+	transform: Transform | null;
+	groupBy: GroupByFn[];
 }
 
 export interface InstantMetric {
@@ -41,10 +33,10 @@ export interface InstantMetric {
 	prettyName: string;
 	labels: string[];
 	unit: string | null;
-	type: "counter" | "histogram";
-	aggregation: InstantAggregation;
-	rangeAggregation: RangeAggregation;
-	show: Show[];
+	type: MetricType;
+	transform: Transform | null;
+	groupBy: GroupByFn[];
+	timeAggregation: TimeAggregation[];
 }
 
 export interface MetricHistory {

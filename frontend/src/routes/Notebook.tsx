@@ -31,8 +31,11 @@ import {
 	ListChecks,
 	ListCollapse,
 	Logs,
+	Percent,
 	RectangleEllipsis,
 	RectangleHorizontal,
+	SquareDivide,
+	SquareDot,
 	SquarePercent,
 	Table2,
 	Table as TableIcon,
@@ -50,7 +53,6 @@ import { HeatmapBlock } from "../blocks/HeatmapBlock";
 import { MetricBlock } from "../blocks/MetricBlock";
 import { MetricHistoryBlock } from "../blocks/MetricHistoryBlock";
 import { MetricRatioBlock } from "../blocks/MetricRatioBlock";
-import { MetricTableBlock } from "../blocks/MetricTableBlock";
 import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
@@ -110,7 +112,6 @@ export default function NotebookPage() {
 					metric: MetricBlock,
 					metricHistory: MetricHistoryBlock,
 					metricRatio: MetricRatioBlock,
-					metricTable: MetricTableBlock,
 				},
 			}),
 		),
@@ -381,8 +382,8 @@ export default function NotebookPage() {
 												},
 												group: "Metrics",
 												subtext:
-													"Display a metric value aggregated across time window",
-												icon: <RectangleHorizontal className="size-4.5" />,
+													"Display a metric value aggregated across time window. For example, the total number of signups.",
+												icon: <SquareDot className="size-4.5" />,
 												aliases: ["metric"],
 											},
 											{
@@ -394,12 +395,13 @@ export default function NotebookPage() {
 													setOpenBlockSettings(block.id);
 												},
 												group: "Metrics",
-												subtext: "Chart showing metric history over time",
+												subtext:
+													"Chart showing metric history over time. For example, the number of signups over time.",
 												icon: <ChartLine className="size-4.5" />,
 												aliases: ["metric history"],
 											},
 											{
-												title: "Ratio",
+												title: "Metric Ratio",
 												onItemClick: () => {
 													const block = insertOrUpdateBlock(editor, {
 														type: "metricRatio",
@@ -408,22 +410,9 @@ export default function NotebookPage() {
 												},
 												group: "Metrics",
 												subtext:
-													"Display ratio/percentage between two metric filters",
-												icon: <SquarePercent className="size-4.5" />,
+													"Display ratio between two metrics. For example, the ratio of US signups to global signups.",
+												icon: <SquareDivide className="size-4.5" />,
 												aliases: ["metric ratio", "percentage"],
-											},
-											{
-												title: "Table",
-												onItemClick: () => {
-													const block = insertOrUpdateBlock(editor, {
-														type: "metricTable",
-													});
-													setOpenBlockSettings(block.id);
-												},
-												group: "Metrics",
-												subtext: "Table displaying metric values with labels",
-												icon: <TableIcon className="size-4.5" />,
-												aliases: ["metric table"],
 											},
 										]);
 										const q = query.trim().toLowerCase();

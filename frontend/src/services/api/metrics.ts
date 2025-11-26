@@ -1,11 +1,11 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
 import type { Filter } from "@/src/types/filter";
 import {
-	InstantAggregation,
+	GroupBy,
 	InstantMetric,
-	RangeAggregation,
 	RangeMetric,
-	Show,
+	TimeAggregation,
+	Transform,
 } from "@/src/types/metric";
 
 const MetricsAPI = NewRestAPI(`api`);
@@ -25,13 +25,6 @@ export type MetricHistoryResponse = {
 			timestamp: string;
 			value: number;
 		}[];
-	}[];
-};
-
-export type MetricScalarResponse = {
-	scalars: {
-		labels: Record<string, string>;
-		value: number;
 	}[];
 };
 
@@ -60,10 +53,12 @@ const Metrics = {
 	getHistory: async (
 		tenant: string,
 		metricName: string,
-		aggregation: RangeAggregation,
+		transform: Transform | null,
 		startTime: Date,
 		endTime: Date,
 		labels: Filter[],
+		groupBy: string[],
+		groupByFn: GroupBy,
 	): Promise<{
 		series: { labels: Record<string, string>; values: MetricHistoryPoint[] }[];
 	}> => {
@@ -74,7 +69,9 @@ const Metrics = {
 			},
 			body: JSON.stringify({
 				metric_name: metricName,
-				aggregation,
+				transform,
+				group_by: groupBy,
+				group_fn: groupByFn,
 				start_time: startTime.toISOString(),
 				end_time: endTime.toISOString(),
 				labels: [...labels, { label: "tenant", value: tenant }],
@@ -92,30 +89,45 @@ const Metrics = {
 		};
 	},
 
-	getScalars: async (
+	getScalar: async (
 		tenant: string,
 		metricName: string,
 		startTime: Date,
 		endTime: Date,
-		aggregation: InstantAggregation,
-		show: Show,
+		transform: Transform | null,
+		groupBy: string[],
+		groupByFn: GroupBy,
+		timeAggregation: TimeAggregation,
+		matchOperator: "==" | ">" | "<" | ">=" | "<=" | "!=" | null,
+		matchValue: string | null,
 		labels: Filter[],
-	): Promise<MetricScalarResponse> => {
+	): Promise<{
+		scalars: { labels: Record<string, string>; value: number }[];
+	}> => {
+		const payload: Record<string, any> = {
+			metric_name: metricName,
+			transform,
+			group_by: groupBy,
+			group_fn: groupByFn,
+			time_aggregation: timeAggregation,
+			start_time: startTime.toISOString(),
+			end_time: endTime.toISOString(),
+			labels: [...labels, { label: "tenant", value: tenant }],
+		};
+		if (timeAggregation === "match") {
+			payload.match_operator = matchOperator;
+			payload.match_value = matchValue;
+		}
 		const response = await fetch(`/api/metrics/instant`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify({
-				metric_name: metricName,
-				aggregation,
-				show,
-				start_time: startTime.toISOString(),
-				end_time: endTime.toISOString(),
-				labels: [...labels, { label: "tenant", value: tenant }],
-			}),
+			body: JSON.stringify(payload),
 		});
-		const data = (await response.json()) as MetricScalarResponse;
+		const data = (await response.json()) as {
+			scalars: { labels: Record<string, string>; value: number }[];
+		};
 		return data;
 	},
 };

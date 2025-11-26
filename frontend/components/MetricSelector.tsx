@@ -11,6 +11,7 @@ import {
 	CommandItem,
 	CommandList,
 } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 import {
 	Popover,
 	PopoverContent,
@@ -31,11 +32,12 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type {
-	RangeAggregation,
-	InstantAggregation,
+	Transform,
 	RangeMetric,
 	InstantMetric,
-	Show,
+	TimeAggregation,
+	GroupByFn,
+	MetricType,
 } from "@/src/types/metric";
 import { FilterBadgesEditor } from "./FilterBadgesEditor";
 import { useLabelsStore } from "@/src/stores/labels";
@@ -68,10 +70,10 @@ export function RangeMetricSelector({
 		);
 	}
 
-	// Group metrics by aggregation type
+	// Group metrics by transform type
 	const groupedMetrics: Record<string, RangeMetric[]> = {};
 	for (const metric of metrics) {
-		const groupKey = getAggregationGroupKey(metric.aggregation);
+		const groupKey = getAggregationGroupKey(metric.transform, metric.type);
 		if (!groupedMetrics[groupKey]) {
 			groupedMetrics[groupKey] = [];
 		}
@@ -119,7 +121,7 @@ export function RangeMetricSelector({
 							>
 								{groupMetrics.map((metric) => (
 									<CommandItem
-										key={`${metric.prometheusName}-${metric.aggregation}`}
+										key={`${metric.prometheusName}-${metric.transform}`}
 										value={metric.prettyName}
 										onSelect={() => {
 											onMetricSelect(metric);
@@ -133,7 +135,7 @@ export function RangeMetricSelector({
 												"mr-2 h-4 w-4",
 												selectedMetric?.prometheusName ===
 													metric.prometheusName &&
-													selectedMetric?.aggregation === metric.aggregation
+													selectedMetric?.transform === metric.transform
 													? "opacity-100"
 													: "opacity-0",
 											)}
@@ -152,19 +154,38 @@ export function RangeMetricSelector({
 type InstantMetricSelectorProps = {
 	metrics: InstantMetric[];
 	selectedMetric: InstantMetric | null;
-	selectedShow: Show | null;
+	selectedTimeAggregation: TimeAggregation | null;
+	selectedGroupBy: string[];
+	selectedGroupByFn: GroupByFn | null;
 	blockFilters: Filter[];
-	onMetricSelect: (metric: InstantMetric, show: Show) => void;
+	matchOperator?: "==" | ">" | "<" | ">=" | "<=" | "!=";
+	matchValue?: string;
+	onMetricSelect: (metric: InstantMetric) => void;
+	onTimeAggregationChange: (timeAggregation: TimeAggregation) => void;
+	onGroupByChange: (labels: string[]) => void;
+	onGroupByFnChange: (groupByFn: GroupByFn) => void;
 	onFiltersChange: (filters: Filter[]) => void;
+	onMatchConditionChange?: (
+		operator: "==" | ">" | "<" | ">=" | "<=" | "!=",
+		value: string,
+	) => void;
 };
 
 export function InstantMetricSelector({
 	metrics,
 	selectedMetric,
-	selectedShow,
+	selectedTimeAggregation,
+	selectedGroupBy,
+	selectedGroupByFn,
 	blockFilters,
+	matchOperator = "==",
+	matchValue = "",
 	onMetricSelect,
+	onTimeAggregationChange,
+	onGroupByChange,
+	onGroupByFnChange,
 	onFiltersChange,
+	onMatchConditionChange,
 }: InstantMetricSelectorProps) {
 	const labels = useLabelsStore((state) => state.labels);
 	const [comboboxOpen, setComboboxOpen] = useState(false);
@@ -175,20 +196,26 @@ export function InstantMetricSelector({
 		);
 	}
 
-	// Group metrics by aggregation type
+	// Group metrics by transform type
 	const groupedMetrics: Record<string, InstantMetric[]> = {};
 	for (const metric of metrics) {
-		const groupKey = getAggregationGroupKey(metric.aggregation);
+		const groupKey = getAggregationGroupKey(metric.transform, metric.type);
 		if (!groupedMetrics[groupKey]) {
 			groupedMetrics[groupKey] = [];
 		}
 		groupedMetrics[groupKey].push(metric);
 	}
 
-	const showMultipleOptions = selectedMetric && selectedMetric.show.length > 1;
+	const hasMultipleTimeAggregations =
+		selectedMetric && selectedMetric.timeAggregation.length > 1;
+	const hasMultipleGroupByFnOptions =
+		selectedMetric && selectedMetric.groupBy.length > 1;
 
 	return (
 		<div className="space-y-2">
+			<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+				Metric
+			</h3>
 			<Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal={true}>
 				<PopoverTrigger asChild>
 					<Button
@@ -230,12 +257,26 @@ export function InstantMetricSelector({
 									>
 										{groupMetrics.map((metric) => (
 											<CommandItem
-												key={`${metric.prometheusName}-${metric.aggregation}`}
+												key={`${metric.prometheusName}-${metric.transform}`}
 												value={metric.prettyName}
 												onSelect={() => {
-													const defaultShow =
-														metric.show.length > 0 ? metric.show[0] : "last";
-													onMetricSelect(metric, defaultShow);
+													onMetricSelect(metric);
+													// Set default timeAggregation if not already set
+													if (
+														!selectedTimeAggregation ||
+														!metric.timeAggregation.includes(
+															selectedTimeAggregation,
+														)
+													) {
+														onTimeAggregationChange(metric.timeAggregation[0]);
+													}
+													// Set default groupBy if not already set
+													if (
+														!selectedGroupByFn ||
+														!metric.groupBy.includes(selectedGroupByFn)
+													) {
+														onGroupByFnChange(metric.groupBy[0]);
+													}
 													setComboboxOpen(false);
 												}}
 												className="flex items-center justify-between"
@@ -246,7 +287,7 @@ export function InstantMetricSelector({
 														"mr-2 h-4 w-4",
 														selectedMetric?.prometheusName ===
 															metric.prometheusName &&
-															selectedMetric?.aggregation === metric.aggregation
+															selectedMetric?.transform === metric.transform
 															? "opacity-100"
 															: "opacity-0",
 													)}
@@ -261,140 +302,302 @@ export function InstantMetricSelector({
 				</PopoverContent>
 			</Popover>
 
-			{showMultipleOptions && (
-				<div className="space-y-2">
-					<div className="flex items-center gap-1.5">
-						<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-							Aggregation
-						</h3>
-						<TooltipProvider delayDuration={300}>
-							<Tooltip>
-								<TooltipTrigger asChild>
-									<HelpCircle className="size-3 text-muted-foreground cursor-help" />
-								</TooltipTrigger>
-								<TooltipContent side="right">
-									<p className="max-w-xs text-sm">
-										How to aggregate the metric values over the selected time
-										window
-									</p>
-								</TooltipContent>
-							</Tooltip>
-						</TooltipProvider>
+			{selectedMetric && (
+				<>
+					<div className="flex gap-2">
+						<div className="space-y-2 flex-1">
+							<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+								Group By
+							</h3>
+							<Popover>
+								<PopoverTrigger asChild>
+									<Button
+										variant="outline"
+										className="w-full justify-start text-left"
+									>
+										{selectedGroupBy.length > 0 ? (
+											<span>{selectedGroupBy.join(", ")}</span>
+										) : (
+											<span className="text-muted-foreground">
+												Select labels to group by...
+											</span>
+										)}
+									</Button>
+								</PopoverTrigger>
+								<PopoverContent className="w-[300px] p-0" align="start">
+									<Command>
+										<CommandInput placeholder="Search labels..." />
+										<CommandList>
+											<CommandEmpty>No labels found.</CommandEmpty>
+											<CommandGroup heading="Available Labels">
+												{selectedMetric.labels.map((label) => (
+													<CommandItem
+														key={label}
+														value={label}
+														onSelect={() => {
+															const newGroupBy = selectedGroupBy.includes(label)
+																? selectedGroupBy.filter((l) => l !== label)
+																: [...selectedGroupBy, label];
+															onGroupByChange(newGroupBy);
+														}}
+													>
+														<Check
+															className={cn(
+																"mr-2 h-4 w-4",
+																selectedGroupBy.includes(label)
+																	? "opacity-100"
+																	: "opacity-0",
+															)}
+														/>
+														{label}
+													</CommandItem>
+												))}
+											</CommandGroup>
+										</CommandList>
+									</Command>
+								</PopoverContent>
+							</Popover>
+						</div>
+						{hasMultipleGroupByFnOptions && (
+							<div className="space-y-2 w-32">
+								<div className="flex items-center gap-1.5">
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Apply
+									</h3>
+									<TooltipProvider delayDuration={300}>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<HelpCircle className="size-3 text-muted-foreground cursor-help" />
+											</TooltipTrigger>
+											<TooltipContent side="right">
+												<p className="max-w-xs text-sm">
+													What function to apply to the grouped values. For
+													example, if the metric represents the temperature of
+													different rooms, you can apply the average function to
+													get the average temperature across all rooms.
+												</p>
+											</TooltipContent>
+										</Tooltip>
+									</TooltipProvider>
+								</div>
+								<Select
+									value={selectedGroupByFn || selectedMetric.groupBy[0]}
+									onValueChange={onGroupByFnChange}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{selectedMetric.groupBy.includes("sum") && (
+											<SelectItem value="sum">Sum</SelectItem>
+										)}
+										{selectedMetric.groupBy.includes("avg") && (
+											<SelectItem value="avg">Average</SelectItem>
+										)}
+										{selectedMetric.groupBy.includes("min") && (
+											<SelectItem value="min">Min</SelectItem>
+										)}
+										{selectedMetric.groupBy.includes("max") && (
+											<SelectItem value="max">Max</SelectItem>
+										)}
+									</SelectContent>
+								</Select>
+							</div>
+						)}
 					</div>
-					<TooltipProvider delayDuration={300}>
-						<Select
-							value={selectedShow || selectedMetric.show[0]}
-							onValueChange={(value: Show) => {
-								onMetricSelect(selectedMetric, value);
-							}}
-						>
-							<SelectTrigger className="w-full">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{selectedMetric.show.includes("last") && (
+
+					{hasMultipleTimeAggregations && (
+						<div className="space-y-2 flex-1">
+							<div className="flex items-center gap-1.5">
+								<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+									Time Aggregation
+								</h3>
+								<TooltipProvider delayDuration={300}>
 									<Tooltip>
 										<TooltipTrigger asChild>
-											<SelectItem value="last">Last value</SelectItem>
+											<HelpCircle className="size-3 text-muted-foreground cursor-help" />
 										</TooltipTrigger>
 										<TooltipContent side="right">
 											<p className="max-w-xs text-sm">
-												Returns the most recent value in the time window
+												How to aggregate the metric values over the selected
+												time window
 											</p>
 										</TooltipContent>
 									</Tooltip>
-								)}
-								{selectedMetric.show.includes("avg") && (
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<SelectItem value="avg">Average over time</SelectItem>
-										</TooltipTrigger>
-										<TooltipContent side="right">
-											<p className="max-w-xs text-sm">
-												Calculates the mean of all values in the time window
-											</p>
-										</TooltipContent>
-									</Tooltip>
-								)}
-								{selectedMetric.show.includes("min") && (
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<SelectItem value="min">Minimum over time</SelectItem>
-										</TooltipTrigger>
-										<TooltipContent side="right">
-											<p className="max-w-xs text-sm">
-												Returns the lowest value in the time window
-											</p>
-										</TooltipContent>
-									</Tooltip>
-								)}
-								{selectedMetric.show.includes("max") && (
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<SelectItem value="max">Maximum over time</SelectItem>
-										</TooltipTrigger>
-										<TooltipContent side="right">
-											<p className="max-w-xs text-sm">
-												Returns the highest value in the time window
-											</p>
-										</TooltipContent>
-									</Tooltip>
-								)}
-							</SelectContent>
-						</Select>
-					</TooltipProvider>
-				</div>
+								</TooltipProvider>
+							</div>
+							<TooltipProvider delayDuration={300}>
+								<Select
+									value={
+										selectedTimeAggregation || selectedMetric.timeAggregation[0]
+									}
+									onValueChange={onTimeAggregationChange}
+								>
+									<SelectTrigger className="w-full">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{selectedMetric.timeAggregation.includes("last") && (
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<SelectItem value="last">Last value</SelectItem>
+												</TooltipTrigger>
+												<TooltipContent side="right">
+													<p className="max-w-xs text-sm">
+														Returns the most recent value in the time window
+													</p>
+												</TooltipContent>
+											</Tooltip>
+										)}
+										{selectedMetric.timeAggregation.includes("avg") && (
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<SelectItem value="avg">Average over time</SelectItem>
+												</TooltipTrigger>
+												<TooltipContent side="right">
+													<p className="max-w-xs text-sm">
+														Calculates the mean of all values in the time window
+													</p>
+												</TooltipContent>
+											</Tooltip>
+										)}
+										{selectedMetric.timeAggregation.includes("min") && (
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<SelectItem value="min">Minimum over time</SelectItem>
+												</TooltipTrigger>
+												<TooltipContent side="right">
+													<p className="max-w-xs text-sm">
+														Returns the lowest value in the time window
+													</p>
+												</TooltipContent>
+											</Tooltip>
+										)}
+										{selectedMetric.timeAggregation.includes("max") && (
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<SelectItem value="max">Maximum over time</SelectItem>
+												</TooltipTrigger>
+												<TooltipContent side="right">
+													<p className="max-w-xs text-sm">
+														Returns the highest value in the time window
+													</p>
+												</TooltipContent>
+											</Tooltip>
+										)}
+										{selectedMetric.timeAggregation.includes("match") && (
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<SelectItem value="match">Match rate</SelectItem>
+												</TooltipTrigger>
+												<TooltipContent side="right">
+													<p className="max-w-xs text-sm">
+														Percentage of time where metric matches a condition
+													</p>
+												</TooltipContent>
+											</Tooltip>
+										)}
+									</SelectContent>
+								</Select>
+							</TooltipProvider>
+						</div>
+					)}
+
+					{selectedTimeAggregation === "match" && (
+						<div className="space-y-2">
+							<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+								Match Condition
+							</h3>
+							<div className="flex gap-2">
+								<Select
+									value={matchOperator}
+									onValueChange={(value) => {
+										onMatchConditionChange?.(
+											value as typeof matchOperator,
+											matchValue,
+										);
+									}}
+								>
+									<SelectTrigger className="w-24">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="==">=</SelectItem>
+										<SelectItem value=">">&gt;</SelectItem>
+										<SelectItem value="<">&lt;</SelectItem>
+										<SelectItem value=">=">&gt;=</SelectItem>
+										<SelectItem value="<=">&lt;=</SelectItem>
+										<SelectItem value="!=">!=</SelectItem>
+									</SelectContent>
+								</Select>
+								<Input
+									type="number"
+									placeholder="Value"
+									value={matchValue}
+									onChange={(e) => {
+										onMatchConditionChange?.(matchOperator, e.target.value);
+									}}
+								/>
+							</div>
+							<p className="text-xs text-muted-foreground">
+								Shows percentage of time where metric {matchOperator}{" "}
+								{matchValue || "..."}
+							</p>
+						</div>
+					)}
+
+					<div className="space-y-2">
+						<div className="flex gap-2 flex-col">
+							<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+								Additional Filters
+							</h3>
+
+							<FilterBadgesEditor
+								availableLabels={labels}
+								filters={blockFilters}
+								onFiltersChange={onFiltersChange}
+							/>
+						</div>
+					</div>
+				</>
 			)}
-
-			<div className="space-y-2">
-				<div className="flex gap-2 flex-col">
-					<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-						Additional Filters
-					</h3>
-
-					<FilterBadgesEditor
-						availableLabels={labels}
-						filters={blockFilters}
-						onFiltersChange={onFiltersChange}
-					/>
-				</div>
-			</div>
 		</div>
 	);
 }
 
 // Helper functions for grouping
 function getAggregationGroupKey(
-	aggregation: RangeAggregation | InstantAggregation,
+	transform: Transform | null,
+	type: MetricType,
 ): string {
-	if (aggregation === "increase") return "increase";
-	if (aggregation.startsWith("rate")) return "rate";
-	if (aggregation.startsWith("p")) return "percentile";
-	return "other";
+	if (transform?.startsWith("rate")) return "rate";
+	else if (transform?.startsWith("p")) return "percentile";
+	else if (type === "counter") return "total";
+	return "raw";
 }
 
 function getAggregationGroupLabel(groupKey: string): string {
 	switch (groupKey) {
 		case "increase":
-			return "Total";
+			return "Increase";
 		case "rate":
-			return "Rates";
+			return "Rate";
 		case "percentile":
-			return "Percentiles";
+			return "Percentile";
 		default:
-			return "Other";
+			return "Raw";
 	}
 }
 
 function getAggregationGroupDescription(groupKey: string): string {
 	switch (groupKey) {
 		case "increase":
-			return "Shows the total increase of a counter metric over the selected time window. For example: number of new users, number of cancelled orders, etc.";
+			return "Total increase of a counter over the time window. For example: number of new signups in the last hour.";
 		case "rate":
-			return "Shows the rate of change per time unit (second, minute, hour, or day). For example: number of requests per second, number of errors per minute, etc.";
+			return "Shows the rate of change per time unit (second, minute, hour, or day). For example: number of signups per second.";
 		case "percentile":
-			return "Shows the value below which a given percentage of observations fall (p50 = median, p99 = 99th percentile). For example: 90th percentile of response time, 95th percentile of request duration, etc.";
+			return "Shows the value below which a given percentage of observations fall. For example: 90th percentile of response time.";
 		default:
-			return "";
+			return "Shows the raw value of the metric. For example: Current stock price.";
 	}
 }
