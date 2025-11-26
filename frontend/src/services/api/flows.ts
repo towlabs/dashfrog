@@ -6,6 +6,7 @@ import type {
 	FlowHistoryEvent,
 	FlowHistoryStep,
 	FlowRunCount,
+	StaticFlow,
 } from "@/src/types/flow";
 
 /**
@@ -168,35 +169,9 @@ const Flows = {
 		return toFlowHistory(data.history);
 	},
 
-	/**
-	 * Get flow run counts grouped by labels
-	 */
-	getFlowRunCounts: async (
-		tenant: string,
-		flowName: string,
-		start: Date,
-		end: Date,
-		labels: Filter[],
-	): Promise<FlowRunCount[]> => {
-		const response = await fetch(`/api/flows/run-counts`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				flow_name: flowName,
-				start: start.toISOString(),
-				end: end.toISOString(),
-				labels,
-				tenant,
-			}),
-		});
-		if (!response.ok) {
-			throw new Error(
-				`Failed to fetch flow run counts: ${response.statusText}`,
-			);
-		}
-		const data = (await response.json()) as FlowRunCount[];
+	list: async (): Promise<StaticFlow[]> => {
+		const response = await fetch(`/api/flows/`);
+		const data = await response.json();
 		return data;
 	},
 };

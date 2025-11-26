@@ -418,9 +418,24 @@ export function InstantMetricSelector({
 					<div className="flex gap-2">
 						{!disableGroupBy && (
 							<div className="space-y-2 flex-1">
-								<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-									Group By
-								</h3>
+								<div className="flex items-center gap-1.5">
+									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+										Group By
+									</h3>
+									<TooltipProvider delayDuration={300}>
+										<Tooltip>
+											<TooltipTrigger asChild>
+												<HelpCircle className="size-3 text-muted-foreground cursor-help" />
+											</TooltipTrigger>
+											<TooltipContent side="right">
+												<p className="max-w-xs text-sm">
+													Labels to group by. If no labels are selected, all
+													values will be combined into a single one.
+												</p>
+											</TooltipContent>
+										</Tooltip>
+									</TooltipProvider>
+								</div>
 								<Popover>
 									<PopoverTrigger asChild>
 										<Button
@@ -489,10 +504,10 @@ export function InstantMetricSelector({
 											<TooltipContent side="right">
 												<p className="max-w-xs text-sm">
 													What function to apply when combining values from
-													multiple labels. For example, when combining the
-													values of temperature metric across different rooms,
-													this allows you to choose whether to max, min, or
-													average the values.
+													multiple labels. For example, when combining
+													temperature values across different rooms, this allows
+													you to choose whether to max, min, or average the
+													values.
 												</p>
 											</TooltipContent>
 										</Tooltip>
@@ -690,7 +705,7 @@ function getAggregationGroupKey(
 ): string {
 	if (transform?.startsWith("rate")) return "rate";
 	else if (transform?.startsWith("p")) return "percentile";
-	else if (type === "counter") return "total";
+	else if (type === "counter") return "increase";
 	return "raw";
 }
 

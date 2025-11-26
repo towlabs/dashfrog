@@ -172,6 +172,10 @@ export const useNotebooksStore = create<NotebooksState>()(
 				const updatedNotebooks = (notebooks[tenant] || []).map((nb) =>
 					nb.id === updatedNotebook.id ? updatedNotebook : nb,
 				);
+				if (updates.timeWindow) {
+					const { start, end } = resolveTimeWindow(updates.timeWindow);
+					set({ startDate: start, endDate: end });
+				}
 				set({
 					notebooks: {
 						...notebooks,

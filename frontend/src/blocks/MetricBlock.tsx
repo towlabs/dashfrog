@@ -302,17 +302,11 @@ export const MetricBlock = createReactBlockSpec(
 
 			// Render content based on state
 			const renderContent = () => {
-				if (!metricName) {
-					return (
-						<EmptyState
-							icon={RectangleHorizontal}
-							title="No metric selected"
-							description="Select a metric to view its value."
-						/>
-					);
-				}
-
-				if ((metricsLoading || loading) && scalarData === null) {
+				if (
+					(metricsLoading || loading) &&
+					scalarData === null &&
+					selectedMetric
+				) {
 					return (
 						<Card className="@container/card shadow-none">
 							<CardHeader>
@@ -326,22 +320,12 @@ export const MetricBlock = createReactBlockSpec(
 					);
 				}
 
-				if (!selectedMetric) {
-					return (
-						<EmptyState
-							icon={SquareDot}
-							title="Metric not found"
-							description="The selected metric could not be loaded."
-						/>
-					);
-				}
-
 				if (scalarData === null || scalarData.length === 0) {
 					return (
 						<Card className="@container/card shadow-none">
 							<CardHeader className="relative pb-3">
 								<CardDescription>
-									{title || selectedMetric.prettyName}
+									{title || selectedMetric?.prettyName || "N/A"}
 								</CardDescription>
 								<CardTitle
 									className={cn(

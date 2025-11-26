@@ -1,5 +1,10 @@
 export type FlowStatus = "success" | "failure" | "running";
 
+export interface StaticFlow {
+	name: string;
+	labels: string[];
+}
+
 export interface Flow {
 	groupId: string;
 	name: string;
