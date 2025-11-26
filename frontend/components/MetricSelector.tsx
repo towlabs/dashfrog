@@ -47,14 +47,22 @@ type RangeMetricSelectorProps = {
 	metrics: RangeMetric[];
 	metricsLoading: boolean;
 	selectedMetric: RangeMetric | null;
+	selectedGroupBy: string[];
+	selectedGroupByFn: GroupByFn | null;
 	onMetricSelect: (metric: RangeMetric) => void;
+	onGroupByChange: (labels: string[]) => void;
+	onGroupByFnChange: (groupByFn: GroupByFn) => void;
 };
 
 export function RangeMetricSelector({
 	metrics,
 	metricsLoading,
 	selectedMetric,
+	selectedGroupBy,
+	selectedGroupByFn,
 	onMetricSelect,
+	onGroupByChange,
+	onGroupByFnChange,
 }: RangeMetricSelectorProps) {
 	const [comboboxOpen, setComboboxOpen] = useState(false);
 
@@ -80,74 +88,175 @@ export function RangeMetricSelector({
 		groupedMetrics[groupKey].push(metric);
 	}
 
+	const hasMultipleGroupByFnOptions =
+		selectedMetric && selectedMetric.groupBy.length > 1;
+
 	return (
-		<Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal={true}>
-			<PopoverTrigger asChild>
-				<Button
-					variant="outline"
-					role="combobox"
-					aria-expanded={comboboxOpen}
-					className="w-full justify-between"
-				>
-					{selectedMetric ? selectedMetric.prettyName : "Select a metric..."}
-					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent className="w-[400px] p-0">
-				<Command>
-					<CommandInput placeholder="Search metrics..." />
-					<CommandList>
-						<CommandEmpty>No metric found.</CommandEmpty>
-						{Object.entries(groupedMetrics).map(([groupKey, groupMetrics]) => (
-							<CommandGroup
-								key={groupKey}
-								heading={
-									<div className="flex items-center gap-1.5">
-										<span>{getAggregationGroupLabel(groupKey)}</span>
-										<TooltipProvider delayDuration={300}>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<HelpCircle className="size-3 text-muted-foreground" />
-												</TooltipTrigger>
-												<TooltipContent side="right">
-													<p className="max-w-xs text-sm">
-														{getAggregationGroupDescription(groupKey)}
-													</p>
-												</TooltipContent>
-											</Tooltip>
-										</TooltipProvider>
-									</div>
-								}
-							>
-								{groupMetrics.map((metric) => (
-									<CommandItem
-										key={`${metric.prometheusName}-${metric.transform}`}
-										value={metric.prettyName}
-										onSelect={() => {
-											onMetricSelect(metric);
-											setComboboxOpen(false);
-										}}
-										className="flex items-center justify-between"
+		<div className="space-y-2">
+			<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+				Metric
+			</h3>
+			<Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal={true}>
+				<PopoverTrigger asChild>
+					<Button
+						variant="outline"
+						role="combobox"
+						aria-expanded={comboboxOpen}
+						className="w-full justify-between"
+					>
+						{selectedMetric ? selectedMetric.prettyName : "Select a metric..."}
+						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+					</Button>
+				</PopoverTrigger>
+				<PopoverContent className="w-[400px] p-0">
+					<Command>
+						<CommandInput placeholder="Search metrics..." />
+						<CommandList>
+							<CommandEmpty>No metric found.</CommandEmpty>
+							{Object.entries(groupedMetrics).map(
+								([groupKey, groupMetrics]) => (
+									<CommandGroup
+										key={groupKey}
+										heading={
+											<div className="flex items-center gap-1.5">
+												<span>{getAggregationGroupLabel(groupKey)}</span>
+												<TooltipProvider delayDuration={300}>
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<HelpCircle className="size-3 text-muted-foreground" />
+														</TooltipTrigger>
+														<TooltipContent side="right">
+															<p className="max-w-xs text-sm">
+																{getAggregationGroupDescription(groupKey)}
+															</p>
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											</div>
+										}
 									>
-										<span>{metric.prettyName}</span>
-										<Check
-											className={cn(
-												"mr-2 h-4 w-4",
-												selectedMetric?.prometheusName ===
-													metric.prometheusName &&
-													selectedMetric?.transform === metric.transform
-													? "opacity-100"
-													: "opacity-0",
-											)}
-										/>
-									</CommandItem>
-								))}
-							</CommandGroup>
-						))}
-					</CommandList>
-				</Command>
-			</PopoverContent>
-		</Popover>
+										{groupMetrics.map((metric) => (
+											<CommandItem
+												key={`${metric.prometheusName}-${metric.transform}`}
+												value={metric.prettyName}
+												onSelect={() => {
+													onMetricSelect(metric);
+													// Set default groupByFn if not already set
+													if (!selectedGroupByFn && metric.groupBy.length > 0) {
+														onGroupByFnChange(metric.groupBy[0]);
+													}
+													setComboboxOpen(false);
+												}}
+												className="flex items-center justify-between"
+											>
+												<span>{metric.prettyName}</span>
+												<Check
+													className={cn(
+														"mr-2 h-4 w-4",
+														selectedMetric?.prometheusName ===
+															metric.prometheusName &&
+															selectedMetric?.transform === metric.transform
+															? "opacity-100"
+															: "opacity-0",
+													)}
+												/>
+											</CommandItem>
+										))}
+									</CommandGroup>
+								),
+							)}
+						</CommandList>
+					</Command>
+				</PopoverContent>
+			</Popover>
+
+			{selectedMetric && (
+				<>
+					<div className="space-y-2 flex-1">
+						<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+							Group By
+						</h3>
+						<Popover>
+							<PopoverTrigger asChild>
+								<Button
+									variant="outline"
+									className="w-full justify-start text-left"
+								>
+									{selectedGroupBy.length > 0 ? (
+										<span>{selectedGroupBy.join(", ")}</span>
+									) : (
+										<span className="text-muted-foreground">
+											Select labels to group by...
+										</span>
+									)}
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent className="w-[300px] p-0" align="start">
+								<Command>
+									<CommandInput placeholder="Search labels..." />
+									<CommandList>
+										<CommandEmpty>No labels found.</CommandEmpty>
+										<CommandGroup heading="Available Labels">
+											{selectedMetric.labels.map((label) => (
+												<CommandItem
+													key={label}
+													value={label}
+													onSelect={() => {
+														const newGroupBy = selectedGroupBy.includes(label)
+															? selectedGroupBy.filter((l) => l !== label)
+															: [...selectedGroupBy, label];
+														onGroupByChange(newGroupBy);
+													}}
+												>
+													<Check
+														className={cn(
+															"mr-2 h-4 w-4",
+															selectedGroupBy.includes(label)
+																? "opacity-100"
+																: "opacity-0",
+														)}
+													/>
+													{label}
+												</CommandItem>
+											))}
+										</CommandGroup>
+									</CommandList>
+								</Command>
+							</PopoverContent>
+						</Popover>
+					</div>
+					{hasMultipleGroupByFnOptions && (
+						<div className="space-y-2">
+							<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+								Group Function
+							</h3>
+							<Select
+								value={selectedGroupByFn || selectedMetric.groupBy[0]}
+								onValueChange={onGroupByFnChange}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{selectedMetric.groupBy.includes("sum") && (
+										<SelectItem value="sum">Sum</SelectItem>
+									)}
+									{selectedMetric.groupBy.includes("avg") && (
+										<SelectItem value="avg">Average</SelectItem>
+									)}
+									{selectedMetric.groupBy.includes("min") && (
+										<SelectItem value="min">Min</SelectItem>
+									)}
+									{selectedMetric.groupBy.includes("max") && (
+										<SelectItem value="max">Max</SelectItem>
+									)}
+								</SelectContent>
+							</Select>
+						</div>
+					)}
+				</>
+			)}
+		</div>
 	);
 }
 

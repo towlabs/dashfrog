@@ -16,7 +16,7 @@ import {
 } from "@/src/services/api/metrics";
 import { useTenantStore } from "@/src/stores/tenant";
 import type { Filter } from "@/src/types/filter";
-import type { RangeMetric } from "@/src/types/metric";
+import type { GroupByFn, RangeMetric } from "@/src/types/metric";
 import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 type MetricDetailDrawerProps = {
@@ -27,6 +27,8 @@ type MetricDetailDrawerProps = {
 	endDate: Date;
 	filters: Filter[];
 	tenantName: string;
+	groupBy: string[];
+	groupByFn: GroupByFn;
 };
 
 export function MetricDetailDrawer({
@@ -37,6 +39,8 @@ export function MetricDetailDrawer({
 	startDate,
 	endDate,
 	filters,
+	groupBy,
+	groupByFn,
 }: MetricDetailDrawerProps) {
 	const [historyData, setHistoryData] = useState<{
 		series: {
@@ -55,8 +59,8 @@ export function MetricDetailDrawer({
 					startDate,
 					endDate,
 					filters,
-					metric.labels,
-					metric.groupBy[0],
+					groupBy,
+					groupByFn,
 				);
 				setHistoryData(response);
 			} catch (error) {
@@ -64,6 +68,7 @@ export function MetricDetailDrawer({
 				setHistoryData({ series: [] });
 			}
 		};
+		if (!open) return;
 
 		void fetchHistory();
 	}, [
@@ -72,9 +77,10 @@ export function MetricDetailDrawer({
 		startDate,
 		endDate,
 		filters,
-		metric.groupBy,
+		groupBy,
+		groupByFn,
 		metric.transform,
-		metric.labels,
+		open,
 	]);
 
 	if (!metric) return null;

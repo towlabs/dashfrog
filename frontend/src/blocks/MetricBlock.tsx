@@ -432,7 +432,12 @@ export const MetricBlock = createReactBlockSpec(
 				};
 
 				return (
-					<div className="group">
+					<div
+						className="group"
+						key={Object.entries(scalar.labels)
+							.map(([key, value]) => `${key}:${value}`)
+							.join(",")}
+					>
 						<Card className="@container/card shadow-none">
 							<CardHeader className="relative pb-3">
 								<div
@@ -578,6 +583,8 @@ export const MetricBlock = createReactBlockSpec(
 						<MetricDetailDrawer
 							metric={rangeMetric}
 							tenantName={tenantName}
+							groupBy={groupBy}
+							groupByFn={groupByFn}
 							filters={[
 								...filters,
 								...Object.entries(selectedLabels).map(([key, value]) => ({

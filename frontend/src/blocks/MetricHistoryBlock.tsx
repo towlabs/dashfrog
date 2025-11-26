@@ -174,6 +174,24 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				});
 			};
 
+			const handleGroupByChange = (labels: string[]) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						...props.block.props,
+						groupBy: JSON.stringify(labels),
+					},
+				});
+			};
+
+			const handleGroupByFnChange = (grpByFn: GroupByFn) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						...props.block.props,
+						groupByFn: grpByFn,
+					},
+				});
+			};
+
 			const handleFiltersChange = (newFilters: Filter[]) => {
 				props.editor.updateBlock(props.block, {
 					props: {
@@ -239,17 +257,16 @@ export const MetricHistoryBlock = createReactBlockSpec(
 							</SheetHeader>
 
 							<div className="mt-6 space-y-6">
-								<div className="space-y-3">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-										Metric
-									</h3>
-									<RangeMetricSelector
-										metrics={rangeMetrics}
-										metricsLoading={metricsLoading}
-										selectedMetric={selectedMetric ?? null}
-										onMetricSelect={handleMetricSelect}
-									/>
-								</div>
+								<RangeMetricSelector
+									metrics={rangeMetrics}
+									metricsLoading={metricsLoading}
+									selectedMetric={selectedMetric ?? null}
+									selectedGroupBy={groupBy}
+									selectedGroupByFn={groupByFn}
+									onMetricSelect={handleMetricSelect}
+									onGroupByChange={handleGroupByChange}
+									onGroupByFnChange={handleGroupByFnChange}
+								/>
 
 								<div className="space-y-3 mt-6">
 									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
