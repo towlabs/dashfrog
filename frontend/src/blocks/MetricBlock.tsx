@@ -1,20 +1,10 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import {
-	ChartLine,
-	ChevronDown,
-	Divide,
-	FlipHorizontal,
-	Gauge,
-	ListFilterPlus,
-	RectangleHorizontal,
-	SquareDot,
-} from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChartLine, RectangleHorizontal, SquareDot } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
-import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { LabelBadge } from "@/components/LabelBadge";
 import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
 import { InstantMetricSelector } from "@/components/MetricSelector";
@@ -25,6 +15,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import {
 	Sheet,
@@ -33,34 +24,18 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
+
 import { cn } from "@/lib/utils";
 import { Metrics } from "@/src/services/api/metrics";
-import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type {
-	Transform,
+	GroupByFn,
 	InstantMetric,
 	TimeAggregation,
-	GroupByFn,
+	Transform,
 } from "@/src/types/metric";
-import { resolveTimeWindow } from "@/src/types/timewindow";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
-import React from "react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 
 export const MetricBlock = createReactBlockSpec(
 	{
@@ -119,7 +94,6 @@ export const MetricBlock = createReactBlockSpec(
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
-			const labels = useLabelsStore((state) => state.labels);
 			const startDate = useNotebooksStore((state) => state.startDate);
 			const endDate = useNotebooksStore((state) => state.endDate);
 			const [scalarData, setScalarData] = useState<

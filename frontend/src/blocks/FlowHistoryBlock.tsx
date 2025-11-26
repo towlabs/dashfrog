@@ -18,7 +18,6 @@ import { FlowHistoryTable } from "@/components/FlowHistoryTable";
 import { FlowSelector } from "@/components/FlowSelector";
 import type { StatusFilter } from "@/components/FlowStatusButtons";
 import { TableSkeleton } from "@/components/TableSkeleton";
-import { Label } from "@/components/ui/label";
 import {
 	Sheet,
 	SheetContent,
@@ -29,7 +28,6 @@ import { Flows } from "@/src/services/api/flows";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import { resolveTimeWindow } from "@/src/types/timewindow";
 import type { FlowHistory } from "../types/flow";
 
 export const FlowHistoryBlock = createReactBlockSpec(
@@ -77,7 +75,6 @@ export const FlowHistoryBlock = createReactBlockSpec(
 				(state) => state.openBlockSettings,
 			);
 			const flows = useNotebooksStore((state) => state.flows);
-			const flowsLoading = useNotebooksStore((state) => state.flowsLoading);
 			const startDate = useNotebooksStore((state) => state.startDate);
 			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(

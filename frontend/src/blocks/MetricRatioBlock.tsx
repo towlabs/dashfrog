@@ -2,7 +2,7 @@
 
 import { createReactBlockSpec } from "@blocknote/react";
 import { RectangleHorizontal, SquareDivide } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { InstantMetricSelector } from "@/components/MetricSelector";
@@ -23,10 +23,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Metrics } from "@/src/services/api/metrics";
 import { useNotebooksStore } from "@/src/stores/notebooks";
-import type { InstantMetric, Show } from "@/src/types/metric";
-import { resolveTimeWindow } from "@/src/types/timewindow";
-import React from "react";
-import { Filter } from "../types/filter";
+import type {
+	GroupByFn,
+	InstantMetric,
+	TimeAggregation,
+	Transform,
+} from "@/src/types/metric";
+import type { Filter } from "../types/filter";
 
 export const MetricRatioBlock = createReactBlockSpec(
 	{
@@ -39,11 +42,23 @@ export const MetricRatioBlock = createReactBlockSpec(
 			metricAName: {
 				default: "",
 			},
-			aggregationA: {
-				default: "",
+			transformA: {
+				default: "" as Transform | "",
 			},
-			showA: {
-				default: "last" as Show,
+			timeAggregationA: {
+				default: "last" as TimeAggregation,
+			},
+			groupByA: {
+				default: "[]",
+			},
+			groupByFnA: {
+				default: "sum" as GroupByFn,
+			},
+			matchOperatorA: {
+				default: "==" as "==" | ">" | "<" | ">=" | "<=" | "!=",
+			},
+			matchValueA: {
+				default: "",
 			},
 			filtersA: {
 				default: "[]",
@@ -52,11 +67,23 @@ export const MetricRatioBlock = createReactBlockSpec(
 			metricBName: {
 				default: "",
 			},
-			aggregationB: {
-				default: "",
+			transformB: {
+				default: "" as Transform | "",
 			},
-			showB: {
-				default: "last" as Show,
+			timeAggregationB: {
+				default: "last" as TimeAggregation,
+			},
+			groupByB: {
+				default: "[]",
+			},
+			groupByFnB: {
+				default: "sum" as GroupByFn,
+			},
+			matchOperatorB: {
+				default: "==" as "==" | ">" | "<" | ">=" | "<=" | "!=",
+			},
+			matchValueB: {
+				default: "",
 			},
 			filtersB: {
 				default: "[]",
@@ -76,9 +103,8 @@ export const MetricRatioBlock = createReactBlockSpec(
 			);
 			const instantMetrics = useNotebooksStore((state) => state.instantMetrics);
 			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
-			const timeWindow = useNotebooksStore(
-				(state) => state.currentNotebook?.timeWindow,
-			);
+			const startDate = useNotebooksStore((state) => state.startDate);
+			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
@@ -89,13 +115,51 @@ export const MetricRatioBlock = createReactBlockSpec(
 
 			const title = props.block.props.title as string;
 			const metricAName = props.block.props.metricAName as string;
-			const aggregationA = props.block.props.aggregationA as string;
-			const showA = props.block.props.showA as Show;
-			const metricBName = props.block.props.metricBName as string;
-			const aggregationB = props.block.props.aggregationB as string;
-			const showB = props.block.props.showB as Show;
+			const transformA = props.block.props.transformA as Transform | "";
+			const timeAggregationA = props.block.props
+				.timeAggregationA as TimeAggregation;
+			const groupByFnA = props.block.props.groupByFnA as GroupByFn;
+			const matchOperatorA = props.block.props.matchOperatorA as
+				| "=="
+				| ">"
+				| "<"
+				| ">="
+				| "<="
+				| "!=";
+			const matchValueA = props.block.props.matchValueA as string;
 
-			// Parse filters from JSON strings (remove notebookFilters from here, use MetricSelector)
+			const metricBName = props.block.props.metricBName as string;
+			const transformB = props.block.props.transformB as Transform | "";
+			const timeAggregationB = props.block.props
+				.timeAggregationB as TimeAggregation;
+			const groupByFnB = props.block.props.groupByFnB as GroupByFn;
+			const matchOperatorB = props.block.props.matchOperatorB as
+				| "=="
+				| ">"
+				| "<"
+				| ">="
+				| "<="
+				| "!=";
+			const matchValueB = props.block.props.matchValueB as string;
+
+			// Parse groupBy labels from JSON strings
+			const groupByA: string[] = useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.groupByA as string);
+				} catch {
+					return [];
+				}
+			}, [props.block.props.groupByA]);
+
+			const groupByB: string[] = useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.groupByB as string);
+				} catch {
+					return [];
+				}
+			}, [props.block.props.groupByB]);
+
+			// Parse filters from JSON strings
 			const filtersA = useMemo(() => {
 				try {
 					return JSON.parse(props.block.props.filtersA as string);
@@ -115,16 +179,28 @@ export const MetricRatioBlock = createReactBlockSpec(
 			const metricA = React.useMemo(() => {
 				return instantMetrics.find(
 					(m) =>
-						m.prometheusName === metricAName && m.aggregation === aggregationA,
+						m.prometheusName === metricAName &&
+						m.transform === (transformA || null),
 				);
-			}, [metricAName, aggregationA, instantMetrics]);
+			}, [metricAName, transformA, instantMetrics]);
 
 			const metricB = React.useMemo(() => {
 				return instantMetrics.find(
 					(m) =>
-						m.prometheusName === metricBName && m.aggregation === aggregationB,
+						m.prometheusName === metricBName &&
+						m.transform === (transformB || null),
 				);
-			}, [metricBName, aggregationB, instantMetrics]);
+			}, [metricBName, transformB, instantMetrics]);
+
+			// Merge notebook filters with block filters
+			const filtersCombinedA = useMemo(
+				() => [...(notebookFilters || []), ...filtersA],
+				[notebookFilters, filtersA],
+			);
+			const filtersCombinedB = useMemo(
+				() => [...(notebookFilters || []), ...filtersB],
+				[notebookFilters, filtersB],
+			);
 
 			// Fetch both metric A and metric B values
 			useEffect(() => {
@@ -132,8 +208,10 @@ export const MetricRatioBlock = createReactBlockSpec(
 					!tenantName ||
 					!metricA ||
 					!metricB ||
-					timeWindow === undefined ||
-					notebookFilters === undefined
+					startDate === null ||
+					endDate === null ||
+					filtersCombinedA === undefined ||
+					filtersCombinedB === undefined
 				) {
 					setValueA(null);
 					setValueB(null);
@@ -143,39 +221,39 @@ export const MetricRatioBlock = createReactBlockSpec(
 				const fetchValues = async () => {
 					setLoading(true);
 					try {
-						const { start, end } = resolveTimeWindow(timeWindow);
-
 						// Fetch Metric A
-						const filtersCombinedA = [...notebookFilters, ...filtersA];
 						const responseA = await Metrics.getScalar(
 							tenantName,
 							metricA.prometheusName,
-							start,
-							end,
-							metricA.aggregation,
-							showA,
-							null,
-							null,
+							startDate,
+							endDate,
+							metricA.transform,
+							groupByA,
+							groupByFnA,
+							timeAggregationA,
+							matchOperatorA,
+							matchValueA,
 							filtersCombinedA,
 						);
 
 						// Fetch Metric B
-						const filtersCombinedB = [...notebookFilters, ...filtersB];
 						const responseB = await Metrics.getScalar(
 							tenantName,
 							metricB.prometheusName,
-							start,
-							end,
-							metricB.aggregation,
-							showB,
-							null,
-							null,
+							startDate,
+							endDate,
+							metricB.transform,
+							groupByB,
+							groupByFnB,
+							timeAggregationB,
+							matchOperatorB,
+							matchValueB,
 							filtersCombinedB,
 						);
 
-						// Sum all values
-						const sumA = responseA.scalar;
-						const sumB = responseB.scalar;
+						// Sum all scalar values (in case there are multiple series)
+						const sumA = responseA.scalars.reduce((sum, s) => sum + s.value, 0);
+						const sumB = responseB.scalars.reduce((sum, s) => sum + s.value, 0);
 
 						setValueA(sumA);
 						setValueB(sumB);
@@ -193,12 +271,20 @@ export const MetricRatioBlock = createReactBlockSpec(
 				tenantName,
 				metricA,
 				metricB,
-				showA,
-				showB,
-				timeWindow,
-				notebookFilters,
-				filtersA,
-				filtersB,
+				timeAggregationA,
+				timeAggregationB,
+				groupByA,
+				groupByB,
+				groupByFnA,
+				groupByFnB,
+				matchOperatorA,
+				matchValueA,
+				matchOperatorB,
+				matchValueB,
+				startDate,
+				endDate,
+				filtersCombinedA,
+				filtersCombinedB,
 			]);
 
 			if (!tenantName) {
@@ -213,13 +299,36 @@ export const MetricRatioBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleMetricASelect = (metric: InstantMetric, show: Show) => {
+			// Handlers for Metric A
+			const handleMetricASelect = (metric: InstantMetric) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						metricAName: metric.prometheusName,
-						aggregationA: metric.aggregation,
-						showA: show,
+						transformA: metric.transform || "",
+					},
+				});
+			};
+
+			const handleTimeAggregationAChange = (timeAgg: TimeAggregation) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						timeAggregationA: timeAgg,
+					},
+				});
+			};
+
+			const handleGroupByAChange = (labels: string[]) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						groupByA: JSON.stringify(labels),
+					},
+				});
+			};
+
+			const handleGroupByFnAChange = (grpByFn: GroupByFn) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						groupByFnA: grpByFn,
 					},
 				});
 			};
@@ -227,19 +336,41 @@ export const MetricRatioBlock = createReactBlockSpec(
 			const handleFiltersAChange = (newFilters: Filter[]) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						filtersA: JSON.stringify(newFilters),
 					},
 				});
 			};
 
-			const handleMetricBSelect = (metric: InstantMetric, show: Show) => {
+			// Handlers for Metric B
+			const handleMetricBSelect = (metric: InstantMetric) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						metricBName: metric.prometheusName,
-						aggregationB: metric.aggregation,
-						showB: show,
+						transformB: metric.transform || "",
+					},
+				});
+			};
+
+			const handleTimeAggregationBChange = (timeAgg: TimeAggregation) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						timeAggregationB: timeAgg,
+					},
+				});
+			};
+
+			const handleGroupByBChange = (labels: string[]) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						groupByB: JSON.stringify(labels),
+					},
+				});
+			};
+
+			const handleGroupByFnBChange = (grpByFn: GroupByFn) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						groupByFnB: grpByFn,
 					},
 				});
 			};
@@ -247,7 +378,6 @@ export const MetricRatioBlock = createReactBlockSpec(
 			const handleFiltersBChange = (newFilters: Filter[]) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						filtersB: JSON.stringify(newFilters),
 					},
 				});
@@ -349,7 +479,6 @@ export const MetricRatioBlock = createReactBlockSpec(
 										onChange={(e) => {
 											props.editor.updateBlock(props.block, {
 												props: {
-													...props.block.props,
 													title: e.target.value,
 												},
 											});
@@ -358,26 +487,60 @@ export const MetricRatioBlock = createReactBlockSpec(
 								</div>
 
 								<div className="space-y-3 mt-6 p-3 border rounded-lg bg-muted/30">
-									<h3 className="text-sm font-medium">Metric A (Top)</h3>
+									<h3 className="text-sm font-medium">Metric A (Numerator)</h3>
 									<InstantMetricSelector
+										disableGroupBy={true}
 										metrics={instantMetrics}
 										selectedMetric={metricA ?? null}
-										selectedShow={showA}
+										selectedTimeAggregation={timeAggregationA}
+										selectedGroupBy={groupByA}
+										selectedGroupByFn={groupByFnA}
 										blockFilters={filtersA}
+										matchOperator={matchOperatorA}
+										matchValue={matchValueA}
 										onMetricSelect={handleMetricASelect}
+										onTimeAggregationChange={handleTimeAggregationAChange}
+										onGroupByChange={handleGroupByAChange}
+										onGroupByFnChange={handleGroupByFnAChange}
 										onFiltersChange={handleFiltersAChange}
+										onMatchConditionChange={(operator, value) => {
+											props.editor.updateBlock(props.block, {
+												props: {
+													matchOperatorA: operator,
+													matchValueA: value,
+												},
+											});
+										}}
 									/>
 								</div>
 
 								<div className="space-y-3 p-3 border rounded-lg bg-muted/30">
-									<h3 className="text-sm font-medium">Metric B (Bottom)</h3>
+									<h3 className="text-sm font-medium">
+										Metric B (Denominator)
+									</h3>
 									<InstantMetricSelector
+										disableGroupBy={true}
 										metrics={instantMetrics}
 										selectedMetric={metricB ?? null}
-										selectedShow={showB}
+										selectedTimeAggregation={timeAggregationB}
+										selectedGroupBy={groupByB}
+										selectedGroupByFn={groupByFnB}
 										blockFilters={filtersB}
+										matchOperator={matchOperatorB}
+										matchValue={matchValueB}
 										onMetricSelect={handleMetricBSelect}
+										onTimeAggregationChange={handleTimeAggregationBChange}
+										onGroupByChange={handleGroupByBChange}
+										onGroupByFnChange={handleGroupByFnBChange}
 										onFiltersChange={handleFiltersBChange}
+										onMatchConditionChange={(operator, value) => {
+											props.editor.updateBlock(props.block, {
+												props: {
+													matchOperatorB: operator,
+													matchValueB: value,
+												},
+											});
+										}}
 									/>
 								</div>
 							</div>

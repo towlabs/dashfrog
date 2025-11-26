@@ -1,7 +1,7 @@
 import { NewRestAPI } from "@/src/services/api/_helper";
 import type { Filter } from "@/src/types/filter";
-import {
-	GroupBy,
+import type {
+	GroupByFn,
 	InstantMetric,
 	RangeMetric,
 	TimeAggregation,
@@ -58,7 +58,7 @@ const Metrics = {
 		endTime: Date,
 		labels: Filter[],
 		groupBy: string[],
-		groupByFn: GroupBy,
+		groupByFn: GroupByFn,
 	): Promise<{
 		series: { labels: Record<string, string>; values: MetricHistoryPoint[] }[];
 	}> => {
@@ -96,7 +96,7 @@ const Metrics = {
 		endTime: Date,
 		transform: Transform | null,
 		groupBy: string[],
-		groupByFn: GroupBy,
+		groupByFn: GroupByFn,
 		timeAggregation: TimeAggregation,
 		matchOperator: "==" | ">" | "<" | ">=" | "<=" | "!=" | null,
 		matchValue: string | null,
@@ -104,6 +104,7 @@ const Metrics = {
 	): Promise<{
 		scalars: { labels: Record<string, string>; value: number }[];
 	}> => {
+		// biome-ignore lint/suspicious/noExplicitAny: json payload
 		const payload: Record<string, any> = {
 			metric_name: metricName,
 			transform,

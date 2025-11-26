@@ -3,14 +3,13 @@
 import { createReactBlockSpec } from "@blocknote/react";
 import { addDays, formatISO } from "date-fns";
 import { groupBy } from "lodash";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { FlowDetail } from "@/components/FlowDetail";
 import { FlowSelector } from "@/components/FlowSelector";
 import { LabelBadge } from "@/components/LabelBadge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Sheet,
 	SheetContent,
@@ -28,8 +27,7 @@ import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { FlowHistory } from "@/src/types/flow";
-import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
-import React from "react";
+import type { TimeWindow } from "@/src/types/timewindow";
 
 interface DayData {
 	date: Date;

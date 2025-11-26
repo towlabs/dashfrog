@@ -34,7 +34,6 @@ import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
 import { Flows } from "@/src/services/api/flows";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
-import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 type Props = {
 	tenant: string;

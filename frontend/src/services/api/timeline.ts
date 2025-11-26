@@ -1,7 +1,7 @@
+import type { Block } from "@blocknote/core/types/src/blocks";
+import { parseJSON } from "date-fns";
 import type { Filter } from "@/src/types/filter";
 import type { TimelineEvent } from "@/src/types/timeline";
-import { Block } from "@blocknote/core/types/src/blocks";
-import { parseJSON } from "date-fns";
 
 /**
  * Raw timeline event response from backend API (snake_case)

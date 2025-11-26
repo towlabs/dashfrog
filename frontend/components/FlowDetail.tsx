@@ -19,7 +19,6 @@ import {
 import { Flows } from "@/src/services/api/flows";
 import { useTenantStore } from "@/src/stores/tenant";
 import type { FlowHistory } from "@/src/types/flow";
-import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 export interface FlowDetailProps {
 	flowName: string;
@@ -44,7 +43,6 @@ export function FlowDetail({
 	const [loading, setLoading] = useState(true);
 	const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: recompute when time we open the sheet
 	// Fetch detailed flow when filters or time window change
 	useEffect(() => {
 		if (!currentTenant || !open) return;

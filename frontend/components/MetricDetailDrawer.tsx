@@ -9,15 +9,9 @@ import {
 	DrawerHeader,
 	DrawerTitle,
 } from "@/components/ui/drawer";
-import {
-	MetricHistoryPoint,
-	type MetricHistoryResponse,
-	Metrics,
-} from "@/src/services/api/metrics";
-import { useTenantStore } from "@/src/stores/tenant";
+import { type MetricHistoryPoint, Metrics } from "@/src/services/api/metrics";
 import type { Filter } from "@/src/types/filter";
 import type { GroupByFn, RangeMetric } from "@/src/types/metric";
-import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
 
 type MetricDetailDrawerProps = {
 	open: boolean;

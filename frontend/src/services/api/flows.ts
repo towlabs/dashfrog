@@ -1,3 +1,4 @@
+import { parseJSON } from "date-fns";
 import type { Filter } from "@/src/types/filter";
 import type {
 	Flow,
@@ -6,7 +7,6 @@ import type {
 	FlowHistoryStep,
 	FlowRunCount,
 } from "@/src/types/flow";
-import { parseJSON } from "date-fns";
 
 /**
  * Raw flow response from backend API (snake_case)

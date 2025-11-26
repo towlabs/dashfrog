@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/EmptyState";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { MetricHistoryChart } from "@/components/MetricHistoryChart";
 import { RangeMetricSelector } from "@/components/MetricSelector";
-import { Label } from "@/components/ui/label";
 import {
 	Sheet,
 	SheetContent,
@@ -19,8 +18,7 @@ import { type MetricHistoryPoint, Metrics } from "@/src/services/api/metrics";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import { resolveTimeWindow } from "@/src/types/timewindow";
-import { GroupByFn, RangeMetric, Transform } from "../types/metric";
+import type { GroupByFn, RangeMetric, Transform } from "../types/metric";
 
 export const MetricHistoryBlock = createReactBlockSpec(
 	{
@@ -85,7 +83,7 @@ export const MetricHistoryBlock = createReactBlockSpec(
 					values: MetricHistoryPoint[];
 				}[];
 			}>({ series: [] });
-			const [loading, setLoading] = useState(false);
+			const [_, setLoading] = useState(false);
 
 			const metricName = props.block.props.metricName as string;
 			const transform = props.block.props.transform as Transform | "";

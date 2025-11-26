@@ -1,7 +1,7 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: some anys here are from recharts */
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
 	type ChartConfig,
@@ -9,10 +9,8 @@ import {
 	ChartLegend,
 	ChartTooltip,
 } from "@/components/ui/chart";
-import type { MetricHistory, RangeMetric, GroupByFn } from "@/src/types/metric";
-import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
+import type { MetricHistory, RangeMetric } from "@/src/types/metric";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
-import React from "react";
 
 type MetricHistoryChartProps = {
 	historyData: {

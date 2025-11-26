@@ -171,13 +171,15 @@ export function FlowHistoryTable({
 													className="flex flex-wrap gap-1"
 													onClick={(e) => e.stopPropagation()}
 												>
-													{Object.entries(history.labels).map(([key, value]) => (
-														<LabelBadge
-															key={key}
-															labelKey={key}
-															labelValue={value as string}
-														/>
-													))}
+													{Object.entries(history.labels).map(
+														([key, value]) => (
+															<LabelBadge
+																key={key}
+																labelKey={key}
+																labelValue={value as string}
+															/>
+														),
+													)}
 												</div>
 											</TableCell>
 										)}

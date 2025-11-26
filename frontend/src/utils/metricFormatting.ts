@@ -1,4 +1,4 @@
-import { Transform } from "../types/metric";
+import type { Transform } from "../types/metric";
 
 /**
  * Round a number to a maximum of 2 decimal places (not fixed)

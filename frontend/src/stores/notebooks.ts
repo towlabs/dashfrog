@@ -86,7 +86,7 @@ export const useNotebooksStore = create<NotebooksState>()(
 				try {
 					const flows = await Flows.getByTenant(tenant, start, end, filters);
 					set({ flows, flowsLoading: false });
-				} catch (error) {
+				} catch (_) {
 					set({ flows: [], flowsLoading: false });
 				}
 			},

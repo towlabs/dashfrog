@@ -1,4 +1,4 @@
-import { Block } from "@blocknote/core";
+import type { Block } from "@blocknote/core";
 
 export interface TimelineEvent {
 	id: number;

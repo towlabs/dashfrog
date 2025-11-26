@@ -23,8 +23,6 @@ import { formatTimeAgo } from "@/src/lib/formatters";
 import { Timeline as TimelineAPI } from "@/src/services/api/timeline";
 import type { Filter } from "@/src/types/filter";
 import type { TimelineEvent } from "@/src/types/timeline";
-import { resolveTimeWindow, type TimeWindow } from "@/src/types/timewindow";
-import { useNotebooksStore } from "@/src/stores/notebooks";
 
 const ITEMS_PER_PAGE = 14;
 

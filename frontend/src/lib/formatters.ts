@@ -1,8 +1,4 @@
-import {
-	differenceInMilliseconds,
-	differenceInSeconds,
-	format,
-} from "date-fns";
+import { differenceInSeconds, format } from "date-fns";
 
 /**
  * Format duration between two dates

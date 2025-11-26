@@ -31,17 +31,17 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useLabelsStore } from "@/src/stores/labels";
+import type { Filter } from "@/src/types/filter";
 import type {
-	Transform,
-	RangeMetric,
-	InstantMetric,
-	TimeAggregation,
 	GroupByFn,
+	InstantMetric,
 	MetricType,
+	RangeMetric,
+	TimeAggregation,
+	Transform,
 } from "@/src/types/metric";
 import { FilterBadgesEditor } from "./FilterBadgesEditor";
-import { useLabelsStore } from "@/src/stores/labels";
-import { Filter } from "@/src/types/filter";
 
 type RangeMetricSelectorProps = {
 	metrics: RangeMetric[];
@@ -278,6 +278,7 @@ type InstantMetricSelectorProps = {
 		operator: "==" | ">" | "<" | ">=" | "<=" | "!=",
 		value: string,
 	) => void;
+	disableGroupBy?: boolean;
 };
 
 export function InstantMetricSelector({
@@ -295,6 +296,7 @@ export function InstantMetricSelector({
 	onGroupByFnChange,
 	onFiltersChange,
 	onMatchConditionChange,
+	disableGroupBy = false,
 }: InstantMetricSelectorProps) {
 	const labels = useLabelsStore((state) => state.labels);
 	const [comboboxOpen, setComboboxOpen] = useState(false);
@@ -414,61 +416,67 @@ export function InstantMetricSelector({
 			{selectedMetric && (
 				<>
 					<div className="flex gap-2">
-						<div className="space-y-2 flex-1">
-							<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-								Group By
-							</h3>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className="w-full justify-start text-left"
-									>
-										{selectedGroupBy.length > 0 ? (
-											<span>{selectedGroupBy.join(", ")}</span>
-										) : (
-											<span className="text-muted-foreground">
-												Select labels to group by...
-											</span>
-										)}
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-[300px] p-0" align="start">
-									<Command>
-										<CommandInput placeholder="Search labels..." />
-										<CommandList>
-											<CommandEmpty>No labels found.</CommandEmpty>
-											<CommandGroup heading="Available Labels">
-												{selectedMetric.labels.map((label) => (
-													<CommandItem
-														key={label}
-														value={label}
-														onSelect={() => {
-															const newGroupBy = selectedGroupBy.includes(label)
-																? selectedGroupBy.filter((l) => l !== label)
-																: [...selectedGroupBy, label];
-															onGroupByChange(newGroupBy);
-														}}
-													>
-														<Check
-															className={cn(
-																"mr-2 h-4 w-4",
-																selectedGroupBy.includes(label)
-																	? "opacity-100"
-																	: "opacity-0",
-															)}
-														/>
-														{label}
-													</CommandItem>
-												))}
-											</CommandGroup>
-										</CommandList>
-									</Command>
-								</PopoverContent>
-							</Popover>
-						</div>
+						{!disableGroupBy && (
+							<div className="space-y-2 flex-1">
+								<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+									Group By
+								</h3>
+								<Popover>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											className="w-full justify-start text-left"
+										>
+											{selectedGroupBy.length > 0 ? (
+												<span>{selectedGroupBy.join(", ")}</span>
+											) : (
+												<span className="text-muted-foreground">
+													Select labels to group by...
+												</span>
+											)}
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-[300px] p-0" align="start">
+										<Command>
+											<CommandInput placeholder="Search labels..." />
+											<CommandList>
+												<CommandEmpty>No labels found.</CommandEmpty>
+												<CommandGroup heading="Available Labels">
+													{selectedMetric.labels.map((label) => (
+														<CommandItem
+															key={label}
+															value={label}
+															onSelect={() => {
+																const newGroupBy = selectedGroupBy.includes(
+																	label,
+																)
+																	? selectedGroupBy.filter((l) => l !== label)
+																	: [...selectedGroupBy, label];
+																onGroupByChange(newGroupBy);
+															}}
+														>
+															<Check
+																className={cn(
+																	"mr-2 h-4 w-4",
+																	selectedGroupBy.includes(label)
+																		? "opacity-100"
+																		: "opacity-0",
+																)}
+															/>
+															{label}
+														</CommandItem>
+													))}
+												</CommandGroup>
+											</CommandList>
+										</Command>
+									</PopoverContent>
+								</Popover>
+							</div>
+						)}
 						{hasMultipleGroupByFnOptions && (
-							<div className="space-y-2 w-32">
+							<div
+								className={cn("space-y-2", disableGroupBy ? "flex-1" : "w-32")}
+							>
 								<div className="flex items-center gap-1.5">
 									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 										Apply
@@ -480,10 +488,11 @@ export function InstantMetricSelector({
 											</TooltipTrigger>
 											<TooltipContent side="right">
 												<p className="max-w-xs text-sm">
-													What function to apply to the grouped values. For
-													example, if the metric represents the temperature of
-													different rooms, you can apply the average function to
-													get the average temperature across all rooms.
+													What function to apply when combining values from
+													multiple labels. For example, when combining the
+													values of temperature metric across different rooms,
+													this allows you to choose whether to max, min, or
+													average the values.
 												</p>
 											</TooltipContent>
 										</Tooltip>

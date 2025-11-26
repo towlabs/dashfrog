@@ -2,6 +2,7 @@
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
+import type { Block } from "@blocknote/core";
 import * as locales from "@blocknote/core/locales";
 import {
 	SideMenu,
@@ -23,13 +24,12 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { formatTimeAgo } from "@/src/lib/formatters";
+import { Timeline } from "@/src/services/api";
 import type { TimelineEvent } from "@/src/types/timeline";
 import { customEditor, getSlashMenuItems } from "@/src/utils/editor";
 import { AddBlockButton } from "./ui/add-block";
 import { DragHandleButton } from "./ui/drag-block";
 import { SuggestionMenu } from "./ui/suggestion-menu";
-import { Timeline } from "@/src/services/api";
-import { Block } from "@blocknote/core";
 
 interface TimelineEventSheetProps {
 	event: TimelineEvent | null;

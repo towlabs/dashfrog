@@ -2,23 +2,22 @@
 
 import { createReactBlockSpec } from "@blocknote/react";
 import { ChartNoAxesGantt, Circle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import React from "react";
 import { useParams } from "react-router-dom";
 import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { FlowDetail } from "@/components/FlowDetail";
 import { FlowSelector } from "@/components/FlowSelector";
+import { statusConfig } from "@/components/FlowStatus";
 import { LabelBadge } from "@/components/LabelBadge";
+import { Badge } from "@/components/ui/badge";
 import {
 	Card,
 	CardContent,
 	CardDescription,
 	CardFooter,
 	CardHeader,
-	CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
@@ -26,13 +25,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Tooltip,
 	TooltipContent,
@@ -45,8 +44,6 @@ import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
-import { statusConfig } from "@/components/FlowStatus";
-import { Separator } from "@/components/ui/separator";
 
 export const FlowStatusBlock = createReactBlockSpec(
 	{

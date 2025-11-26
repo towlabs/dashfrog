@@ -21,24 +21,16 @@ import {
 	withMultiColumn,
 } from "@blocknote/xl-multi-column";
 import {
-	BadgePercent,
-	BarChart3,
 	ChartLine,
 	ChevronRight,
 	History,
 	Home,
 	LayoutGrid,
-	ListChecks,
-	ListCollapse,
 	Logs,
-	Percent,
 	RectangleEllipsis,
-	RectangleHorizontal,
 	SquareDivide,
 	SquareDot,
-	SquarePercent,
 	Table2,
-	Table as TableIcon,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -57,8 +49,6 @@ import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
-import type { Notebook } from "../types/notebook";
-import { resolveTimeWindow } from "../types/timewindow";
 import { customEditor, getSlashMenuItems } from "../utils/editor";
 
 export default function NotebookPage() {
@@ -142,6 +132,7 @@ export default function NotebookPage() {
 
 		if (!mounted) return;
 
+		// biome-ignore lint/suspicious/noExplicitAny: json payload
 		editor.replaceBlocks(editor.document, (notebook.blocks || []) as any);
 		setInitialized(true);
 	}, [
