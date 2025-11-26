@@ -14,18 +14,6 @@ const Labels = {
 		return data;
 	},
 
-	getTimelineLabels: async () => {
-		const response = await fetch(`/api/timeline/labels`);
-		const data = (await response.json()) as Label[];
-		return data;
-	},
-
-	getTimelineTenants: async () => {
-		const response = await fetch(`/api/timeline/tenants`);
-		const data = (await response.json()) as string[];
-		return data;
-	},
-
 	getMetricsLabels: async () => {
 		const response = await fetch(`/api/metrics/labels`);
 		const data = (await response.json()) as Label[];
@@ -34,17 +22,9 @@ const Labels = {
 
 	getAll: async (): Promise<{ labels: Label[]; tenants: string[] }> => {
 		// Fetch both in parallel for better performance
-		const [
-			flowLabels,
-			timelineLabels,
-			flowTenants,
-			timelineTenants,
-			allMetricsLabels,
-		] = await Promise.all([
+		const [flowLabels, flowTenants, allMetricsLabels] = await Promise.all([
 			Labels.getFlowLabels(),
-			Labels.getTimelineLabels(),
 			Labels.getFlowTenants(),
-			Labels.getTimelineTenants(),
 			Labels.getMetricsLabels(),
 		]);
 
@@ -56,14 +36,10 @@ const Labels = {
 		);
 
 		const groupedLabels = groupBy(
-			[...flowLabels, ...timelineLabels, ...metricsLabels],
+			[...flowLabels, ...metricsLabels],
 			(label) => label.label,
 		);
-		const tenants = uniq([
-			...flowTenants,
-			...timelineTenants,
-			...metricsTenants,
-		]);
+		const tenants = uniq([...flowTenants, ...metricsTenants]);
 
 		return {
 			labels: Object.entries(groupedLabels).map(([label, values]) => ({

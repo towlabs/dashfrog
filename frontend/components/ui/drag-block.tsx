@@ -91,8 +91,7 @@ export const DragHandleButton = <
 					Actions
 				</DropdownMenuLabel>
 				{openBlockSettings &&
-					(blockType === "timeline" ||
-						blockType === "flow" ||
+					(blockType === "flow" ||
 						blockType === "flowHistory" ||
 						blockType === "flowStatus" ||
 						blockType === "heatmap" ||

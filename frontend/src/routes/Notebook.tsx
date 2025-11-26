@@ -7,6 +7,8 @@ import {
 	insertOrUpdateBlock,
 } from "@blocknote/core";
 import * as locales from "@blocknote/core/locales";
+import "@blocknote/core/fonts/inter.css";
+import "@blocknote/shadcn/style.css";
 import {
 	SideMenu,
 	SideMenuController,
@@ -45,7 +47,6 @@ import { HeatmapBlock } from "../blocks/HeatmapBlock";
 import { MetricBlock } from "../blocks/MetricBlock";
 import { MetricHistoryBlock } from "../blocks/MetricHistoryBlock";
 import { MetricRatioBlock } from "../blocks/MetricRatioBlock";
-import { TimelineBlock } from "../blocks/TimelineBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
@@ -94,7 +95,6 @@ export default function NotebookPage() {
 			BlockNoteSchema.create({
 				blockSpecs: {
 					...defaultSpecs,
-					timeline: TimelineBlock,
 					flow: FlowBlock,
 					flowHistory: FlowHistoryBlock,
 					flowStatus: FlowStatusBlock,
@@ -166,38 +166,6 @@ export default function NotebookPage() {
 			});
 		}
 	}, editor);
-
-	// const customDragHandleMenu = React.useCallback(
-	// 	(menuProps: DragHandleMenuProps) => {
-	// 		const blockType = menuProps.block.type as string;
-	// 		if (
-	// 			blockType === "timeline" ||
-	// 			blockType === "flow" ||
-	// 			blockType === "flowHistory" ||
-	// 			blockType === "flowStatus" ||
-	// 			blockType === "heatmap" ||
-	// 			blockType === "metric" ||
-	// 			blockType === "metricHistory"
-	// 		) {
-	// 			return (
-	// 				<DragHandleMenu {...menuProps}>
-	// 					<DropdownMenuItem
-	// 						className={"bn-menu-item"}
-	// 						onClick={() => {
-	// 							openBlockSettings(menuProps.block.id);
-	// 						}}
-	// 					>
-	// 						Settings
-	// 					</DropdownMenuItem>
-	// 					<RemoveBlockItem {...menuProps}>Delete</RemoveBlockItem>
-	// 				</DragHandleMenu>
-	// 			);
-	// 		} else {
-	// 			return <DragHandleMenu {...menuProps} />;
-	// 		}
-	// 	},
-	// 	[openBlockSettings],
-	// );
 
 	const customSideMenu = React.useCallback(
 		(props: SideMenuProps) => {
@@ -296,19 +264,6 @@ export default function NotebookPage() {
 									getItems={async (query: string) => {
 										// Simple filter matching title/aliases like defaults
 										const all = getSlashMenuItems(editor, [
-											{
-												title: "Events",
-												onItemClick: () => {
-													insertOrUpdateBlock(editor, {
-														type: "timeline",
-													});
-												},
-												group: "Timeline",
-												subtext: "Table listing of timeline events",
-												icon: <Logs className="size-4.5" />,
-												aliases: ["timeline"],
-											},
-
 											{
 												title: "Flows Table",
 												onItemClick: () => {
