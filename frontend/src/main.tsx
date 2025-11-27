@@ -6,32 +6,44 @@ import "@/src/globals.css";
 import LayoutClient from "@/components/LayoutClient";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/src/routes/Home";
+import Login from "@/src/routes/Login";
 import Notebook from "@/src/routes/Notebook";
 import Tenant from "@/src/routes/Tenant";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const router = createBrowserRouter([
 	{
+		path: "/login",
+		element: <Login />,
+	},
+	{
 		path: "/",
 		element: (
-			<LayoutClient>
-				<Home />
-			</LayoutClient>
+			<ProtectedRoute>
+				<LayoutClient>
+					<Home />
+				</LayoutClient>
+			</ProtectedRoute>
 		),
 	},
 	{
 		path: "/tenants/:tenant",
 		element: (
-			<LayoutClient>
-				<Tenant />
-			</LayoutClient>
+			<ProtectedRoute>
+				<LayoutClient>
+					<Tenant />
+				</LayoutClient>
+			</ProtectedRoute>
 		),
 	},
 	{
 		path: "/tenants/:tenant/notebooks/:notebookId",
 		element: (
-			<LayoutClient>
-				<Notebook />
-			</LayoutClient>
+			<ProtectedRoute>
+				<LayoutClient>
+					<Notebook />
+				</LayoutClient>
+			</ProtectedRoute>
 		),
 	},
 ]);

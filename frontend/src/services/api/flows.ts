@@ -1,11 +1,11 @@
 import { parseJSON } from "date-fns";
+import { fetchWithAuth } from "@/src/lib/fetch-wrapper";
 import type { Filter } from "@/src/types/filter";
 import type {
 	Flow,
 	FlowHistory,
 	FlowHistoryEvent,
 	FlowHistoryStep,
-	FlowRunCount,
 	StaticFlow,
 } from "@/src/types/flow";
 
@@ -123,7 +123,7 @@ const Flows = {
 		end: Date,
 		labels: Filter[],
 	) => {
-		const response = await fetch(`/api/flows/search`, {
+		const response = await fetchWithAuth(`/api/flows/search`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -149,7 +149,7 @@ const Flows = {
 		end: Date,
 		labels: Filter[],
 	): Promise<FlowHistory[]> => {
-		const response = await fetch(`/api/flows/history`, {
+		const response = await fetchWithAuth(`/api/flows/history`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -170,7 +170,7 @@ const Flows = {
 	},
 
 	list: async (): Promise<StaticFlow[]> => {
-		const response = await fetch(`/api/flows/`);
+		const response = await fetchWithAuth(`/api/flows/`);
 		const data = await response.json();
 		return data;
 	},

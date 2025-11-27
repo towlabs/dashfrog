@@ -1,35 +1,21 @@
 import {
 	BarChart3,
 	ChevronRight,
-	Clock,
 	Database,
 	Home,
 	Workflow,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { MetricsTable } from "@/components/MetricsTable";
-import { TenantControls } from "@/components/TenantControls";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useLabelsStore } from "@/src/stores/labels";
-import { useTenantStore } from "@/src/stores/tenant";
-import type { Filter } from "../types/filter";
-import { resolveTimeWindow, type TimeWindow } from "../types/timewindow";
-import React from "react";
 import { StaticFlowTable } from "@/components/StaticFlowTable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTenantStore } from "@/src/stores/tenant";
 
 export default function TenantPage() {
 	const { tenant } = useParams<{ tenant: string }>();
 	const [searchParams, setSearchParams] = useSearchParams();
-	const [timeWindow, setTimeWindow] = useState<TimeWindow>({
-		type: "relative",
-		metadata: { value: "24h" },
-	});
-	const [filters, setFilters] = useState<Filter[]>([]);
 	const setCurrentTenant = useTenantStore((state) => state.setCurrentTenant);
-
-	// Get labels for filter dropdown
-	const labels = useLabelsStore((state) => state.labels);
 
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
@@ -44,11 +30,6 @@ export default function TenantPage() {
 	useEffect(() => {
 		setCurrentTenant(tenantName);
 	}, [tenantName, setCurrentTenant]);
-
-	const { end, start } = React.useMemo(
-		() => resolveTimeWindow(timeWindow),
-		[timeWindow],
-	);
 
 	return (
 		<div className="flex-1 min-w-0 space-y-6 px-8 py-4">
@@ -95,12 +76,7 @@ export default function TenantPage() {
 				</TabsList>
 
 				<TabsContent value="metrics" className="space-y-4">
-					<MetricsTable
-						tenant={tenantName}
-						startDate={start}
-						endDate={end}
-						filters={filters}
-					/>
+					<MetricsTable tenant={tenantName} />
 				</TabsContent>
 
 				<TabsContent value="flows" className="space-y-4">

@@ -1,10 +1,9 @@
 "use client";
 
 import { createReactBlockSpec } from "@blocknote/react";
-import { ChartLine, RectangleHorizontal, SquareDot } from "lucide-react";
+import { ChartLine } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { EmptyState } from "@/components/EmptyState";
 import { LabelBadge } from "@/components/LabelBadge";
 import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
 import { InstantMetricSelector } from "@/components/MetricSelector";

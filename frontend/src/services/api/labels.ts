@@ -1,21 +1,22 @@
 import { flatMap, groupBy, uniq } from "lodash";
+import { fetchWithAuth } from "@/src/lib/fetch-wrapper";
 import type { Label } from "@/src/types/label";
 
 const Labels = {
 	getFlowLabels: async () => {
-		const response = await fetch(`/api/flows/labels`);
+		const response = await fetchWithAuth(`/api/flows/labels`);
 		const data = (await response.json()) as Label[];
 		return data;
 	},
 
 	getFlowTenants: async () => {
-		const response = await fetch(`/api/flows/tenants`);
+		const response = await fetchWithAuth(`/api/flows/tenants`);
 		const data = (await response.json()) as string[];
 		return data;
 	},
 
 	getMetricsLabels: async () => {
-		const response = await fetch(`/api/metrics/labels`);
+		const response = await fetchWithAuth(`/api/metrics/labels`);
 		const data = (await response.json()) as Label[];
 		return data;
 	},

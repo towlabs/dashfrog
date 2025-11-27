@@ -9,4 +9,7 @@ export interface Notebook {
 	blocks: Block[] | null; // JSON content for BlockNote
 	timeWindow: TimeWindow;
 	filters: Filter[];
+	flowBlocksFilters: { names: string[]; filters: Filter[] }[] | null;
+	metricBlocksFilters: { names: string[]; filters: Filter[] }[] | null;
+	isPublic: boolean;
 }

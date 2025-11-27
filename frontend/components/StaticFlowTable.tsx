@@ -1,6 +1,6 @@
 "use client";
 
-import { Workflow, Tag } from "lucide-react";
+import { Tag, Workflow } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { SimplePagination } from "@/components/SimplePagination";

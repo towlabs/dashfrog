@@ -131,7 +131,7 @@ export const useNotebooksStore = create<NotebooksState>()(
 				// Update immediately and start refresh interval (every 5s)
 				updateDates();
 				if (currentNotebook?.timeWindow?.type === "relative") {
-					timeWindowInterval = setInterval(updateDates, 5000);
+					timeWindowInterval = setInterval(updateDates, 15000);
 				}
 
 				return currentNotebook;

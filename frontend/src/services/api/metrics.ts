@@ -1,3 +1,4 @@
+import { fetchWithAuth } from "@/src/lib/fetch-wrapper";
 import { NewRestAPI } from "@/src/services/api/_helper";
 import type { Filter } from "@/src/types/filter";
 import type {
@@ -36,7 +37,7 @@ const Metrics = {
 		instant: InstantMetric[];
 		range: RangeMetric[];
 	}> => {
-		const response = await fetch(`/api/metrics/search`, {
+		const response = await fetchWithAuth(`/api/metrics/search`, {
 			method: "GET",
 			headers: {
 				"Content-Type": "application/json",
@@ -62,7 +63,7 @@ const Metrics = {
 	): Promise<{
 		series: { labels: Record<string, string>; values: MetricHistoryPoint[] }[];
 	}> => {
-		const response = await fetch(`/api/metrics/range`, {
+		const response = await fetchWithAuth(`/api/metrics/range`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -119,7 +120,7 @@ const Metrics = {
 			payload.match_operator = matchOperator;
 			payload.match_value = matchValue;
 		}
-		const response = await fetch(`/api/metrics/instant`, {
+		const response = await fetchWithAuth(`/api/metrics/instant`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",

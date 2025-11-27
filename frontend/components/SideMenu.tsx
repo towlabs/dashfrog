@@ -6,6 +6,7 @@ import {
 	CornerDownRight,
 	Database,
 	Home,
+	LogOut,
 	Plus,
 	Trash2,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/src/stores/auth";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Notebook } from "@/src/types/notebook";
@@ -71,6 +73,7 @@ export default function SideMenu({
 	const createNotebook = useNotebooksStore((state) => state.createNotebook);
 	const deleteNotebook = useNotebooksStore((state) => state.deleteNotebook);
 	const navigate = useNavigate();
+	const logout = useAuthStore((state) => state.logout);
 
 	// Use controlled state if provided, otherwise use internal state
 	const isCollapsed =
@@ -126,6 +129,9 @@ export default function SideMenu({
 				},
 			},
 			filters: [],
+			flowBlocksFilters: null,
+			metricBlocksFilters: null,
+			isPublic: false,
 		};
 
 		// Create notebook (returns immediately with UUID)
@@ -163,6 +169,11 @@ export default function SideMenu({
 			setDeleteDialogOpen(false);
 			setNotebookToDelete(null);
 		}
+	};
+
+	const handleLogout = () => {
+		logout();
+		navigate("/login");
 	};
 
 	return (
@@ -374,6 +385,22 @@ export default function SideMenu({
 						</>
 					)}
 				</nav>
+			</div>
+
+			{/* Logout Button at Bottom */}
+			<div className="border-t p-2">
+				<Button
+					variant="ghost"
+					className={cn(
+						"w-full justify-start gap-3 text-sm font-medium hover:bg-accent",
+						isCollapsed && "justify-center px-2",
+					)}
+					style={{ color: "#5f5e5b" }}
+					onClick={handleLogout}
+				>
+					<LogOut className="h-4 w-4 shrink-0" />
+					{!isCollapsed && <span className="flex-1 text-left">Logout</span>}
+				</Button>
 			</div>
 
 			<SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />

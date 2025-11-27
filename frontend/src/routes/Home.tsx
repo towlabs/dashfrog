@@ -1,4 +1,5 @@
 import { Building2, Home as HomeIcon } from "lucide-react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";
@@ -16,6 +17,13 @@ export default function HomePage() {
 	const tenants = useLabelsStore((state) => state.tenants);
 	const loading = useLabelsStore((state) => state.loading);
 	const navigate = useNavigate();
+	const fetchLabelsAndTenants = useLabelsStore(
+		(state) => state.fetchLabelsAndTenants,
+	);
+
+	useEffect(() => {
+		void fetchLabelsAndTenants();
+	}, [fetchLabelsAndTenants]);
 
 	const handleTenantClick = (tenantName: string) => {
 		navigate(`/tenants/${encodeURIComponent(tenantName)}`);

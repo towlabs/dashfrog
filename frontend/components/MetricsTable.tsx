@@ -1,12 +1,12 @@
 "use client";
 
+import { addDays } from "date-fns";
 import { CaseUpper, ChartLine, Tags } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
 import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
 import { SimplePagination } from "@/components/SimplePagination";
 import { TableSkeleton } from "@/components/TableSkeleton";
-import { addDays } from "date-fns";
 import {
 	Table,
 	TableBody,
@@ -21,14 +21,10 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Metrics } from "@/src/services/api/metrics";
-import type { Filter } from "@/src/types/filter";
 import type { RangeMetric } from "@/src/types/metric";
 
 type MetricsTableProps = {
 	tenant: string;
-	startDate: Date;
-	endDate: Date;
-	filters: Filter[];
 };
 
 const ITEMS_PER_PAGE = 14;

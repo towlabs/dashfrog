@@ -1,56 +1,15 @@
 "use client";
 
-import {
-	type Block,
-	BlockNoteSchema,
-	defaultBlockSpecs,
-	insertOrUpdateBlock,
-} from "@blocknote/core";
-import * as locales from "@blocknote/core/locales";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
-import {
-	SideMenu,
-	SideMenuController,
-	type SideMenuProps,
-	SuggestionMenuController,
-	useEditorChange,
-} from "@blocknote/react";
-import { BlockNoteView } from "@blocknote/shadcn";
-import {
-	multiColumnDropCursor,
-	locales as multiColumnLocales,
-	withMultiColumn,
-} from "@blocknote/xl-multi-column";
-import {
-	ChartLine,
-	ChevronRight,
-	History,
-	Home,
-	LayoutGrid,
-	Logs,
-	RectangleEllipsis,
-	SquareDivide,
-	SquareDot,
-	Table2,
-} from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { ChevronRight, Home } from "lucide-react";
+import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
+import BlockNoteEditor from "@/components/BlockNoteEditor";
 import { TenantControls } from "@/components/TenantControls";
-import { AddBlockButton } from "@/components/ui/add-block";
-import { DragHandleButton } from "@/components/ui/drag-block";
-import { SuggestionMenu } from "@/components/ui/suggestion-menu";
-import { FlowBlock } from "../blocks/FlowBlock";
-import { FlowHistoryBlock } from "../blocks/FlowHistoryBlock";
-import { FlowStatusBlock } from "../blocks/FlowStatusBlock";
-import { HeatmapBlock } from "../blocks/HeatmapBlock";
-import { MetricBlock } from "../blocks/MetricBlock";
-import { MetricHistoryBlock } from "../blocks/MetricHistoryBlock";
-import { MetricRatioBlock } from "../blocks/MetricRatioBlock";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
-import { customEditor, getSlashMenuItems } from "../utils/editor";
 
 export default function NotebookPage() {
 	const { tenant, notebookId } = useParams<{
@@ -70,9 +29,6 @@ export default function NotebookPage() {
 	);
 	const updateNotebook = useNotebooksStore((state) => state.updateNotebook);
 	const notebooksAreLoading = useNotebooksStore((state) => state.loading);
-	const setOpenBlockSettings = useNotebooksStore(
-		(state) => state.openBlockSettings,
-	);
 	const fetchFlows = useNotebooksStore((state) => state.fetchFlows);
 	const fetchMetrics = useNotebooksStore((state) => state.fetchMetrics);
 	const notebookCreating = useNotebooksStore((state) => state.notebookCreating);
@@ -81,68 +37,20 @@ export default function NotebookPage() {
 	);
 	const startDate = useNotebooksStore((state) => state.startDate);
 	const endDate = useNotebooksStore((state) => state.endDate);
-	const [initialized, setInitialized] = useState(false);
-	const [mounted, setMounted] = useState(false);
 
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
 
-	// Create BlockNote editor instance
-	// biome-ignore lint/correctness/noUnusedVariables: removing table from defaultSpecs
-	const { table, ...defaultSpecs } = defaultBlockSpecs;
-	const editor = customEditor({
-		schema: withMultiColumn(
-			BlockNoteSchema.create({
-				blockSpecs: {
-					...defaultSpecs,
-					flow: FlowBlock,
-					flowHistory: FlowHistoryBlock,
-					flowStatus: FlowStatusBlock,
-					heatmap: HeatmapBlock,
-					metric: MetricBlock,
-					metricHistory: MetricHistoryBlock,
-					metricRatio: MetricRatioBlock,
-				},
-			}),
-		),
-		dropCursor: multiColumnDropCursor,
-		dictionary: {
-			...locales.en,
-			multi_column: multiColumnLocales.en,
-		},
-		placeholders: {
-			...locales.en.placeholders,
-			emptyDocument: "Write or press '/' for commands",
-			default: "Write or press '/' for commands",
-		},
-		extensions: [],
-	});
-
-	editor.onMount(() => {
-		setMounted(true);
-	});
-
 	useEffect(() => {
 		if (!tenant || !notebookId || notebooksAreLoading) return;
 		setCurrentTenant(tenant);
-		const notebook = setCurrentNotebook(tenant, notebookId);
-		if (!notebook) return;
-
-		setInitialized(false);
-
-		if (!mounted) return;
-
-		// biome-ignore lint/suspicious/noExplicitAny: json payload
-		editor.replaceBlocks(editor.document, (notebook.blocks || []) as any);
-		setInitialized(true);
+		setCurrentNotebook(tenant, notebookId);
 	}, [
 		notebookId,
 		tenant,
 		setCurrentNotebook,
-		editor,
 		notebooksAreLoading,
 		setCurrentTenant,
-		mounted,
 	]);
 
 	useEffect(() => {
@@ -156,28 +64,6 @@ export default function NotebookPage() {
 		void fetchFlows(tenant, startDate, endDate, filters);
 		void fetchMetrics();
 	}, [tenant, fetchFlows, fetchMetrics, startDate, endDate, filters]);
-
-	// Save editor content changes (debounced in store)
-	useEditorChange((editor) => {
-		if (tenantName && currentNotebook && !notebookCreating && initialized) {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			updateNotebook(tenantName, currentNotebook, {
-				blocks: editor.document as Block[],
-			});
-		}
-	}, editor);
-
-	const customSideMenu = React.useCallback(
-		(props: SideMenuProps) => {
-			return (
-				<SideMenu {...props}>
-					<AddBlockButton {...props} />
-					<DragHandleButton openBlockSettings={openBlockSettings} {...props} />
-				</SideMenu>
-			);
-		},
-		[openBlockSettings],
-	);
 
 	return (
 		<div className="flex-1 flex flex-col h-screen">
@@ -219,162 +105,12 @@ export default function NotebookPage() {
 			{/* Notebook Content */}
 			<div className="flex-1 overflow-y-auto">
 				{currentNotebook && !notebookCreating && (
-					<div className="mx-auto py-12">
-						{/* Title - Editable */}
-						<div className="mx-32">
-							<input
-								type="text"
-								value={currentNotebook.title}
-								onChange={(e) => {
-									updateNotebook(tenantName, currentNotebook, {
-										title: e.target.value,
-									});
-								}}
-								placeholder="Untitled"
-								className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground"
-							/>
-
-							{/* Description - Editable */}
-							<input
-								type="text"
-								value={currentNotebook.description}
-								onChange={(e) => {
-									updateNotebook(tenantName, currentNotebook, {
-										description: e.target.value,
-									});
-								}}
-								placeholder="Add a description..."
-								className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground"
-							/>
-						</div>
-
-						{/* BlockNote Editor */}
-						<div className="mx-19 mb-32">
-							<BlockNoteView
-								editor={editor}
-								// key={notebook.id}
-								theme="light"
-								slashMenu={false}
-								sideMenu={false}
-								// tableHandles={false}
-							>
-								<SuggestionMenuController
-									triggerCharacter="/"
-									suggestionMenuComponent={SuggestionMenu}
-									getItems={async (query: string) => {
-										// Simple filter matching title/aliases like defaults
-										const all = getSlashMenuItems(editor, [
-											{
-												title: "Flows Table",
-												onItemClick: () => {
-													insertOrUpdateBlock(editor, {
-														type: "flow",
-													});
-												},
-												group: "Flows",
-												subtext:
-													"List of all flows with information about their last run",
-												icon: <Table2 className="size-4.5" />,
-												aliases: [],
-											},
-											{
-												title: "Flow History",
-												onItemClick: () => {
-													const block = insertOrUpdateBlock(editor, {
-														type: "flowHistory",
-													});
-													setOpenBlockSettings(block.id);
-												},
-												group: "Flows",
-												subtext: "List of all executions for a given flow",
-												icon: <History className="size-4.5" />,
-												aliases: [],
-											},
-											{
-												title: "Flow Card",
-												onItemClick: () => {
-													const block = insertOrUpdateBlock(editor, {
-														type: "flowStatus",
-													});
-													setOpenBlockSettings(block.id);
-												},
-												group: "Flows",
-												subtext:
-													"Card showing key information about a specific flow",
-												icon: <RectangleEllipsis className="size-4.5" />,
-												aliases: ["run counts", "flow run count"],
-											},
-											{
-												title: "Heatmap",
-												onItemClick: () => {
-													const block = insertOrUpdateBlock(editor, {
-														type: "heatmap",
-													});
-													setOpenBlockSettings(block.id);
-												},
-												group: "Flows",
-												subtext:
-													"Heatmap showing daily status for a given flow",
-												icon: <LayoutGrid className="size-4.5" />,
-												aliases: ["flow heatmap"],
-											},
-											{
-												title: "Number",
-												onItemClick: () => {
-													const block = insertOrUpdateBlock(editor, {
-														type: "metric",
-													});
-													setOpenBlockSettings(block.id);
-												},
-												group: "Metrics",
-												subtext:
-													"Display a metric value aggregated across time window. For example, the total number of signups.",
-												icon: <SquareDot className="size-4.5" />,
-												aliases: ["metric"],
-											},
-											{
-												title: "Chart",
-												onItemClick: () => {
-													const block = insertOrUpdateBlock(editor, {
-														type: "metricHistory",
-													});
-													setOpenBlockSettings(block.id);
-												},
-												group: "Metrics",
-												subtext:
-													"Chart showing metric history over time. For example, the number of signups over time.",
-												icon: <ChartLine className="size-4.5" />,
-												aliases: ["metric history"],
-											},
-											{
-												title: "Metric Ratio",
-												onItemClick: () => {
-													const block = insertOrUpdateBlock(editor, {
-														type: "metricRatio",
-													});
-													setOpenBlockSettings(block.id);
-												},
-												group: "Metrics",
-												subtext:
-													"Display ratio between two metrics. For example, the ratio of US signups to global signups.",
-												icon: <SquareDivide className="size-4.5" />,
-												aliases: ["metric ratio", "percentage"],
-											},
-										]);
-										const q = query.trim().toLowerCase();
-										return q
-											? all.filter(
-													(i) =>
-														i.title?.toLowerCase().includes(q) ||
-														i.aliases?.some((a: string) => a.includes(q)),
-												)
-											: all;
-									}}
-								/>
-								<SideMenuController sideMenu={customSideMenu} />
-							</BlockNoteView>
-						</div>
-					</div>
+					<BlockNoteEditor
+						tenantName={tenantName}
+						notebook={currentNotebook}
+						openBlockSettings={openBlockSettings}
+						updateNotebook={updateNotebook}
+					/>
 				)}
 				{(!currentNotebook || notebookCreating) && (
 					<div className="mx-auto py-12">

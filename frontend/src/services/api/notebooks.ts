@@ -1,4 +1,5 @@
 import type { Block } from "@blocknote/core";
+import { fetchWithAuth } from "@/src/lib/fetch-wrapper";
 import type { Filter } from "@/src/types/filter";
 import type { Notebook } from "@/src/types/notebook";
 import type { RelativeTimeValue } from "@/src/types/timewindow";
@@ -19,12 +20,15 @@ export const Notebooks = {
 	getAll: async (tenant: string): Promise<Notebook[]> => {
 		const query = new URLSearchParams();
 		query.set("tenant", tenant);
-		const response = await fetch(`/api/notebooks/list?${query.toString()}`, {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
+		const response = await fetchWithAuth(
+			`/api/notebooks/list?${query.toString()}`,
+			{
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+				},
 			},
-		});
+		);
 		return (await response.json()).map((notebook: NotebookResponse) => ({
 			...notebook,
 			timeWindow:
@@ -46,7 +50,7 @@ export const Notebooks = {
 
 	// Create a new notebook
 	create: async (tenant: string, notebook: Notebook): Promise<null> => {
-		const response = await fetch(`/api/notebooks/create`, {
+		const response = await fetchWithAuth(`/api/notebooks/create`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -61,13 +65,16 @@ export const Notebooks = {
 
 	// Update a notebook
 	update: async (notebook: Notebook): Promise<null> => {
-		const response = await fetch(`/api/notebooks/${notebook.id}/update`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
+		const response = await fetchWithAuth(
+			`/api/notebooks/${notebook.id}/update`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(notebook),
 			},
-			body: JSON.stringify(notebook),
-		});
+		);
 
 		if (!response.ok) {
 			throw new Error(`Failed to update notebook: ${response.statusText}`);
@@ -78,7 +85,7 @@ export const Notebooks = {
 
 	// Delete a notebook
 	delete: async (notebookId: string): Promise<void> => {
-		const response = await fetch(`/api/notebooks/${notebookId}`, {
+		const response = await fetchWithAuth(`/api/notebooks/${notebookId}`, {
 			method: "DELETE",
 			headers: {
 				"Content-Type": "application/json",

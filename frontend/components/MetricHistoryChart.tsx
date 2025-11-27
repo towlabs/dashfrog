@@ -334,7 +334,16 @@ export function MetricHistoryChart({
 							type="monotone"
 							stroke={chartColors[i % chartColors.length]}
 							strokeWidth={isHovered ? 3 : 2}
-							dot={false}
+							dot={{
+								fill: chartColors[i % chartColors.length],
+								strokeWidth: isHovered ? 2 : 0,
+								r: isHovered ? 5 : 3,
+							}}
+							activeDot={{
+								r: 6,
+								strokeWidth: 2,
+								stroke: "var(--background)",
+							}}
 							hide={isHidden}
 							strokeOpacity={isHidden ? 0 : shouldDim ? 0.2 : 1}
 						/>
