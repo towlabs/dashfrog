@@ -1,20 +1,23 @@
 """Metrics API routes."""
 
 from datetime import datetime
-from typing import Annotated, Callable, Literal
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 import requests
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from dashfrog_python_sdk import get_dashfrog_instance
-from .auth import verify_has_access_to_notebook, security, verify_token, verify_token_string
-from dashfrog_python_sdk.models import Metric as MetricModel, Notebook
+from dashfrog_python_sdk.models import (
+    Metric as MetricModel,
+    Notebook,
+)
 
+from .auth import security, verify_has_access_to_notebook, verify_token, verify_token_string
 from .schemas import (
     BlockFilters,
     DataPoint,

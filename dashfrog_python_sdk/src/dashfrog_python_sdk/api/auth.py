@@ -1,7 +1,6 @@
 """Authentication for DashFrog API."""
 
 import datetime
-from datetime import timezone
 from itertools import chain
 from typing import Annotated
 

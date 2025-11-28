@@ -13,8 +13,8 @@ from dashfrog_python_sdk.api.schemas import CommentResponse, CreateCommentReques
 from dashfrog_python_sdk.dashfrog import get_dashfrog_instance
 from dashfrog_python_sdk.models import Comment, Notebook
 from dashfrog_python_sdk.utils import get_time_range_from_time_window
-from .auth import security, verify_token, verify_token_string
 
+from .auth import security, verify_token, verify_token_string
 
 router = APIRouter(prefix="/api/comments", tags=["comments"])
 

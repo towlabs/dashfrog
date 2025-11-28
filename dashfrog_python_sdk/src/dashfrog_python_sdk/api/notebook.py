@@ -2,16 +2,15 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from dashfrog_python_sdk.api.schemas import BlockFilters, CreateNotebookRequest, SerializedNotebook
 from dashfrog_python_sdk.dashfrog import get_dashfrog_instance
 from dashfrog_python_sdk.models import Notebook
+
 from .auth import security, verify_token, verify_token_string
-
-
 
 router = APIRouter(prefix="/api/notebooks", tags=["notebooks"])
 

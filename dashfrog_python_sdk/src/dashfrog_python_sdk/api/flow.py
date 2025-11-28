@@ -13,7 +13,6 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from dashfrog_python_sdk import get_dashfrog_instance
-from .auth import security, verify_has_access_to_notebook, verify_token
 from dashfrog_python_sdk.constants import (
     BAGGAGE_FLOW_LABEL_NAME,
     BAGGAGE_STEP_LABEL_NAME,
@@ -27,6 +26,7 @@ from dashfrog_python_sdk.constants import (
 )
 from dashfrog_python_sdk.models import Flow, FlowEvent, Notebook
 
+from .auth import security, verify_has_access_to_notebook, verify_token
 from .schemas import (
     BlockFilters,
     FlowHistory,

@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from functools import wraps
 import time
-from typing import Callable, Iterator, Literal, Protocol
+from typing import Iterator, Protocol
 
 from .constants import MetricUnitT
 from .dashfrog import get_dashfrog_instance

@@ -1,8 +1,7 @@
 """SQLAlchemy models for DashFrog."""
 
 from datetime import datetime
-from typing import Any, Literal, TypedDict
-import uuid
+from typing import Any, Literal
 from uuid import UUID
 
 from sqlalchemy import BigInteger, Index, String, func
