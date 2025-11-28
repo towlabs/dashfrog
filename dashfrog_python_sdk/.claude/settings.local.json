@@ -45,7 +45,10 @@
       "Bash(/tmp/sidemenu_part2.tsx)",
       "Bash(.venv/bin/ruff check tests/test_api.py --fix)",
       "Bash(.venv/bin/ruff check src/dashfrog_python_sdk/api/metric.py)",
-      "Bash(.venv/bin/grep:*)"
+      "Bash(.venv/bin/grep:*)",
+      "Bash(chmod:*)",
+      "Bash(uv pip install:*)",
+      "Bash(uv pip uninstall:*)"
     ],
     "deny": [],
     "ask": []

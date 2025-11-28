@@ -29,7 +29,7 @@ __version__ = "0.1.0"
 
 # Core setup and configuration
 # Submodules (users import from these)
-from . import flow, metrics, migrations, models, step, timeline
+from . import flow, metrics, migrations, models, step
 from .config import Config
 from .dashfrog import Dashfrog, get_dashfrog_instance, setup
 
@@ -52,7 +52,6 @@ __all__ = [
     # Submodules
     "flow",
     "step",
-    "timeline",
     "models",
     "migrations",
     "metrics",

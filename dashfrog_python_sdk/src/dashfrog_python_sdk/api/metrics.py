@@ -1,9 +1,10 @@
 """Metrics API routes."""
 
 from datetime import datetime
-from typing import Callable
+from typing import Annotated, Callable, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 import requests
 from sqlalchemy import select
@@ -11,20 +12,28 @@ from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 
 from dashfrog_python_sdk import get_dashfrog_instance
-from dashfrog_python_sdk.models import Metric as MetricModel
+from .auth import verify_has_access_to_notebook, security, verify_token, verify_token_string
+from dashfrog_python_sdk.models import Metric as MetricModel, Notebook
 
 from .schemas import (
+    BlockFilters,
     DataPoint,
+    GroupByFnT,
     InstantMetric,
+    InstantMetricRequest,
+    InstantMetricResponse,
     Label,
-    MetricRequest,
-    MetricResponse,
+    LabelFilter,
     RangeMetric,
+    RangeMetricRequest,
+    RangeMetricResponse,
+    TimeAggregationT,
+    TransformT,
 )
 
-router = APIRouter(prefix="/metrics", tags=["metrics"])
+router = APIRouter(prefix="/api/metrics", tags=["metrics"])
 
-_STEP = "300s"
+_STEP = "60s"
 
 
 def get_range_resolution(start_time: datetime, end_time: datetime) -> str:
@@ -82,14 +91,13 @@ def get_range_resolution(start_time: datetime, end_time: datetime) -> str:
         return "1d"  # Maximum step for very long ranges
 
 
-class MetricSearchRequest(BaseModel):
-    """Request body for searching/listing metrics."""
+class SearchMetricsResponse(BaseModel):
+    instant: list[InstantMetricResponse]
+    range: list[RangeMetricResponse]
 
-    labels: list[str] = Field(default_factory=list, description="Filter metrics by label names")
 
-
-@router.post("/search", response_model=list[MetricResponse])
-async def search_metrics(request: MetricSearchRequest) -> list[MetricResponse]:
+@router.get("/search", response_model=SearchMetricsResponse)
+async def search_metrics(auth: Annotated[None, Depends(verify_token)]) -> SearchMetricsResponse:
     """Search/list metrics with optional label filters.
 
     Args:
@@ -104,80 +112,176 @@ async def search_metrics(request: MetricSearchRequest) -> list[MetricResponse]:
     If labels is empty, returns all metrics.
     """
     dashfrog = get_dashfrog_instance()
+    instant_metrics: list[InstantMetricResponse] = []
+    range_metrics: list[RangeMetricResponse] = []
 
-    with dashfrog.db_engine.connect() as conn:
-        query = select(MetricModel)
+    with Session(dashfrog.db_engine) as session:
+        result = session.execute(select(MetricModel)).scalars()
 
-        # Add filter conditions for each required label
-        for label in request.labels:
-            # Use PostgreSQL array contains operator (@>) to check if label exists
-            query = query.where(MetricModel.labels.contains([label]))
+        for metric in result:
+            if metric.type == "counter":
+                range_transforms: list[TransformT | None] = [
+                    "ratePerSecond",
+                    "ratePerMinute",
+                    "ratePerHour",
+                    "ratePerDay",
+                ]
+                pretty_names = [
+                    f"{metric.pretty_name} per second",
+                    f"{metric.pretty_name} per minute",
+                    f"{metric.pretty_name} per hour",
+                    f"{metric.pretty_name} per day",
+                ]
+                group_by: list[GroupByFnT] = ["sum"]
+            elif metric.type == "histogram":
+                range_transforms = [
+                    "p50",
+                    "p90",
+                    "p95",
+                    "p99",
+                ]
+                pretty_names = [
+                    f"{metric.pretty_name} 50th percentile",
+                    f"{metric.pretty_name} 90th percentile",
+                    f"{metric.pretty_name} 95th percentile",
+                    f"{metric.pretty_name} 99th percentile",
+                ]
+                group_by = ["sum"]
+            else:
+                range_transforms = [None]
+                pretty_names = [metric.pretty_name]
+                group_by = ["sum", "avg", "min", "max"]
 
-        result = conn.execute(query).fetchall()
+            for transform, pretty_name in zip(
+                range_transforms,
+                pretty_names,
+            ):
+                range_metrics.append(
+                    RangeMetricResponse(
+                        prometheusName=metric.name,
+                        prettyName=pretty_name,
+                        type=metric.type,
+                        unit=metric.unit,
+                        labels=metric.labels,
+                        transform=transform,
+                        groupBy=group_by,
+                    )
+                )
+                instant_metrics.append(
+                    InstantMetricResponse(
+                        prometheusName=metric.name,
+                        prettyName=pretty_name,
+                        type=metric.type,
+                        unit=metric.unit,
+                        labels=metric.labels,
+                        transform=transform,
+                        groupBy=group_by,
+                        timeAggregation=["last", "avg", "min", "max", "match"],
+                    )
+                )
+            if metric.type == "counter":
+                instant_metrics.append(
+                    InstantMetricResponse(
+                        prometheusName=metric.name,
+                        prettyName=metric.pretty_name,
+                        type=metric.type,
+                        unit=metric.unit,
+                        labels=metric.labels,
+                        transform=None,
+                        timeAggregation=["last"],
+                        groupBy=["sum"],
+                    )
+                )
 
-        return [
-            MetricResponse(
-                name=metric.name,
-                prettyName=metric.pretty_name,
-                type=metric.type,
-                unit=metric.unit,
-                defaultAggregation=metric.aggregation,
-                labels=metric.labels,
-            )
-            for metric in result
-        ]
+        return SearchMetricsResponse(instant=instant_metrics, range=range_metrics)
 
 
-def get_range_metric_promql(metric: MetricModel, request: MetricRequest) -> tuple[str, str]:
-    label_filters = [f'{label.key}="{label.value}"' for label in request.labels if label.key in metric.labels]
-    metric_name = (
-        f"dashfrog_{metric.name}" if not request.labels else f"dashfrog_{metric.name}{{{','.join(label_filters)}}}"
-    )
+def get_range_metric_promql(
+    metric: MetricModel,
+    transform: TransformT | None,
+    labels: list[LabelFilter],
+    group_by_labels: list[str],
+    group_fn: GroupByFnT,
+) -> str:
+    metric_name = get_metric_name(metric, labels)
+
     if metric.type == "counter":
-        if metric.aggregation.startswith("rate"):
-            return metric_name, spatial_agg(metric, f"rate({metric_name}[{_STEP}])")
-        else:
-            return metric_name, spatial_agg(metric, f"increase({metric_name}[{_STEP}])")
+        assert transform is not None
+        return group_by(group_fn, rate(metric_name, transform), group_by_labels)
+    elif metric.type == "histogram":
+        assert transform is not None
+        percentile = int(transform.replace("p", "")) / 100
+        rate_expr = f"rate({metric_name}[{_STEP}])"
+        return f"histogram_quantile({percentile}, {group_by('sum', rate_expr, group_by_labels)})"
     else:
-        percentile = int(metric.aggregation.replace("p", "")) / 100
-        rate_metric = f"rate({metric_name}[{_STEP}])"
-        return metric_name, f"histogram_quantile({percentile}, {spatial_agg(metric, rate_metric)})"
+        return group_by(group_fn, metric_name, group_by_labels)
 
 
-def get_instant_metric_promql(metric: MetricModel, request: MetricRequest) -> str:
-    window_in_seconds = int((request.end_time - request.start_time).total_seconds())
+def get_instant_metric_promql(
+    metric: MetricModel,
+    transform: TransformT | None,
+    time_aggregation: TimeAggregationT,
+    group_by_labels: list[str],
+    group_fn: GroupByFnT,
+    match_operator: Literal["==", "!=", ">=", "<=", ">", "<"] | None,
+    match_value: float | None,
+    start_time: datetime,
+    end_time: datetime,
+    labels: list[LabelFilter],
+) -> str:
+    window_in_seconds = int((end_time - start_time).total_seconds())
     window = f"{window_in_seconds}s"
-    metric_name, vector_promql = get_range_metric_promql(metric, request)
+    metric_name = get_metric_name(metric, labels)
 
-    if metric.type == "counter":
-        if metric.aggregation.startswith("rate"):
-            return temporal_agg(metric, _STEP, window)(vector_promql)
-        else:
-            return spatial_agg(metric, f"increase({metric_name}[{window}])")
-    else:
-        return temporal_agg(metric, _STEP, window)(vector_promql)
+    if metric.type == "counter" and not transform:
+        return group_by(group_fn, f"increase({metric_name}[{window}])", group_by_labels)
+
+    vector_promql = get_range_metric_promql(metric, transform, labels, group_by_labels, group_fn)
+    if time_aggregation == "last":
+        return vector_promql
+    if time_aggregation == "match":
+        assert match_operator is not None and match_value is not None
+        return f"avg_over_time(({vector_promql} {match_operator} bool {match_value})[{window}:{_STEP}])"
+
+    return f"{time_aggregation}_over_time({vector_promql}[{window}:{_STEP}])"
 
 
-def spatial_agg(metric: MetricModel, prom_expr: str) -> str:
-    return f"sum({prom_expr})" if not metric.labels else f"sum by ({','.join(metric.labels)})({prom_expr})"
+def get_metric_name(metric: MetricModel, labels: list[LabelFilter]) -> str:
+    label_filters = [
+        f'{label.label}="{label.value}"' for label in labels if label.label in set(metric.labels) | {"tenant"}
+    ]
+    return f"dashfrog_{metric.name}" if not labels else f"dashfrog_{metric.name}{{{','.join(label_filters)}}}"
 
 
-def temporal_agg(metric: MetricModel, step: str, window: str) -> Callable[[str], str]:
-    match metric.aggregation:
-        case "ratePerSecond":
-            return lambda prom_expr: f"avg_over_time({prom_expr}[{window}:{step}])"
+def group_by(fn: GroupByFnT, prom_expr: str, labels: list[str]) -> str:
+    return f"{fn}({prom_expr})" if not labels else f"{fn} by ({','.join(labels)})({prom_expr})"
+
+
+def rate(metric_name: str, transform: TransformT) -> str:
+    match transform:
         case "ratePerMinute":
-            return lambda prom_expr: f"avg_over_time({prom_expr}[{window}:{step}]) * 60"
+            return f"(rate({metric_name}[{_STEP}]) * 60)"
         case "ratePerHour":
-            return lambda prom_expr: f"avg_over_time({prom_expr}[{window}:{step}]) * 3600"
+            return f"(rate({metric_name}[{_STEP}]) * 3600)"
         case "ratePerDay":
-            return lambda prom_expr: f"avg_over_time({prom_expr}[{window}:{step}]) * 86400"
+            return f"(rate({metric_name}[{_STEP}]) * 86400)"
         case _:
-            return lambda prom_expr: f"avg_over_time({prom_expr}[{window}:{step}])"
+            return f"rate({metric_name}[{_STEP}])"
 
 
-@router.post("/instant", response_model=list[InstantMetric])
-async def get_instant_metric(request: MetricRequest) -> list[InstantMetric]:
+class InstantResponse(BaseModel):
+    type: Literal["counter", "histogram", "gauge"]
+    unit: str | None
+    prettyName: str
+    transform: TransformT | None
+    scalars: list[InstantMetric]
+
+
+@router.post("/instant", response_model=InstantResponse)
+async def get_instant_metric(request: InstantMetricRequest, 
+
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
+) -> InstantResponse:
     """Query Prometheus for instant metric value over a time range.
 
     This endpoint generates an instant query that aggregates data over the time window
@@ -208,8 +312,27 @@ async def get_instant_metric(request: MetricRequest) -> list[InstantMetric]:
         except NoResultFound:
             raise HTTPException(status_code=404, detail=f"Metric {request.metric_name} not found")
 
+        try:
+            notebook = session.execute(select(Notebook).where(Notebook.id == request.notebook_id)).scalar_one()
+        except NoResultFound:
+            raise HTTPException(status_code=404, detail=f"Notebook {request.notebook_id} not found")
+
+        tenant = next((label.value for label in request.labels if label.label == "tenant"))
+        verify_has_access_to_notebook(credentials, notebook, tenant, request.start_time, request.end_time, metric_filter=BlockFilters(names=[request.metric_name], filters=request.labels))
+
         # Generate PromQL query
-        promql = get_instant_metric_promql(metric, request)
+        promql = get_instant_metric_promql(
+            metric,
+            request.transform,
+            request.time_aggregation,
+            request.group_by,
+            request.group_fn,
+            request.match_operator,
+            request.match_value,
+            request.start_time,
+            request.end_time,
+            request.labels,
+        )
 
         response = requests.get(
             f"{dashfrog.config.prometheus_endpoint}/api/v1/query",
@@ -220,21 +343,30 @@ async def get_instant_metric(request: MetricRequest) -> list[InstantMetric]:
         if response.status_code != 200:
             raise HTTPException(status_code=502, detail="Prometheus query failed")
 
-        prom_data = response.json()["data"]["result"]
+        return InstantResponse(
+            type=metric.type,
+            unit=metric.unit,
+            prettyName=metric.pretty_name,
+            transform=request.transform,
+            scalars=[
+                InstantMetric(labels=item["metric"], value=float(item["value"][1]))
+                for item in response.json()["data"]["result"]
+                if item["value"][1] != "NaN"
+            ]
+        )
 
-        return [
-            InstantMetric(
-                metric_name=request.metric_name,
-                labels={label: item["metric"][label] for label in metric.labels},
-                value=float(item["value"][1]),
-            )
-            for item in prom_data
-            if item["value"][1] != "NaN"
-        ]
+
+class RangeResponse(BaseModel):
+    unit: str | None
+    prettyName: str
+    transform: TransformT | None
+    series: list[RangeMetric]
 
 
-@router.post("/range", response_model=list[RangeMetric])
-async def get_range_metric(request: MetricRequest) -> list[RangeMetric]:
+@router.post("/range", response_model=RangeResponse)
+async def get_range_metric(request: RangeMetricRequest, 
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
+) -> RangeResponse:
     """Query Prometheus for range metric value.
 
     This endpoint generates a range query that returns the value over a time range.
@@ -263,7 +395,20 @@ async def get_range_metric(request: MetricRequest) -> list[RangeMetric]:
             raise HTTPException(status_code=404, detail=f"Metric {request.metric_name} not found")
 
         # Generate PromQL query
-        _metric_name, promql = get_range_metric_promql(metric, request)
+        promql = get_range_metric_promql(metric, request.transform, request.labels, request.group_by, request.group_fn)
+
+        if request.notebook_id is not None:
+            try:
+                notebook = session.execute(select(Notebook).where(Notebook.id == request.notebook_id)).scalar_one()
+            except NoResultFound:
+                raise HTTPException(status_code=404, detail=f"Notebook {request.notebook_id} not found")
+
+            tenant = next((label.value for label in request.labels if label.label == "tenant"))
+            verify_has_access_to_notebook(credentials, notebook, tenant, request.start_time, request.end_time, metric_filter=BlockFilters(names=[request.metric_name], filters=request.labels))
+        else:
+            if credentials is None:
+                raise HTTPException(status_code=401, detail="Unauthorized")
+            verify_token_string(credentials.credentials)
 
         response = requests.get(
             f"{dashfrog.config.prometheus_endpoint}/api/v1/query_range",
@@ -280,22 +425,26 @@ async def get_range_metric(request: MetricRequest) -> list[RangeMetric]:
             raise HTTPException(status_code=502, detail="Prometheus query failed")
 
         prom_data = response.json()["data"]["result"]
-        return [
-            RangeMetric(
-                metric_name=request.metric_name,
-                labels={label: item["metric"][label] for label in metric.labels},
-                values=[
-                    DataPoint(timestamp=timestamp, value=float(value))
-                    for timestamp, value in item["values"]
-                    if value != "NaN"
-                ],
-            )
-            for item in prom_data
-        ]
+        return RangeResponse(
+            unit=metric.unit,
+            transform=request.transform,
+            prettyName=metric.pretty_name,
+            series=[
+                RangeMetric(
+                    labels={label: item["metric"][label] for label in metric.labels if label in item["metric"]},
+                    values=[
+                        DataPoint(timestamp=timestamp, value=float(value))
+                        for timestamp, value in item["values"]
+                        if value != "NaN"
+                    ],
+                )
+                for item in prom_data
+            ]
+        )
 
 
 @router.get("/labels", response_model=list[Label])
-async def get_all_metric_labels() -> list[Label]:
+async def get_all_metric_labels(auth: Annotated[None, Depends(verify_token)]) -> list[Label]:
     """Fetch all labels and their values from Prometheus."""
     dashfrog = get_dashfrog_instance()
 
@@ -304,6 +453,9 @@ async def get_all_metric_labels() -> list[Label]:
         metrics = conn.execute(select(MetricModel)).fetchall()
         metric_labels = {label for metric in metrics for label in metric.labels} | {"tenant"}
         metric_names = {metric.name for metric in metrics}
+
+    if not metric_names:
+        return []
 
     # Step 2: Fetch all series from Prometheus
     try:

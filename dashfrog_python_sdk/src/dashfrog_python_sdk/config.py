@@ -30,14 +30,19 @@ class Config(BaseModel):
     """
 
     # Postgres
-    postgres_host: str = environ.get("DASHFROG_POSTGRES_HOST", "localhost")
+    postgres_host: str = environ.get("DASHFROG_POSTGRES_HOST", "postgres")
     postgres_port: int = int(environ.get("DASHFROG_POSTGRES_PORT", "5432"))
-    postgres_dbname: str = environ.get("DASHFROG_POSTGRES_DBNAME", "dashfrog")
+    postgres_dbname: str = environ.get("DASHFROG_POSTGRES_DBNAME", "dashfrog_test")
     postgres_user: str = environ.get("DASHFROG_POSTGRES_USER", "postgres")
-    postgres_password: str = environ.get("DASHFROG_POSTGRES_PASSWORD", "")
+    postgres_password: str = environ.get("DASHFROG_POSTGRES_PASSWORD", "postgres")
 
     # OTLP
     otlp_endpoint: str = environ.get("DASHFROG_OTLP_ENDPOINT", "grpc://otel-collector:4317")
 
     # prometheus
     prometheus_endpoint: str = environ.get("DASHFROG_PROMETHEUS_ENDPOINT", "http://prometheus:9090")
+
+    # API Authentication
+    api_username: str = environ.get("DASHFROG_API_USERNAME", "admin")
+    api_password: str = environ.get("DASHFROG_API_PASSWORD", "admin")
+    api_secret_key: str = environ.get("DASHFROG_API_SECRET_KEY", "change-this-secret-key-in-production")

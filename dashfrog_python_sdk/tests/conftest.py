@@ -28,15 +28,7 @@ def setup_dashfrog(test_engine):
     from dashfrog_python_sdk import get_dashfrog_instance
     from dashfrog_python_sdk.models import Base
 
-    config = Config(
-        postgres_host="postgres",
-        postgres_port=5432,
-        postgres_dbname="dashfrog_test",
-        postgres_user="postgres",
-        postgres_password="postgres",
-        otlp_endpoint="grpc://otel-collector:4317",
-        prometheus_endpoint="http://prometheus:9090",
-    )
+    config = Config()
     setup(config)
 
     # Clean all tables before test
@@ -45,7 +37,7 @@ def setup_dashfrog(test_engine):
         conn.execute(Base.metadata.tables["flow_event"].delete())
         conn.execute(Base.metadata.tables["flow"].delete())
         conn.execute(Base.metadata.tables["metric"].delete())
-        conn.execute(Base.metadata.tables["timeline_event"].delete())
+        conn.execute(Base.metadata.tables["notebook"].delete())
 
     # Clear in-memory caches
     dashfrog._flows.clear()

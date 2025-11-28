@@ -14,7 +14,10 @@ EVENT_FLOW_FAIL = "flow_fail"
 EVENT_STEP_START = "step_start"
 EVENT_STEP_SUCCESS = "step_success"
 EVENT_STEP_FAIL = "step_fail"
+TENANT_LABEL_NAME = "tenant"
 
 
 # Types
 MetricUnitT = Literal["percent"] | str | None
+
+DEFAULT_THRESHOLD_DAYS = 30

@@ -1,13 +1,13 @@
+import datetime
 from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
+from datetime import timezone
 
 from sqlalchemy import (
     insert as insert,
 )
 
 from .constants import BAGGAGE_FLOW_LABEL_PREFIX
-from .dashfrog import get_dashfrog_instance
-from .models import FlowEvent
 
 from opentelemetry import baggage, context
 from opentelemetry.trace import INVALID_SPAN, get_current_span
@@ -44,25 +44,51 @@ def get_flow_id() -> str:
     return str(span.get_span_context().trace_id)
 
 
-def insert_flow_event(flow_id: str, event_name: str, labels: Mapping[str, str]) -> None:
-    """
-    Insert an event into Postgres.
+def generate_flow_group_id(flow_name: str, tenant: str, **labels: str) -> str:
+    serialized_labels = "$$".join(f"{k}={v}" for k, v in labels.items())
+    return f"{flow_name}$$tenant={tenant}$${serialized_labels}"
 
-    Periodically refreshes materialized views based on minimum refresh interval
-    to keep views up-to-date.
+
+def get_time_range_from_time_window(time_window: dict | None) -> tuple[datetime.datetime, datetime.datetime]:
+    """
+    Convert a time window configuration to absolute start and end datetimes.
 
     Args:
-        flow_id: The flow ID (this is the trace ID from the current span)
-        event_name: The event name (e.g., "flow_start", "step_success", "incident_start")
-        labels: Dictionary of labels/metadata for this event
-    """
-    dashfrog = get_dashfrog_instance()
+        time_window: Time window config with structure:
+            - {"type": "absolute", "metadata": {"start": "ISO8601", "end": "ISO8601"}}
+            - {"type": "relative", "metadata": {"value": "24h" | "7d" | "today" | "w"}}
 
-    with dashfrog.db_engine.begin() as conn:
-        conn.execute(
-            insert(FlowEvent).values(
-                flow_id=flow_id,
-                event_name=event_name,
-                labels=dict(labels),
-            )
-        )
+    Returns:
+        Tuple of (start_datetime, end_datetime)
+
+    Raises:
+        ValueError: If time_window is None or has invalid format
+    """
+    if time_window is None:
+        raise ValueError("time_window cannot be None")
+
+    if time_window["type"] == "absolute":
+        window_start = datetime.datetime.fromisoformat(time_window["metadata"]["start"])
+        window_end = datetime.datetime.fromisoformat(time_window["metadata"]["end"])
+        return window_start, window_end
+    else:  # relative
+        value = time_window["metadata"]["value"]
+
+        if value == "today":
+            delta, unit = 24, "h"
+        elif value == "w":
+            delta, unit = 7, "d"
+        else:
+            delta, unit = int(value[:-1]), value[-1]
+
+        factor = 1
+        if unit == "h":
+            factor = 60
+        elif unit == "d":
+            factor = 60 * 24
+
+        delta_in_minutes = delta * factor + 60
+        window_start = datetime.datetime.now(timezone.utc) - datetime.timedelta(minutes=delta_in_minutes)
+        window_end = datetime.datetime.now(timezone.utc)
+
+        return window_start, window_end

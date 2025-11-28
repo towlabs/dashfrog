@@ -2,7 +2,8 @@
 
 from fastapi import FastAPI
 
-from . import flow, metrics, timeline
+from dashfrog_python_sdk import Config, setup
+from dashfrog_python_sdk.api import auth_router, comment, flow, metrics, notebook
 
 app = FastAPI(
     title="DashFrog API",
@@ -11,6 +12,15 @@ app = FastAPI(
 )
 
 # Include routers
+app.include_router(auth_router.router)  # Auth routes (login)
+app.include_router(comment.router)
 app.include_router(flow.router)
 app.include_router(metrics.router)
-app.include_router(timeline.router)
+app.include_router(notebook.router)
+
+if __name__ == "__main__":
+    import uvicorn
+
+    setup(Config())
+
+    uvicorn.run(app, host="0.0.0.0", port=8000)

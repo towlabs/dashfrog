@@ -13,7 +13,7 @@ from .models import (
 )
 
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.metrics import Histogram, Instrument, Meter
+from opentelemetry.metrics import CallbackT, Histogram, Instrument, Meter, ObservableGauge
 from opentelemetry.sdk.metrics import Counter, MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.metrics.view import ExponentialBucketHistogramAggregation, View
@@ -125,7 +125,7 @@ class Dashfrog:
         pretty_name: str,
         unit: MetricUnitT,
         labels: list[str],
-        aggregation: str,
+        callback: None = None,
     ) -> Counter: ...
 
     @overload
@@ -136,28 +136,40 @@ class Dashfrog:
         pretty_name: str,
         unit: MetricUnitT,
         labels: list[str],
-        aggregation: str,
+        callback: None = None,
     ) -> Histogram: ...
 
     @overload
     def register_metric(
         self,
-        metric_type: Literal["counter", "histogram"],
+        metric_type: Literal["gauge"],
         metric_name: str,
         pretty_name: str,
         unit: MetricUnitT,
         labels: list[str],
-        aggregation: str,
+        *,
+        callback: CallbackT,
+    ) -> ObservableGauge: ...
+
+    @overload
+    def register_metric(
+        self,
+        metric_type: Literal["counter", "histogram", "gauge"],
+        metric_name: str,
+        pretty_name: str,
+        unit: MetricUnitT,
+        labels: list[str],
+        callback: CallbackT | None = None,
     ) -> Instrument: ...
 
     def register_metric(
         self,
-        metric_type: Literal["counter", "histogram"],
+        metric_type: Literal["counter", "histogram", "gauge"],
         metric_name: str,
         pretty_name: str,
         unit: MetricUnitT,
         labels: list[str],
-        aggregation: str,
+        callback: CallbackT | None = None,
     ) -> Instrument:
         if metric_name not in self._metrics:
             with self.db_engine.begin() as conn:
@@ -168,7 +180,6 @@ class Dashfrog:
                         pretty_name=pretty_name,
                         type=metric_type,
                         unit=unit,
-                        aggregation=aggregation,
                         labels=list(labels),
                     )
                     .on_conflict_do_update(
@@ -177,7 +188,6 @@ class Dashfrog:
                             pretty_name=pretty_name,
                             type=metric_type,
                             unit=unit,
-                            aggregation=aggregation,
                             labels=list(labels),
                         ),
                     )
@@ -185,9 +195,12 @@ class Dashfrog:
             self._metrics.add(metric_name)
 
         if metric_type == "counter":
-            return self.meter.create_counter(metric_name, description=metric_name, unit=unit or "")
+            return self.meter.create_counter(metric_name, description=metric_name)
+        elif metric_type == "histogram":
+            return self.meter.create_histogram(metric_name, description=metric_name)
         else:
-            return self.meter.create_histogram(metric_name, description=metric_name, unit=unit or "")
+            assert callback is not None
+            return self.meter.create_observable_gauge(metric_name, description=metric_name, callbacks=[callback])
 
     @staticmethod
     def with_flask(flask_app: "Flask") -> None:

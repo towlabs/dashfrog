@@ -2,14 +2,20 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from logging import warning
 
+from sqlalchemy import insert
+
+from dashfrog_python_sdk.models import FlowEvent
+
 from .constants import (
     BAGGAGE_FLOW_LABEL_NAME,
     BAGGAGE_STEP_LABEL_NAME,
     EVENT_STEP_FAIL,
     EVENT_STEP_START,
     EVENT_STEP_SUCCESS,
+    TENANT_LABEL_NAME,
 )
-from .utils import get_flow_id, get_labels_from_baggage, insert_flow_event, write_to_baggage
+from .dashfrog import get_dashfrog_instance
+from .utils import generate_flow_group_id, get_flow_id, get_labels_from_baggage, write_to_baggage
 
 
 @contextmanager
@@ -63,12 +69,33 @@ def _write_step_event(event_name: str) -> None:
         return
 
     try:
-        event_labels = get_labels_from_baggage(mandatory_labels=[BAGGAGE_FLOW_LABEL_NAME, BAGGAGE_STEP_LABEL_NAME])
+        event_labels = get_labels_from_baggage(
+            mandatory_labels=[BAGGAGE_FLOW_LABEL_NAME, BAGGAGE_STEP_LABEL_NAME, TENANT_LABEL_NAME]
+        )
     except ValueError as e:
         warning(e.args[0])
         return
 
-    insert_flow_event(flow_id, event_name, event_labels)
+    flow_name = event_labels.pop(BAGGAGE_FLOW_LABEL_NAME)
+    tenant = event_labels.pop(TENANT_LABEL_NAME)
+    step_name = event_labels.pop(BAGGAGE_STEP_LABEL_NAME)
+    group_id = generate_flow_group_id(flow_name, tenant, **event_labels)
+    dashfrog = get_dashfrog_instance()
+
+    with dashfrog.db_engine.begin() as conn:
+        conn.execute(
+            insert(FlowEvent).values(
+                flow_id=flow_id,
+                event_name=event_name,
+                tenant=tenant,
+                group_id=group_id,
+                flow_metadata={
+                    BAGGAGE_FLOW_LABEL_NAME: flow_name,
+                    BAGGAGE_STEP_LABEL_NAME: step_name,
+                },
+                labels=event_labels,
+            )
+        )
 
 
 def success() -> None:
