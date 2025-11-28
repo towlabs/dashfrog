@@ -16,6 +16,18 @@ type NotebookResponse = {
 };
 
 export const Notebooks = {
+	getOne: async (notebookId: string): Promise<Notebook | null> => {
+		const response = await fetchWithAuth(`/api/notebooks/${notebookId}`, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+		if (!response.ok) {
+			return null;
+		}
+		return await response.json();
+	},
 	// Get all notebooks for a tenant
 	getAll: async (tenant: string): Promise<Notebook[]> => {
 		const query = new URLSearchParams();

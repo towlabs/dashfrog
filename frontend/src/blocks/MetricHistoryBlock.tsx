@@ -14,11 +14,20 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { type MetricHistoryPoint, Metrics } from "@/src/services/api/metrics";
+import {
+	type MetricHistoryPoint,
+	MetricRangeHistory,
+	Metrics,
+} from "@/src/services/api/metrics";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import type { GroupByFn, RangeMetric, Transform } from "../types/metric";
+import type {
+	GroupByFn,
+	MetricHistory,
+	RangeMetric,
+	Transform,
+} from "../types/metric";
 
 export const MetricHistoryBlock = createReactBlockSpec(
 	{
@@ -63,7 +72,9 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
-
+			const currentNotebookId = useNotebooksStore(
+				(state) => state.currentNotebook?.id,
+			);
 			const blockFilters: Filter[] = useMemo(() => {
 				try {
 					return JSON.parse(props.block.props.blockFilters as string);
@@ -77,12 +88,12 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				[notebookFilters, blockFilters],
 			);
 
-			const [historyData, setHistoryData] = useState<{
-				series: {
-					labels: Record<string, string>;
-					values: MetricHistoryPoint[];
-				}[];
-			}>({ series: [] });
+			const [historyData, setHistoryData] = useState<MetricRangeHistory>({
+				prettyName: "",
+				unit: null,
+				transform: null,
+				series: [],
+			});
 			const [_, setLoading] = useState(false);
 
 			const metricName = props.block.props.metricName as string;
@@ -108,12 +119,18 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			useEffect(() => {
 				if (
 					!tenantName ||
-					!selectedMetric ||
+					!metricName ||
 					!startDate ||
 					!endDate ||
-					filters === undefined
+					filters === undefined ||
+					!currentNotebookId
 				) {
-					setHistoryData({ series: [] });
+					setHistoryData({
+						prettyName: "",
+						unit: null,
+						transform: null,
+						series: [],
+					});
 					return;
 				}
 
@@ -122,18 +139,24 @@ export const MetricHistoryBlock = createReactBlockSpec(
 					try {
 						const response = await Metrics.getHistory(
 							tenantName,
-							selectedMetric.prometheusName,
-							selectedMetric.transform,
+							metricName,
+							transform || null,
 							startDate,
 							endDate,
 							filters,
 							groupBy,
 							groupByFn,
+							currentNotebookId,
 						);
 						setHistoryData(response);
 					} catch (error) {
 						console.error("Failed to fetch metric history:", error);
-						setHistoryData({ series: [] });
+						setHistoryData({
+							prettyName: "",
+							unit: null,
+							transform: null,
+							series: [],
+						});
 					} finally {
 						setLoading(false);
 					}
@@ -142,12 +165,14 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				void fetchHistory();
 			}, [
 				tenantName,
-				selectedMetric,
+				metricName,
+				transform,
 				startDate,
 				endDate,
 				filters,
 				groupBy,
 				groupByFn,
+				currentNotebookId,
 			]);
 
 			if (!tenantName) {
@@ -225,13 +250,14 @@ export const MetricHistoryBlock = createReactBlockSpec(
 						<div className="flex items-center justify-between">
 							<div>
 								<h3 className="text-lg font-semibold">
-									{selectedMetric?.prettyName ?? ""}
+									{historyData.prettyName}
 								</h3>
 							</div>
 						</div>
 						<MetricHistoryChart
 							historyData={historyData}
-							metric={selectedMetric ?? null}
+							unit={historyData.unit}
+							transform={transform || null}
 							startDate={startDate}
 							endDate={endDate}
 						/>

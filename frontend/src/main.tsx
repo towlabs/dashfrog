@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/src/routes/Home";
 import Login from "@/src/routes/Login";
 import Notebook from "@/src/routes/Notebook";
+import NotebookView from "@/src/routes/NotebookView";
 import Tenant from "@/src/routes/Tenant";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -15,6 +16,10 @@ const router = createBrowserRouter([
 	{
 		path: "/login",
 		element: <Login />,
+	},
+	{
+		path: "/view/:tenant/notebooks/:notebookId",
+		element: <NotebookView />,
 	},
 	{
 		path: "/",

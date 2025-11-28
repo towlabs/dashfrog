@@ -44,6 +44,7 @@ import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
+import { Flows } from "../services/api/flows";
 
 export const FlowStatusBlock = createReactBlockSpec(
 	{
@@ -87,6 +88,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 
 			const [selectedFlow, setSelectedFlow] = React.useState<Flow | null>(null);
 			const [detailOpen, setDetailOpen] = React.useState(false);
+			const [selectedFlows, setSelectedFlows] = React.useState<Flow[]>([]);
 
 			const flowName = props.block.props.flowName as string;
 			const title = props.block.props.title as string;
@@ -109,17 +111,33 @@ export const FlowStatusBlock = createReactBlockSpec(
 				[notebookFilters, blockFilters],
 			);
 
-			const selectedFlows = React.useMemo(() => {
-				return flows.filter((flow) => {
-					// Match flow name
-					if (flow.name !== flowName) return false;
+			React.useEffect(() => {
+				if (!tenantName || !startDate || !endDate || !currentNotebook?.id)
+					return;
+				const fetchFlows = async () => {
+					try {
+						const flows = await Flows.getByTenant(
+							tenantName,
+							startDate,
+							endDate,
+							filters,
+							currentNotebook.id,
+						);
+						setSelectedFlows(flows.filter((flow) => flow.name === flowName));
+					} catch (_) {
+						setSelectedFlows([]);
+					}
+				};
 
-					// Match all filters
-					return filters.every((filter) => {
-						return flow.labels[filter.label] === filter.value;
-					});
-				});
-			}, [flows, flowName, filters]);
+				void fetchFlows();
+			}, [
+				tenantName,
+				startDate,
+				endDate,
+				filters,
+				currentNotebook?.id,
+				flowName,
+			]);
 
 			if (!tenantName) {
 				return (
@@ -463,6 +481,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 								startDate={startDate}
 								endDate={endDate}
 								onOpenChange={setDetailOpen}
+								notebookId={currentNotebook.id}
 							/>
 						)}
 				</>

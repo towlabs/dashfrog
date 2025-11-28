@@ -25,7 +25,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { cn } from "@/lib/utils";
-import { Metrics } from "@/src/services/api/metrics";
+import { Metrics, MetricScalar } from "@/src/services/api/metrics";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type {
@@ -87,21 +87,16 @@ export const MetricBlock = createReactBlockSpec(
 				(state) => state.closeBlockSettings,
 			);
 			const instantMetrics = useNotebooksStore((state) => state.instantMetrics);
-			const rangeMetrics = useNotebooksStore((state) => state.rangeMetrics);
-			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
 
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
 			const startDate = useNotebooksStore((state) => state.startDate);
 			const endDate = useNotebooksStore((state) => state.endDate);
-			const [scalarData, setScalarData] = useState<
-				| {
-						labels: Record<string, string>;
-						value: number;
-				  }[]
-				| null
-			>(null);
+			const currentNotebookId = useNotebooksStore(
+				(state) => state.currentNotebook?.id,
+			);
+			const [scalarData, setScalarData] = useState<MetricScalar | null>(null);
 			const [loading, setLoading] = useState(false);
 			const [detailOpen, setDetailOpen] = useState(false);
 			const [selectedLabels, setSelectedLabels] = useState<
@@ -155,23 +150,15 @@ export const MetricBlock = createReactBlockSpec(
 				);
 			}, [metricName, transform, instantMetrics]);
 
-			const rangeMetric = React.useMemo(() => {
-				if (!selectedMetric) return null;
-				return rangeMetrics.find(
-					(m) =>
-						m.transform === selectedMetric.transform &&
-						m.prometheusName === selectedMetric.prometheusName,
-				);
-			}, [selectedMetric, rangeMetrics]);
-
 			// Fetch scalar data when metric and aggregation are selected
 			useEffect(() => {
 				if (
 					!tenantName ||
-					!selectedMetric ||
+					!metricName ||
 					startDate === null ||
 					endDate === null ||
-					filters === undefined
+					filters === undefined ||
+					!currentNotebookId
 				) {
 					setScalarData(null);
 					return;
@@ -179,7 +166,7 @@ export const MetricBlock = createReactBlockSpec(
 
 				const fetchScalar = async () => {
 					if (timeAggregation === "match" && !matchValue) {
-						setScalarData([]);
+						setScalarData(null);
 						return;
 					}
 
@@ -187,18 +174,19 @@ export const MetricBlock = createReactBlockSpec(
 					try {
 						const response = await Metrics.getScalar(
 							tenantName,
-							selectedMetric.prometheusName,
+							metricName,
 							startDate,
 							endDate,
-							selectedMetric.transform,
+							transform || null,
 							groupBy,
 							groupByFn,
 							timeAggregation,
 							matchOperator,
 							matchValue,
 							filters,
+							currentNotebookId,
 						);
-						setScalarData(response.scalars);
+						setScalarData(response);
 					} catch (error) {
 						console.error("Failed to fetch metric scalar:", error);
 						setScalarData(null);
@@ -210,7 +198,8 @@ export const MetricBlock = createReactBlockSpec(
 				void fetchScalar();
 			}, [
 				tenantName,
-				selectedMetric,
+				metricName,
+				transform,
 				timeAggregation,
 				groupBy,
 				groupByFn,
@@ -219,6 +208,7 @@ export const MetricBlock = createReactBlockSpec(
 				startDate,
 				endDate,
 				filters,
+				currentNotebookId,
 			]);
 
 			if (!tenantName) {
@@ -301,11 +291,7 @@ export const MetricBlock = createReactBlockSpec(
 
 			// Render content based on state
 			const renderContent = () => {
-				if (
-					(metricsLoading || loading) &&
-					scalarData === null &&
-					selectedMetric
-				) {
+				if (loading && scalarData === null && metricName) {
 					return (
 						<Card className="@container/card shadow-none">
 							<CardHeader>
@@ -319,12 +305,12 @@ export const MetricBlock = createReactBlockSpec(
 					);
 				}
 
-				if (scalarData === null || scalarData.length === 0) {
+				if (scalarData === null || scalarData.scalars.length === 0) {
 					return (
 						<Card className="@container/card shadow-none">
 							<CardHeader className="relative pb-3">
 								<CardDescription>
-									{title || selectedMetric?.prettyName || "N/A"}
+									{title || scalarData?.prettyName || "N/A"}
 								</CardDescription>
 								<CardTitle
 									className={cn(
@@ -343,7 +329,7 @@ export const MetricBlock = createReactBlockSpec(
 
 				return (
 					<div className="outline-none flex flex-col gap-1">
-						{scalarData.map((scalar) => renderScalarCard(scalar))}
+						{scalarData.scalars.map((scalar) => renderScalarCard(scalar))}
 					</div>
 				);
 			};
@@ -352,14 +338,12 @@ export const MetricBlock = createReactBlockSpec(
 				labels: Record<string, string>;
 				value: number;
 			}) => {
-				if (!selectedMetric) return null;
-
 				// For match timeAggregation type, display as percentage
 				const isMatchRate = timeAggregation === "match";
 				const formatted = formatMetricValue(
 					scalar.value,
-					isMatchRate ? "%" : (selectedMetric.unit ?? undefined),
-					selectedMetric.transform,
+					isMatchRate ? "%" : (scalarData?.unit ?? undefined),
+					transform || null,
 				);
 
 				const colorClass =
@@ -368,24 +352,25 @@ export const MetricBlock = createReactBlockSpec(
 				// Generate description based on timeAggregation type
 				const getDescription = () => {
 					if (title) return title;
+					if (!scalarData) return "N/A";
 					if (isMatchRate) {
-						return `${selectedMetric.prettyName} ${matchOperator} ${matchValue}`;
+						return `${scalarData.prettyName} ${matchOperator} ${matchValue}`;
 					}
-					if (!selectedMetric.transform && selectedMetric.type === "counter")
-						return `${selectedMetric.prettyName} - Increase`;
+					if (!transform && scalarData.type === "counter")
+						return `${scalarData.prettyName} - Increase`;
 					if (timeAggregation === "last") {
-						return `${selectedMetric.prettyName} - Last value`;
+						return `${scalarData.prettyName} - Last value`;
 					}
 					if (timeAggregation === "avg") {
-						return `${selectedMetric.prettyName} - Average over time`;
+						return `${scalarData.prettyName} - Average over time`;
 					}
 					if (timeAggregation === "min") {
-						return `${selectedMetric.prettyName} - Minimum over time`;
+						return `${scalarData.prettyName} - Minimum over time`;
 					}
 					if (timeAggregation === "max") {
-						return `${selectedMetric.prettyName} - Maximum over time`;
+						return `${scalarData.prettyName} - Maximum over time`;
 					}
-					return selectedMetric.prettyName;
+					return scalarData.prettyName;
 				};
 
 				return (
@@ -536,9 +521,16 @@ export const MetricBlock = createReactBlockSpec(
 					</Sheet>
 
 					{/* Metric Detail Drawer */}
-					{rangeMetric && startDate !== null && endDate !== null && (
+					{startDate !== null && endDate !== null && currentNotebookId && (
 						<MetricDetailDrawer
-							metric={rangeMetric}
+							metricName={metricName}
+							prettyName={scalarData?.prettyName ?? ""}
+							transform={
+								scalarData?.type === "counter" && !transform
+									? "ratePerSecond"
+									: transform || null
+							}
+							unit={scalarData?.unit ?? null}
 							tenantName={tenantName}
 							groupBy={groupBy}
 							groupByFn={groupByFn}
@@ -553,6 +545,7 @@ export const MetricBlock = createReactBlockSpec(
 							startDate={startDate}
 							endDate={endDate}
 							onOpenChange={setDetailOpen}
+							notebookId={currentNotebookId}
 						/>
 					)}
 				</>

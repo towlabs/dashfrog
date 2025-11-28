@@ -71,6 +71,9 @@ export const FlowBlock = createReactBlockSpec(
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
+			const currentNotebookId = useNotebooksStore(
+				(state) => state.currentNotebook?.id,
+			);
 			const labels = useLabelsStore((state) => state.labels);
 
 			// Parse block filters from JSON string
@@ -131,10 +134,12 @@ export const FlowBlock = createReactBlockSpec(
 			return (
 				startDate !== null &&
 				endDate !== null &&
-				filters !== undefined && (
+				filters !== undefined &&
+				currentNotebookId && (
 					<>
 						<div className="outline-none min-w-0 flex-1">
 							<FlowTable
+								notebookId={currentNotebookId}
 								tenant={tenantName}
 								startDate={startDate}
 								endDate={endDate}

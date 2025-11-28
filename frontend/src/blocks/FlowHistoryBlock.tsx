@@ -80,6 +80,9 @@ export const FlowHistoryBlock = createReactBlockSpec(
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
+			const currentNotebookId = useNotebooksStore(
+				(state) => state.currentNotebook?.id,
+			);
 			const labels = useLabelsStore((state) => state.labels);
 
 			const [flowHistory, setFlowHistory] = useState<FlowHistory[] | null>(
@@ -110,6 +113,7 @@ export const FlowHistoryBlock = createReactBlockSpec(
 					if (
 						!tenantName ||
 						!flowName ||
+						!currentNotebookId ||
 						startDate === null ||
 						endDate === null ||
 						filters === undefined
@@ -126,6 +130,7 @@ export const FlowHistoryBlock = createReactBlockSpec(
 							startDate,
 							endDate,
 							filters,
+							currentNotebookId,
 						);
 						setFlowHistory(response);
 					} catch (error) {
@@ -137,7 +142,14 @@ export const FlowHistoryBlock = createReactBlockSpec(
 				};
 
 				void fetchFlowHistory();
-			}, [tenantName, flowName, startDate, endDate, filters]);
+			}, [
+				tenantName,
+				flowName,
+				startDate,
+				endDate,
+				filters,
+				currentNotebookId,
+			]);
 
 			if (!tenantName) {
 				return (

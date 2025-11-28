@@ -11,30 +11,38 @@ import {
 } from "@/components/ui/drawer";
 import { type MetricHistoryPoint, Metrics } from "@/src/services/api/metrics";
 import type { Filter } from "@/src/types/filter";
-import type { GroupByFn, RangeMetric } from "@/src/types/metric";
+import type { GroupByFn, RangeMetric, Transform } from "@/src/types/metric";
 
 type MetricDetailDrawerProps = {
+	notebookId?: string | null;
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	metric: RangeMetric;
 	startDate: Date;
 	endDate: Date;
 	filters: Filter[];
 	tenantName: string;
 	groupBy: string[];
 	groupByFn: GroupByFn;
+	metricName: string;
+	transform: Transform | null;
+	prettyName: string;
+	unit: string | null;
 };
 
 export function MetricDetailDrawer({
+	notebookId = null,
 	open,
 	onOpenChange,
-	metric,
+	metricName,
+	prettyName,
+	transform,
 	tenantName,
 	startDate,
 	endDate,
 	filters,
 	groupBy,
 	groupByFn,
+	unit,
 }: MetricDetailDrawerProps) {
 	const [historyData, setHistoryData] = useState<{
 		series: {
@@ -48,13 +56,14 @@ export function MetricDetailDrawer({
 			try {
 				const response = await Metrics.getHistory(
 					tenantName,
-					metric.prometheusName,
-					metric.transform,
+					metricName,
+					transform,
 					startDate,
 					endDate,
 					filters,
 					groupBy,
 					groupByFn,
+					notebookId,
 				);
 				setHistoryData(response);
 			} catch (error) {
@@ -67,17 +76,16 @@ export function MetricDetailDrawer({
 		void fetchHistory();
 	}, [
 		tenantName,
-		metric.prometheusName,
+		metricName,
+		transform,
 		startDate,
 		endDate,
 		filters,
 		groupBy,
 		groupByFn,
-		metric.transform,
 		open,
+		notebookId,
 	]);
-
-	if (!metric) return null;
 
 	return (
 		<Drawer open={open} onOpenChange={onOpenChange}>
@@ -85,7 +93,7 @@ export function MetricDetailDrawer({
 				<DrawerHeader>
 					<DrawerTitle className="flex items-center justify-between">
 						<div className="space-y-2">
-							<div className="text-2xl font-bold">{metric.prettyName}</div>
+							<div className="text-2xl font-bold">{prettyName}</div>
 						</div>
 						<DrawerClose asChild>
 							<Button variant="ghost" size="icon">
@@ -98,7 +106,8 @@ export function MetricDetailDrawer({
 				<div className="px-4 pb-10">
 					<MetricHistoryChart
 						historyData={historyData}
-						metric={metric}
+						unit={unit}
+						transform={transform}
 						startDate={startDate}
 						endDate={endDate}
 					/>

@@ -42,8 +42,10 @@ import { HeatmapBlock } from "@/src/blocks/HeatmapBlock";
 import { MetricBlock } from "@/src/blocks/MetricBlock";
 import { MetricHistoryBlock } from "@/src/blocks/MetricHistoryBlock";
 import { MetricRatioBlock } from "@/src/blocks/MetricRatioBlock";
+import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Notebook } from "@/src/types/notebook";
 import { customEditor, getSlashMenuItems } from "@/src/utils/editor";
+import { Filter } from "@/src/types/filter";
 
 type BlockNoteEditorProps = {
 	tenantName: string;
@@ -54,6 +56,7 @@ type BlockNoteEditorProps = {
 		notebook: Notebook,
 		updates: Partial<Notebook>,
 	) => void;
+	editable?: boolean;
 };
 
 export default function BlockNoteEditor({
@@ -61,9 +64,15 @@ export default function BlockNoteEditor({
 	notebook,
 	openBlockSettings,
 	updateNotebook,
+	editable = true,
 }: BlockNoteEditorProps) {
 	const [initialized, setInitialized] = useState(false);
 	const [mounted, setMounted] = useState(false);
+
+	// Get store functions and state
+	const startDate = useNotebooksStore((state) => state.startDate);
+	const endDate = useNotebooksStore((state) => state.endDate);
+	const fetchComments = useNotebooksStore((state) => state.fetchComments);
 
 	// Create BlockNote editor instance
 	// biome-ignore lint/correctness/noUnusedVariables: removing table from defaultSpecs
@@ -108,14 +117,58 @@ export default function BlockNoteEditor({
 		// biome-ignore lint/suspicious/noExplicitAny: json payload
 		editor.replaceBlocks(editor.document, (notebook.blocks || []) as any);
 		setInitialized(true);
-	}, [notebook, editor, mounted]);
+	}, [notebook.id, editor, mounted]);
+
+	// Fetch comments when start or end dates change
+	useEffect(() => {
+		if (startDate === null || endDate === null) return;
+		void fetchComments(notebook.id);
+	}, [startDate, endDate, notebook.id, fetchComments]);
 
 	// Save editor content changes (debounced in store)
 	useEditorChange((editor) => {
 		if (!initialized) return;
+
+		const flowBlocksFilters: { names: string[]; filters: Filter[] }[] = [];
+		const metricBlocksFilters: { names: string[]; filters: Filter[] }[] = [];
+
+		editor.document.forEach((block) => {
+			if (block.type === "flow") {
+				flowBlocksFilters.push({
+					names: [],
+					filters: JSON.parse(block.props.blockFilters as string),
+				});
+			} else if (
+				block.type === "flowHistory" ||
+				block.type === "flowStatus" ||
+				block.type === "heatmap"
+			) {
+				flowBlocksFilters.push({
+					names: [block.props.flowName],
+					filters: JSON.parse(block.props.blockFilters as string),
+				});
+			} else if (block.type === "metric" || block.type === "metricHistory") {
+				metricBlocksFilters.push({
+					names: [block.props.metricName],
+					filters: JSON.parse(block.props.blockFilters as string),
+				});
+			} else if (block.type === "metricRatio") {
+				metricBlocksFilters.push({
+					names: [block.props.metricAName],
+					filters: JSON.parse(block.props.filtersA as string),
+				});
+				metricBlocksFilters.push({
+					names: [block.props.metricBName],
+					filters: JSON.parse(block.props.filtersB as string),
+				});
+			}
+		});
+
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		updateNotebook(tenantName, notebook, {
 			blocks: editor.document as Block[],
+			flowBlocksFilters,
+			metricBlocksFilters,
 		});
 	}, editor);
 
@@ -136,32 +189,44 @@ export default function BlockNoteEditor({
 			{/* Notebook Content */}
 			<div className="flex-1 overflow-y-auto">
 				<div className="mx-auto py-12">
-					{/* Title - Editable */}
+					{/* Title */}
 					<div className="mx-32">
-						<input
-							type="text"
-							value={notebook.title}
-							onChange={(e) => {
-								updateNotebook(tenantName, notebook, {
-									title: e.target.value,
-								});
-							}}
-							placeholder="Untitled"
-							className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground"
-						/>
+						{editable ? (
+							<input
+								type="text"
+								value={notebook.title}
+								onChange={(e) => {
+									updateNotebook(tenantName, notebook, {
+										title: e.target.value,
+									});
+								}}
+								placeholder="Untitled"
+								className="w-full text-5xl font-bold mb-4 outline-none border-none bg-transparent placeholder:text-muted-foreground"
+							/>
+						) : (
+							<h1 className="w-full text-5xl font-bold mb-4">
+								{notebook.title}
+							</h1>
+						)}
 
-						{/* Description - Editable */}
-						<input
-							type="text"
-							value={notebook.description}
-							onChange={(e) => {
-								updateNotebook(tenantName, notebook, {
-									description: e.target.value,
-								});
-							}}
-							placeholder="Add a description..."
-							className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground"
-						/>
+						{/* Description */}
+						{editable ? (
+							<input
+								type="text"
+								value={notebook.description}
+								onChange={(e) => {
+									updateNotebook(tenantName, notebook, {
+										description: e.target.value,
+									});
+								}}
+								placeholder="Add a description..."
+								className="w-full text-lg text-secondary-foreground mb-8 outline-none border-none bg-transparent placeholder:text-muted-foreground"
+							/>
+						) : (
+							<p className="w-full text-lg text-secondary-foreground mb-8">
+								{notebook.description}
+							</p>
+						)}
 					</div>
 
 					{/* BlockNote Editor */}
@@ -172,6 +237,7 @@ export default function BlockNoteEditor({
 							theme="light"
 							slashMenu={false}
 							sideMenu={false}
+							editable={editable}
 							// tableHandles={false}
 						>
 							<SuggestionMenuController

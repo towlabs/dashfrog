@@ -91,6 +91,9 @@ export const HeatmapBlock = createReactBlockSpec(
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
+			const currentNotebookId = useNotebooksStore(
+				(state) => state.currentNotebook?.id,
+			);
 			const flows = useNotebooksStore((state) => state.flows);
 			const labels = useLabelsStore((state) => state.labels);
 			const settingsOpenBlockId = useNotebooksStore(
@@ -155,7 +158,8 @@ export const HeatmapBlock = createReactBlockSpec(
 					!flowName ||
 					startDate === null ||
 					endDate === null ||
-					filters === undefined
+					filters === undefined ||
+					!currentNotebookId
 				) {
 					setFlowHistories([]);
 					setLabelGroups([]);
@@ -171,6 +175,7 @@ export const HeatmapBlock = createReactBlockSpec(
 							startDate,
 							endDate,
 							filters,
+							currentNotebookId,
 						);
 						setFlowHistories(response);
 					} catch (error) {
@@ -182,7 +187,14 @@ export const HeatmapBlock = createReactBlockSpec(
 				};
 
 				void fetchFlowHistories();
-			}, [tenantName, flowName, startDate, endDate, filters]);
+			}, [
+				tenantName,
+				flowName,
+				startDate,
+				endDate,
+				filters,
+				currentNotebookId,
+			]);
 
 			// Process flow histories into label groups
 			useEffect(() => {
@@ -499,7 +511,7 @@ export const HeatmapBlock = createReactBlockSpec(
 					</Sheet>
 
 					{/* Flow Detail Sheet */}
-					{selectedTimeWindow && (
+					{selectedTimeWindow && currentNotebookId && (
 						<FlowDetail
 							labels={selectedLabels}
 							flowName={flowName}
@@ -507,6 +519,7 @@ export const HeatmapBlock = createReactBlockSpec(
 							startDate={startDate}
 							endDate={endDate}
 							onOpenChange={setDetailOpen}
+							notebookId={currentNotebookId}
 						/>
 					)}
 				</>

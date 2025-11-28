@@ -36,6 +36,7 @@ import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
 
 type Props = {
+	notebookId: string;
 	tenant: string;
 	startDate: Date;
 	endDate: Date;
@@ -54,6 +55,7 @@ type Props = {
 const ITEMS_PER_PAGE = 14;
 
 export function FlowTable({
+	notebookId,
 	tenant,
 	startDate,
 	endDate,
@@ -83,6 +85,7 @@ export function FlowTable({
 					startDate,
 					endDate,
 					filters,
+					notebookId,
 				);
 				setFlows(fetchedFlows);
 			} finally {
@@ -93,7 +96,7 @@ export function FlowTable({
 		if (tenant) {
 			void fetchFlows();
 		}
-	}, [tenant, startDate, endDate, filters]);
+	}, [tenant, startDate, endDate, filters, notebookId]);
 
 	const handleFlowClick = (flow: Flow) => {
 		setSelectedFlow(flow);
@@ -315,6 +318,7 @@ export function FlowTable({
 			{/* Flow Detail Sheet */}
 			{selectedFlow && (
 				<FlowDetail
+					notebookId={notebookId}
 					labels={selectedFlow.labels}
 					flowName={selectedFlow.name}
 					open={detailOpen}

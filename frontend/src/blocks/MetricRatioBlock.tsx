@@ -21,7 +21,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Metrics } from "@/src/services/api/metrics";
+import { Metrics, MetricScalar } from "@/src/services/api/metrics";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type {
 	GroupByFn,
@@ -102,15 +102,18 @@ export const MetricRatioBlock = createReactBlockSpec(
 				(state) => state.closeBlockSettings,
 			);
 			const instantMetrics = useNotebooksStore((state) => state.instantMetrics);
-			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
+			// const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
 			const startDate = useNotebooksStore((state) => state.startDate);
 			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
 			);
+			const currentNotebookId = useNotebooksStore(
+				(state) => state.currentNotebook?.id,
+			);
+			const [scalarDataA, setScalarDataA] = useState<MetricScalar | null>(null);
+			const [scalarDataB, setScalarDataB] = useState<MetricScalar | null>(null);
 
-			const [valueA, setValueA] = useState<number | null>(null);
-			const [valueB, setValueB] = useState<number | null>(null);
 			const [loading, setLoading] = useState(false);
 
 			const title = props.block.props.title as string;
@@ -206,15 +209,16 @@ export const MetricRatioBlock = createReactBlockSpec(
 			useEffect(() => {
 				if (
 					!tenantName ||
-					!metricA ||
-					!metricB ||
+					!metricAName ||
+					!metricBName ||
 					startDate === null ||
 					endDate === null ||
 					filtersCombinedA === undefined ||
-					filtersCombinedB === undefined
+					filtersCombinedB === undefined ||
+					!currentNotebookId
 				) {
-					setValueA(null);
-					setValueB(null);
+					setScalarDataA(null);
+					setScalarDataB(null);
 					return;
 				}
 
@@ -224,43 +228,41 @@ export const MetricRatioBlock = createReactBlockSpec(
 						// Fetch Metric A
 						const responseA = await Metrics.getScalar(
 							tenantName,
-							metricA.prometheusName,
+							metricAName,
 							startDate,
 							endDate,
-							metricA.transform,
+							transformA || null,
 							groupByA,
 							groupByFnA,
 							timeAggregationA,
 							matchOperatorA,
 							matchValueA,
 							filtersCombinedA,
+							currentNotebookId,
 						);
 
 						// Fetch Metric B
 						const responseB = await Metrics.getScalar(
 							tenantName,
-							metricB.prometheusName,
+							metricBName,
 							startDate,
 							endDate,
-							metricB.transform,
+							transformB || null,
 							groupByB,
 							groupByFnB,
 							timeAggregationB,
 							matchOperatorB,
 							matchValueB,
 							filtersCombinedB,
+							currentNotebookId,
 						);
 
-						// Sum all scalar values (in case there are multiple series)
-						const sumA = responseA.scalars.reduce((sum, s) => sum + s.value, 0);
-						const sumB = responseB.scalars.reduce((sum, s) => sum + s.value, 0);
-
-						setValueA(sumA);
-						setValueB(sumB);
+						setScalarDataA(responseA);
+						setScalarDataB(responseB);
 					} catch (error) {
 						console.error("Failed to fetch metric ratio:", error);
-						setValueA(null);
-						setValueB(null);
+						setScalarDataA(null);
+						setScalarDataB(null);
 					} finally {
 						setLoading(false);
 					}
@@ -269,8 +271,10 @@ export const MetricRatioBlock = createReactBlockSpec(
 				void fetchValues();
 			}, [
 				tenantName,
-				metricA,
-				metricB,
+				metricAName,
+				transformA,
+				metricBName,
+				transformB,
 				timeAggregationA,
 				timeAggregationB,
 				groupByA,
@@ -285,6 +289,7 @@ export const MetricRatioBlock = createReactBlockSpec(
 				endDate,
 				filtersCombinedA,
 				filtersCombinedB,
+				currentNotebookId,
 			]);
 
 			if (!tenantName) {
@@ -385,11 +390,18 @@ export const MetricRatioBlock = createReactBlockSpec(
 
 			// Calculate percentage
 			const calculateDisplay = () => {
-				if (valueA === null || valueB === null || valueB === 0) {
+				if (!scalarDataA || !scalarDataB) {
 					return { value: "—", suffix: "" };
 				}
 
-				const percentage = (valueA / valueB) * 100;
+				const sumA = scalarDataA.scalars.reduce((sum, s) => sum + s.value, 0);
+				const sumB = scalarDataB.scalars.reduce((sum, s) => sum + s.value, 0);
+
+				if (sumB === 0) {
+					return { value: "—", suffix: "" };
+				}
+
+				const percentage = (sumA / sumB) * 100;
 				return {
 					value: percentage.toFixed(1),
 					suffix: "%",
@@ -408,7 +420,7 @@ export const MetricRatioBlock = createReactBlockSpec(
 					);
 				}
 
-				if ((metricsLoading || loading) && valueA === null && valueB === null) {
+				if (loading && scalarDataA === null && scalarDataB === null) {
 					return (
 						<Card className="@container/card shadow-none">
 							<CardHeader>
@@ -422,7 +434,7 @@ export const MetricRatioBlock = createReactBlockSpec(
 					);
 				}
 
-				if (!metricA || !metricB) {
+				if (!metricAName || !metricBName) {
 					return (
 						<EmptyState
 							icon={RectangleHorizontal}
@@ -439,7 +451,8 @@ export const MetricRatioBlock = createReactBlockSpec(
 						<Card className="@container/card shadow-none">
 							<CardHeader>
 								<CardDescription>
-									{title || `${metricA.prettyName} / ${metricB.prettyName}`}
+									{title ||
+										`${scalarDataA?.prettyName} / ${scalarDataB?.prettyName}`}
 								</CardDescription>
 								<CardTitle className="text-2xl font-semibold @[250px]/card:text-3xl">
 									{value}

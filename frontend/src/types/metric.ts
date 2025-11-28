@@ -17,7 +17,6 @@ export type GroupByFn = "sum" | "avg" | "min" | "max";
 export type MetricType = "counter" | "histogram" | "gauge";
 
 export interface RangeMetric {
-	name: string;
 	prometheusName: string;
 	prettyName: string;
 	labels: string[];
@@ -28,7 +27,6 @@ export interface RangeMetric {
 }
 
 export interface InstantMetric {
-	name: string;
 	prometheusName: string;
 	prettyName: string;
 	labels: string[];

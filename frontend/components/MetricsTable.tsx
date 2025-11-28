@@ -85,10 +85,13 @@ export function MetricsTable({ tenant }: MetricsTableProps) {
 				<MetricDetailDrawer
 					open={drawerOpen}
 					onOpenChange={setDrawerOpen}
-					metric={selectedMetric}
+					metricName={selectedMetric.prometheusName}
+					prettyName={selectedMetric.prettyName}
+					unit={selectedMetric.unit}
+					transform={selectedMetric.transform}
 					tenantName={tenant}
-					startDate={new Date()}
-					endDate={addDays(new Date(), -7)}
+					startDate={addDays(new Date(), -7)}
+					endDate={new Date()}
 					filters={[]}
 					groupBy={selectedMetric.labels}
 					groupByFn={selectedMetric.groupBy[0]}
@@ -116,7 +119,9 @@ export function MetricsTable({ tenant }: MetricsTableProps) {
 						const rowIndex = startIndex + index;
 
 						return (
-							<React.Fragment key={`${metric.name}-${rowIndex}-fragment`}>
+							<React.Fragment
+								key={`${metric.prometheusName}-${rowIndex}-fragment`}
+							>
 								<TableRow className="group cursor-pointer hover:bg-muted/50">
 									<TableCell>
 										<div className="relative flex items-center gap-2">

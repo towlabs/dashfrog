@@ -122,6 +122,7 @@ const Flows = {
 		start: Date,
 		end: Date,
 		labels: Filter[],
+		notebookId: string,
 	) => {
 		const response = await fetchWithAuth(`/api/flows/search`, {
 			method: "POST",
@@ -133,6 +134,7 @@ const Flows = {
 				end: end.toISOString(),
 				tenant,
 				labels,
+				notebook_id: notebookId,
 			}),
 		});
 		const data = (await response.json()) as FlowApiResponse[];
@@ -148,6 +150,7 @@ const Flows = {
 		start: Date,
 		end: Date,
 		labels: Filter[],
+		notebookId: string,
 	): Promise<FlowHistory[]> => {
 		const response = await fetchWithAuth(`/api/flows/history`, {
 			method: "POST",
@@ -160,6 +163,7 @@ const Flows = {
 				end: end.toISOString(),
 				labels,
 				tenant,
+				notebook_id: notebookId,
 			}),
 		});
 		if (!response.ok) {

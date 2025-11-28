@@ -21,6 +21,7 @@ import { useTenantStore } from "@/src/stores/tenant";
 import type { FlowHistory } from "@/src/types/flow";
 
 export interface FlowDetailProps {
+	notebookId: string;
 	flowName: string;
 	open: boolean;
 	startDate: Date;
@@ -30,6 +31,7 @@ export interface FlowDetailProps {
 }
 
 export function FlowDetail({
+	notebookId,
 	flowName,
 	open,
 	startDate,
@@ -59,6 +61,7 @@ export function FlowDetail({
 						label: key,
 						value: value,
 					})),
+					notebookId,
 				);
 				setFlowHistory(response);
 			} catch (error) {
@@ -74,7 +77,7 @@ export function FlowDetail({
 		setStatusFilter(status);
 
 		void fetchFlowHistory();
-	}, [currentTenant, flowName, labels, startDate, endDate, open]);
+	}, [currentTenant, flowName, labels, startDate, endDate, open, notebookId]);
 
 	const failedCount = useMemo(
 		() => flowHistory?.filter((f) => f.status === "failure").length || 0,

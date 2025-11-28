@@ -9,23 +9,25 @@ import {
 	ChartLegend,
 	ChartTooltip,
 } from "@/components/ui/chart";
-import type { MetricHistory, RangeMetric } from "@/src/types/metric";
+import type { MetricHistory, Transform } from "@/src/types/metric";
 import { formatMetricValue } from "@/src/utils/metricFormatting";
 
 type MetricHistoryChartProps = {
 	historyData: {
 		series: { labels: Record<string, string>; values: MetricHistory[] }[];
 	};
-	metric: RangeMetric | null;
 	startDate: Date;
 	endDate: Date;
+	unit: string | null;
+	transform: Transform | null;
 };
 
 export function MetricHistoryChart({
 	historyData,
-	metric,
 	startDate,
 	endDate,
+	unit,
+	transform,
 }: MetricHistoryChartProps) {
 	// Track which series are visible
 	const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
@@ -132,7 +134,6 @@ export function MetricHistoryChart({
 	const chartData = React.useMemo(
 		() =>
 			sortedTimestamps.map((timestampMs) => {
-				if (!metric) return [];
 				const timestamp = new Date(timestampMs);
 				let timestampStr: string;
 				if (timeFormat === "time") {
@@ -168,8 +169,8 @@ export function MetricHistoryChart({
 					if (point) {
 						const { formattedValue } = formatMetricValue(
 							point.value,
-							metric.unit ?? undefined,
-							metric.transform,
+							unit ?? undefined,
+							transform,
 						);
 						// Parse back to number for chart (removes commas)
 						dataPoint[seriesLabel] = Number.parseFloat(
@@ -180,7 +181,14 @@ export function MetricHistoryChart({
 
 				return dataPoint;
 			}),
-		[historyData.series, metric, timeFormat, sortedTimestamps, getSeriesLabel],
+		[
+			historyData.series,
+			unit,
+			transform,
+			timeFormat,
+			sortedTimestamps,
+			getSeriesLabel,
+		],
 	);
 
 	// Build chart config for all series
@@ -203,9 +211,8 @@ export function MetricHistoryChart({
 	}
 
 	const { displayUnit } = React.useMemo(() => {
-		if (!metric) return { displayUnit: undefined };
-		return formatMetricValue(0, metric.unit ?? undefined, metric.transform);
-	}, [metric]);
+		return formatMetricValue(0, unit ?? undefined, transform);
+	}, [unit, transform]);
 
 	// Custom tooltip component with colored squares
 	const CustomTooltip = useMemo(() => {

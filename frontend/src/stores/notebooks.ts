@@ -1,8 +1,10 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+import { Comments } from "@/src/services/api/comments";
 import { Flows } from "@/src/services/api/flows";
 import { Metrics } from "@/src/services/api/metrics";
 import { Notebooks } from "@/src/services/api/notebooks";
+import type { Comment } from "@/src/types/comment";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
 import type { InstantMetric, RangeMetric } from "@/src/types/metric";
@@ -23,23 +25,35 @@ interface NotebooksState {
 	instantMetrics: InstantMetric[];
 	rangeMetrics: RangeMetric[];
 	metricsLoading: boolean;
+	comments: Comment[];
+	commentsLoading: boolean;
+	commentsDrawerOpen: boolean;
 	loading: boolean;
 	error: string | null;
 	settingsOpenBlockId: string | null;
 	notebookCreating: boolean;
 	startDate: Date | null;
 	endDate: Date | null;
-	setCurrentNotebook: (tenant: string, notebookId: string) => Notebook | null;
+	setCurrentNotebook: (
+		tenant: string,
+		notebookId?: string,
+		notebook?: Notebook,
+	) => Notebook | null;
 	openBlockSettings: (blockId: string) => void;
 	closeBlockSettings: () => void;
+	openCommentsDrawer: () => void;
+	closeCommentsDrawer: () => void;
+	toggleCommentsDrawer: () => void;
 	fetchNotebooks: (tenant: string) => Promise<void>;
 	fetchFlows: (
 		tenant: string,
 		start: Date,
 		end: Date,
 		filters: Filter[],
+		notebookId: string,
 	) => Promise<void>;
 	fetchMetrics: () => Promise<void>;
+	fetchComments: (notebookId: string) => Promise<void>;
 	updateNotebook: (
 		tenant: string,
 		notebook: Notebook,
@@ -64,6 +78,9 @@ export const useNotebooksStore = create<NotebooksState>()(
 			instantMetrics: [],
 			rangeMetrics: [],
 			metricsLoading: false,
+			comments: [],
+			commentsLoading: false,
+			commentsDrawerOpen: false,
 			loading: true,
 			error: null,
 			settingsOpenBlockId: null,
@@ -76,15 +93,31 @@ export const useNotebooksStore = create<NotebooksState>()(
 			closeBlockSettings: () => {
 				set({ settingsOpenBlockId: null });
 			},
+			openCommentsDrawer: () => {
+				set({ commentsDrawerOpen: true });
+			},
+			closeCommentsDrawer: () => {
+				set({ commentsDrawerOpen: false });
+			},
+			toggleCommentsDrawer: () => {
+				set({ commentsDrawerOpen: !get().commentsDrawerOpen });
+			},
 			fetchFlows: async (
 				tenant: string,
 				start: Date,
 				end: Date,
 				filters: Filter[],
+				notebookId: string,
 			) => {
 				set({ flowsLoading: true });
 				try {
-					const flows = await Flows.getByTenant(tenant, start, end, filters);
+					const flows = await Flows.getByTenant(
+						tenant,
+						start,
+						end,
+						filters,
+						notebookId,
+					);
 					set({ flows, flowsLoading: false });
 				} catch (_) {
 					set({ flows: [], flowsLoading: false });
@@ -104,8 +137,23 @@ export const useNotebooksStore = create<NotebooksState>()(
 					set({ instantMetrics: [], rangeMetrics: [], metricsLoading: false });
 				}
 			},
-			setCurrentNotebook: (tenant: string, notebookId: string) => {
+			fetchComments: async (notebookId: string) => {
+				set({ commentsLoading: true });
+				try {
+					const comments = await Comments.list(notebookId);
+					set({ comments, commentsLoading: false });
+				} catch (error) {
+					console.error("Failed to fetch comments:", error);
+					set({ comments: [], commentsLoading: false });
+				}
+			},
+			setCurrentNotebook: (
+				tenant: string,
+				notebookId?: string,
+				notebook?: Notebook,
+			) => {
 				const currentNotebook =
+					notebook ||
 					(get().notebooks[tenant] || []).find((nb) => nb.id === notebookId) ||
 					null;
 				if (!currentNotebook) return null;
