@@ -1,13 +1,10 @@
 import {
 	BookOpen,
 	ChevronDown,
-	ChevronLeft,
-	ChevronRight,
 	CornerDownRight,
 	Database,
 	Home,
 	LogOut,
-	PanelLeft,
 	Plus,
 	Trash2,
 } from "lucide-react";
@@ -32,7 +29,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/src/stores/auth";
-import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Notebook } from "@/src/types/notebook";
 import SearchDialog from "./SearchDialog";
@@ -50,16 +46,10 @@ const topMenuItems = [
 
 interface SideMenuProps {
 	isCollapsed?: boolean;
-	onToggleCollapse?: (collapsed: boolean) => void;
 }
 
-export default function SideMenu({
-	isCollapsed: controlledCollapsed,
-	onToggleCollapse,
-}: SideMenuProps = {}) {
+export default function SideMenu({ isCollapsed }: SideMenuProps = {}) {
 	const pathname = useLocation().pathname;
-	const [internalCollapsed, setInternalCollapsed] = useState(false);
-	const _navigate = useNavigate();
 	const [searchOpen, setSearchOpen] = useState(false);
 	const [notebooksOpen, setNotebooksOpen] = useState(true);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -67,7 +57,6 @@ export default function SideMenu({
 		id: string;
 		title: string;
 	} | null>(null);
-	const _tenants = useLabelsStore((state) => state.tenants);
 	const notebooksStore = useNotebooksStore((state) => state.notebooks);
 	const notebooksLoading = useNotebooksStore((state) => state.loading);
 	const fetchNotebooks = useNotebooksStore((state) => state.fetchNotebooks);
@@ -75,19 +64,6 @@ export default function SideMenu({
 	const deleteNotebook = useNotebooksStore((state) => state.deleteNotebook);
 	const navigate = useNavigate();
 	const logout = useAuthStore((state) => state.logout);
-
-	// Use controlled state if provided, otherwise use internal state
-	const isCollapsed =
-		controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed;
-
-	const toggleCollapse = () => {
-		const newCollapsed = !isCollapsed;
-		if (onToggleCollapse) {
-			onToggleCollapse(newCollapsed);
-		} else {
-			setInternalCollapsed(newCollapsed);
-		}
-	};
 
 	// Detect selected tenant from URL
 	const selectedTenant = pathname.startsWith("/tenants/")

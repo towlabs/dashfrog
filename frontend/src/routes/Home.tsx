@@ -1,8 +1,10 @@
-import { Building2, Home as HomeIcon, PanelLeft } from "lucide-react";
+import { Building2, Home, PanelLeft } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
 	Table,
 	TableBody,
@@ -12,9 +14,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useLabelsStore } from "@/src/stores/labels";
-import { Button } from "@/components/ui/button";
 import { useUIStore } from "../stores/ui";
-import { Separator } from "@/components/ui/separator";
 
 export default function HomePage() {
 	const tenants = useLabelsStore((state) => state.tenants);
@@ -61,11 +61,14 @@ export default function HomePage() {
 				/
 			</nav>
 
-			{/* Page Header */}
+			{/* Page Title */}
 			<div className="space-y-1">
-				<h2 className="text-3xl font-bold tracking-tight">Tenants</h2>
-				<p className="text-muted-foreground">
-					Select a tenant to view their data
+				<h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+					<Home className="h-8 w-8 text-muted-foreground" />
+					Tenants
+				</h1>
+				<p className="text-sm text-secondary-foreground">
+					Select a tenant namespace to view their data
 				</p>
 			</div>
 

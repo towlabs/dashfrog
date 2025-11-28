@@ -1,20 +1,13 @@
-import {
-	BarChart3,
-	ChevronRight,
-	Database,
-	Home,
-	PanelLeft,
-	Workflow,
-} from "lucide-react";
+import { BarChart3, Database, PanelLeft, Workflow } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { MetricsTable } from "@/components/MetricsTable";
 import { StaticFlowTable } from "@/components/StaticFlowTable";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenantStore } from "@/src/stores/tenant";
 import { useUIStore } from "../stores/ui";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 export default function TenantPage() {
 	const { tenant } = useParams<{ tenant: string }>();

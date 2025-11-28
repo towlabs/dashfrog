@@ -12,7 +12,6 @@ export default function LayoutClient({
 }) {
 	const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 	const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
-	const setSidebarCollapsed = useUIStore((state) => state.setSidebarCollapsed);
 	const fetchLabelsAndTenants = useLabelsStore(
 		(state) => state.fetchLabelsAndTenants,
 	);
@@ -31,10 +30,7 @@ export default function LayoutClient({
 			<Toaster position="top-right" richColors closeButton />
 			<div className="flex min-h-screen w-screen overflow-hidden">
 				{/* Desktop Sidebar */}
-				<SideMenu
-					isCollapsed={sidebarCollapsed}
-					onToggleCollapse={setSidebarCollapsed}
-				/>
+				<SideMenu isCollapsed={sidebarCollapsed} />
 
 				{/* Mobile Sidebar */}
 				<Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>

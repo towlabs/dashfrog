@@ -4,10 +4,8 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 import {
 	CalendarClock,
-	ChevronRight,
 	ChevronsRight,
 	Globe,
-	Home,
 	Lock,
 	PanelLeft,
 } from "lucide-react";
@@ -17,11 +15,16 @@ import BlockNoteEditor from "@/components/BlockNoteEditor";
 import { CommentsSideMenu } from "@/components/CommentsSideMenu";
 import { TenantControls } from "@/components/TenantControls";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
 import { useUIStore } from "../stores/ui";
-import { Separator } from "@/components/ui/separator";
 
 export default function NotebookPage() {
 	const { tenant, notebookId } = useParams<{
@@ -164,42 +167,53 @@ export default function NotebookPage() {
 						)}
 						{/* Public/Private Toggle */}
 						{currentNotebook && (
-							<Button
-								variant="ghost"
-								size="sm"
-								className="justify-start text-sm text-muted-foreground h-6"
-								onClick={() => {
-									if (!currentNotebook) return;
-									updateNotebook(tenantName, currentNotebook, {
-										isPublic: !currentNotebook.isPublic,
-									});
-								}}
-								title={
-									currentNotebook.isPublic
-										? "Notebook is public"
-										: "Notebook is private"
-								}
-							>
-								{currentNotebook.isPublic ? (
-									<Globe className="size-4" />
-								) : (
-									<Lock className="size-4" />
-								)}
-							</Button>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="justify-start text-sm text-muted-foreground h-6"
+										onClick={() => {
+											if (!currentNotebook) return;
+											updateNotebook(tenantName, currentNotebook, {
+												isPublic: !currentNotebook.isPublic,
+											});
+										}}
+									>
+										{currentNotebook.isPublic ? (
+											<Globe className="size-4" />
+										) : (
+											<Lock className="size-4" />
+										)}
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									{currentNotebook.isPublic
+										? "Notebook is public - click to make private"
+										: "Notebook is private - click to make public"}
+								</TooltipContent>
+							</Tooltip>
 						)}
 						{/* Comments Button */}
-						<Button
-							variant="ghost"
-							size="sm"
-							className="justify-start text-sm text-muted-foreground h-6"
-							onClick={toggleCommentsDrawer}
-						>
-							{commentsDrawerOpen ? (
-								<ChevronsRight className="size-5" />
-							) : (
-								<CalendarClock className="size-4" />
-							)}
-						</Button>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="justify-start text-sm text-muted-foreground h-6"
+									onClick={toggleCommentsDrawer}
+								>
+									{commentsDrawerOpen ? (
+										<ChevronsRight className="size-5" />
+									) : (
+										<CalendarClock className="size-4" />
+									)}
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>
+								{commentsDrawerOpen ? "Hide annotations" : "Show annotations"}
+							</TooltipContent>
+						</Tooltip>
 					</div>
 				</div>
 
