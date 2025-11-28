@@ -45,7 +45,6 @@ export default function NotebookPage() {
 	);
 	const startDate = useNotebooksStore((state) => state.startDate);
 	const endDate = useNotebooksStore((state) => state.endDate);
-	const comments = useNotebooksStore((state) => state.comments);
 	const commentsDrawerOpen = useNotebooksStore(
 		(state) => state.commentsDrawerOpen,
 	);
@@ -168,7 +167,7 @@ export default function NotebookPage() {
 			</div>
 
 			{/* Comments Side Menu */}
-			<CommentsSideMenu visible={commentsDrawerOpen} comments={comments} />
+			<CommentsSideMenu visible={commentsDrawerOpen} />
 		</div>
 	);
 }

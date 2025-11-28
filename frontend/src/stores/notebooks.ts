@@ -4,7 +4,7 @@ import { Comments } from "@/src/services/api/comments";
 import { Flows } from "@/src/services/api/flows";
 import { Metrics } from "@/src/services/api/metrics";
 import { Notebooks } from "@/src/services/api/notebooks";
-import type { Comment } from "@/src/types/comment";
+import type { BaseComment, Comment } from "@/src/types/comment";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
 import type { InstantMetric, RangeMetric } from "@/src/types/metric";
@@ -34,6 +34,7 @@ interface NotebooksState {
 	notebookCreating: boolean;
 	startDate: Date | null;
 	endDate: Date | null;
+	pendingComment: BaseComment | null;
 	setCurrentNotebook: (
 		tenant: string,
 		notebookId?: string,
@@ -53,7 +54,11 @@ interface NotebooksState {
 		notebookId: string,
 	) => Promise<void>;
 	fetchMetrics: () => Promise<void>;
-	fetchComments: (notebookId: string) => Promise<void>;
+	fetchComments: (
+		notebookId?: string,
+		start?: Date,
+		end?: Date,
+	) => Promise<void>;
 	updateNotebook: (
 		tenant: string,
 		notebook: Notebook,
@@ -65,6 +70,9 @@ interface NotebooksState {
 	) => Notebook;
 	deleteNotebook: (tenant: string, notebookId: string) => Promise<void>;
 	stopTimeWindowRefresh: () => void;
+	deleteComment: (id: number) => Promise<void>;
+	createComment: (comment: BaseComment) => Promise<void>;
+	updateComment: (comment: Comment) => Promise<void>;
 }
 
 export const useNotebooksStore = create<NotebooksState>()(
@@ -86,7 +94,7 @@ export const useNotebooksStore = create<NotebooksState>()(
 			settingsOpenBlockId: null,
 			startDate: null,
 			endDate: null,
-
+			pendingComment: null,
 			openBlockSettings: (blockId: string) => {
 				set({ settingsOpenBlockId: blockId });
 			},
@@ -137,10 +145,14 @@ export const useNotebooksStore = create<NotebooksState>()(
 					set({ instantMetrics: [], rangeMetrics: [], metricsLoading: false });
 				}
 			},
-			fetchComments: async (notebookId: string) => {
+			fetchComments: async (notebookId?: string, start?: Date, end?: Date) => {
 				set({ commentsLoading: true });
 				try {
-					const comments = await Comments.list(notebookId);
+					const comments = await Comments.list({
+						notebook_id: notebookId,
+						start,
+						end,
+					});
 					set({ comments, commentsLoading: false });
 				} catch (error) {
 					console.error("Failed to fetch comments:", error);
@@ -286,6 +298,29 @@ export const useNotebooksStore = create<NotebooksState>()(
 					clearInterval(timeWindowInterval);
 					timeWindowInterval = null;
 				}
+			},
+			deleteComment: async (id: number) => {
+				const { comments } = get();
+				set({ comments: comments.filter((c) => c.id !== id) });
+				await Comments.delete(id);
+			},
+			createComment: async (comment: BaseComment) => {
+				const { comments } = get();
+				set({ pendingComment: comment });
+				const newComment = await Comments.create(comment);
+				set({ comments: [...comments, newComment], pendingComment: null });
+			},
+			updateComment: async (updates: Partial<Comment>) => {
+				const { comments } = get();
+				const comment = comments.find((c) => c.id === updates.id);
+				if (!comment) return;
+				const updatedComment = { ...comment, ...updates };
+				set({
+					comments: comments.map((c) =>
+						c.id === updates.id ? { ...c, ...updates } : c,
+					),
+				});
+				await Comments.update(updatedComment);
 			},
 		}),
 		{ name: "notebooks" },

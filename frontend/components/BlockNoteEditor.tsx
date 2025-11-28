@@ -122,8 +122,8 @@ export default function BlockNoteEditor({
 	// Fetch comments when start or end dates change
 	useEffect(() => {
 		if (startDate === null || endDate === null) return;
-		void fetchComments(notebook.id);
-	}, [startDate, endDate, notebook.id, fetchComments]);
+		void fetchComments(undefined, startDate, endDate);
+	}, [startDate, endDate, fetchComments]);
 
 	// Save editor content changes (debounced in store)
 	useEditorChange((editor) => {
