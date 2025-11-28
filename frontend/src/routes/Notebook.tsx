@@ -6,7 +6,9 @@ import {
 	CalendarClock,
 	ChevronRight,
 	ChevronsRight,
+	Globe,
 	Home,
+	Lock,
 	PanelLeft,
 } from "lucide-react";
 import { useEffect } from "react";
@@ -159,6 +161,31 @@ export default function NotebookPage() {
 									});
 								}}
 							/>
+						)}
+						{/* Public/Private Toggle */}
+						{currentNotebook && (
+							<Button
+								variant="ghost"
+								size="sm"
+								className="justify-start text-sm text-muted-foreground h-6"
+								onClick={() => {
+									if (!currentNotebook) return;
+									updateNotebook(tenantName, currentNotebook, {
+										isPublic: !currentNotebook.isPublic,
+									});
+								}}
+								title={
+									currentNotebook.isPublic
+										? "Notebook is public"
+										: "Notebook is private"
+								}
+							>
+								{currentNotebook.isPublic ? (
+									<Globe className="size-4" />
+								) : (
+									<Lock className="size-4" />
+								)}
+							</Button>
 						)}
 						{/* Comments Button */}
 						<Button
