@@ -89,7 +89,7 @@ export function CommentsSideMenu({
 			<div className="w-[400px] flex flex-col h-full">
 				{/* Header */}
 				<div className="py-2 px-6 flex items-center justify-between text-muted-foreground">
-					<h3>Annotations</h3>
+					<h3>Time annotations</h3>
 					<Popover open={open} onOpenChange={handleOpenChange}>
 						<PopoverTrigger asChild>
 							<Button variant="ghost" size="icon" className="cursor-pointer">

@@ -8,6 +8,8 @@ import {
 	Home,
 	MessageSquare,
 	MessageSquareText,
+	Pencil,
+	PenLine,
 } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -51,9 +53,16 @@ export default function NotebookPage() {
 	const toggleCommentsDrawer = useNotebooksStore(
 		(state) => state.toggleCommentsDrawer,
 	);
+	const fetchComments = useNotebooksStore((state) => state.fetchComments);
 
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
+
+	// Fetch comments when start or end dates change
+	useEffect(() => {
+		if (startDate === null || endDate === null) return;
+		void fetchComments(undefined, startDate, endDate);
+	}, [startDate, endDate, fetchComments]);
 
 	useEffect(() => {
 		if (!tenant || !notebookId || notebooksAreLoading) return;
@@ -137,7 +146,7 @@ export default function NotebookPage() {
 							{commentsDrawerOpen ? (
 								<ChevronsRight className="size-5" />
 							) : (
-								<MessageSquareText className="size-4" />
+								<Pencil className="size-4" />
 							)}
 						</Button>
 					</div>
