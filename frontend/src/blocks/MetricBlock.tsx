@@ -25,7 +25,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { cn } from "@/lib/utils";
-import { Metrics, MetricScalar } from "@/src/services/api/metrics";
+import { type MetricScalar, Metrics } from "@/src/services/api/metrics";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type {

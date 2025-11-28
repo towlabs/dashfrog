@@ -42,10 +42,9 @@ import { HeatmapBlock } from "@/src/blocks/HeatmapBlock";
 import { MetricBlock } from "@/src/blocks/MetricBlock";
 import { MetricHistoryBlock } from "@/src/blocks/MetricHistoryBlock";
 import { MetricRatioBlock } from "@/src/blocks/MetricRatioBlock";
-import { useNotebooksStore } from "@/src/stores/notebooks";
+import type { Filter } from "@/src/types/filter";
 import type { Notebook } from "@/src/types/notebook";
 import { customEditor, getSlashMenuItems } from "@/src/utils/editor";
-import { Filter } from "@/src/types/filter";
 
 type BlockNoteEditorProps = {
 	tenantName: string;
@@ -104,6 +103,7 @@ export default function BlockNoteEditor({
 		setMounted(true);
 	});
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: replace when noebook changes
 	useEffect(() => {
 		setInitialized(false);
 

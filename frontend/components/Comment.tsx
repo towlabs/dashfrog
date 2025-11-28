@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { Trash2 } from "lucide-react";
+import { useState } from "react";
 import { AnnotationForm } from "@/components/AnnotationForm";
 import {
 	Popover,
@@ -12,7 +12,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { Comment as CommentModel, BaseComment } from "@/src/types/comment";
+import type { BaseComment, Comment as CommentModel } from "@/src/types/comment";
 
 interface CommentProps {
 	comment: BaseComment | CommentModel;

@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
 	EmojiPicker,
 	EmojiPickerContent,
-	EmojiPickerFooter,
 	EmojiPickerSearch,
 } from "@/components/ui/emoji-picker";
 import { Input } from "@/components/ui/input";

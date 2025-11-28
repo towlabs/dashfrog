@@ -14,20 +14,11 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import {
-	type MetricHistoryPoint,
-	MetricRangeHistory,
-	Metrics,
-} from "@/src/services/api/metrics";
+import { type MetricRangeHistory, Metrics } from "@/src/services/api/metrics";
 import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import type {
-	GroupByFn,
-	MetricHistory,
-	RangeMetric,
-	Transform,
-} from "../types/metric";
+import type { GroupByFn, RangeMetric, Transform } from "../types/metric";
 
 export const MetricHistoryBlock = createReactBlockSpec(
 	{

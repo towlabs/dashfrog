@@ -2,15 +2,7 @@
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
-import {
-	ChevronRight,
-	ChevronsRight,
-	Home,
-	MessageSquare,
-	MessageSquareText,
-	Pencil,
-	PenLine,
-} from "lucide-react";
+import { CalendarClock, ChevronRight, ChevronsRight, Home } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import BlockNoteEditor from "@/components/BlockNoteEditor";
@@ -146,7 +138,7 @@ export default function NotebookPage() {
 							{commentsDrawerOpen ? (
 								<ChevronsRight className="size-5" />
 							) : (
-								<Pencil className="size-4" />
+								<CalendarClock className="size-4" />
 							)}
 						</Button>
 					</div>

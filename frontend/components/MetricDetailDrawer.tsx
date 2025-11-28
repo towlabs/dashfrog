@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/drawer";
 import { type MetricHistoryPoint, Metrics } from "@/src/services/api/metrics";
 import type { Filter } from "@/src/types/filter";
-import type { GroupByFn, RangeMetric, Transform } from "@/src/types/metric";
+import type { GroupByFn, Transform } from "@/src/types/metric";
 
 type MetricDetailDrawerProps = {
 	notebookId?: string | null;

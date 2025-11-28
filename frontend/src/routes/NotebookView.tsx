@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import BlockNoteEditor from "@/components/BlockNoteEditor";
 import { Notebooks } from "@/src/services/api/notebooks";
-import type { Notebook } from "@/src/types/notebook";
-import { useTenantStore } from "../stores/tenant";
 import { useNotebooksStore } from "../stores/notebooks";
+import { useTenantStore } from "../stores/tenant";
 
 export default function NotebookView() {
 	const { tenant, notebookId } = useParams<{
