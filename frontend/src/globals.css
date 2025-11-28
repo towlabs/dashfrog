@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/complexity/noImportantStyles: overriding prosemirror styles */
 @import "tailwindcss";
 @import "react-day-picker/style.css";
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap");
 @plugin "tailwindcss-animate";
 @source "../node_modules/@blocknote/shadcn";
 
@@ -9,6 +10,7 @@
 		ui-sans-serif, -apple-system, BlinkMacSystemFont,
 		"Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji",
 		Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+	--font-family-triodon: "Lexend", sans-serif;
 	--color-background: oklch(100% 0 0);
 	--color-foreground: oklch(3.9% 0 0);
 	--color-card: oklch(100% 0 0);

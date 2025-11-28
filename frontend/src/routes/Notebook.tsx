@@ -2,7 +2,13 @@
 
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
-import { CalendarClock, ChevronRight, ChevronsRight, Home } from "lucide-react";
+import {
+	CalendarClock,
+	ChevronRight,
+	ChevronsRight,
+	Home,
+	PanelLeft,
+} from "lucide-react";
 import { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import BlockNoteEditor from "@/components/BlockNoteEditor";
@@ -12,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
+import { useUIStore } from "../stores/ui";
+import { Separator } from "@/components/ui/separator";
 
 export default function NotebookPage() {
 	const { tenant, notebookId } = useParams<{
@@ -22,6 +30,7 @@ export default function NotebookPage() {
 	const setCurrentTenant = useTenantStore((state) => state.setCurrentTenant);
 	const labels = useLabelsStore((state) => state.labels);
 	const currentNotebook = useNotebooksStore((state) => state.currentNotebook);
+	const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 	const timeWindow = useNotebooksStore(
 		(state) => state.currentNotebook?.timeWindow,
 	);
@@ -96,13 +105,36 @@ export default function NotebookPage() {
 				{/* Toolbar */}
 				<div className="flex items-center justify-between gap-4 px-8 py-3">
 					{/* Breadcrumb */}
-					<nav className="flex items-center text-sm text-muted-foreground">
-						<Link to="/" className="hover:text-foreground transition-colors">
-							<Home className="h-4 w-4" />
+					<nav className="flex items-center text-muted-foreground gap-1">
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-6 w-6"
+							onClick={toggleSidebar}
+						>
+							<PanelLeft className="h-4 w-4" />
+							<span className="sr-only">Toggle sidebar</span>
+						</Button>
+						<Separator
+							orientation="vertical"
+							className="h-4 mr-2 text-secondary-foreground"
+						/>
+						<Link
+							to="/"
+							className="hover:text-foreground transition-colors font-lg"
+						>
+							<span style={{ color: "#558f6f" }} className="font-extrabold">
+								d
+							</span>
 						</Link>
-						<ChevronRight className="h-4 w-4" />
-						<span className="font-medium">{tenantName}</span>
-						<ChevronRight className="h-4 w-4" />
+						/
+						<Link
+							to={`/tenants/${encodeURIComponent(tenantName)}`}
+							className="hover:text-foreground transition-colors font-medium"
+						>
+							{tenantName}
+						</Link>
+						/
 						<span className="font-medium text-foreground">
 							{currentNotebook ? currentNotebook.title : ""}
 						</span>

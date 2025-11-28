@@ -3,6 +3,7 @@ import {
 	ChevronRight,
 	Database,
 	Home,
+	PanelLeft,
 	Workflow,
 } from "lucide-react";
 import { useEffect } from "react";
@@ -11,12 +12,15 @@ import { MetricsTable } from "@/components/MetricsTable";
 import { StaticFlowTable } from "@/components/StaticFlowTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenantStore } from "@/src/stores/tenant";
+import { useUIStore } from "../stores/ui";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 export default function TenantPage() {
 	const { tenant } = useParams<{ tenant: string }>();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const setCurrentTenant = useTenantStore((state) => state.setCurrentTenant);
-
+	const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
 
@@ -36,16 +40,35 @@ export default function TenantPage() {
 			{/* Breadcrumb and Toolbar */}
 			<div className="flex items-center justify-between gap-4">
 				{/* Breadcrumb */}
-				<nav className="flex items-center text-sm text-muted-foreground">
-					<Link to="/" className="hover:text-foreground transition-colors">
-						<Home className="h-4 w-4" />
+				<nav className="flex items-center text-muted-foreground gap-1">
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-6 w-6"
+						onClick={toggleSidebar}
+					>
+						<PanelLeft className="h-4 w-4" />
+						<span className="sr-only">Toggle sidebar</span>
+					</Button>
+					<Separator
+						orientation="vertical"
+						className="h-4 mr-2 text-secondary-foreground"
+					/>
+					<Link
+						to="/"
+						className="hover:text-foreground transition-colors font-lg"
+					>
+						<span style={{ color: "#558f6f" }} className="font-extrabold">
+							d
+						</span>
 					</Link>
-					<ChevronRight className="h-4 w-4" />
-					<span className="font-medium">{tenantName}</span>
-					<ChevronRight className="h-4 w-4" />
-					<span className="font-medium text-foreground">
-						{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-					</span>
+					/
+					<Link
+						to={`/tenants/${encodeURIComponent(tenantName)}`}
+						className="hover:text-foreground transition-colors font-medium"
+					>
+						{tenantName}
+					</Link>
 				</nav>
 			</div>
 

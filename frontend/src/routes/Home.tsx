@@ -1,6 +1,6 @@
-import { Building2, Home as HomeIcon } from "lucide-react";
+import { Building2, Home as HomeIcon, PanelLeft } from "lucide-react";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import {
@@ -12,6 +12,9 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useLabelsStore } from "@/src/stores/labels";
+import { Button } from "@/components/ui/button";
+import { useUIStore } from "../stores/ui";
+import { Separator } from "@/components/ui/separator";
 
 export default function HomePage() {
 	const tenants = useLabelsStore((state) => state.tenants);
@@ -20,6 +23,7 @@ export default function HomePage() {
 	const fetchLabelsAndTenants = useLabelsStore(
 		(state) => state.fetchLabelsAndTenants,
 	);
+	const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 
 	useEffect(() => {
 		void fetchLabelsAndTenants();
@@ -32,9 +36,29 @@ export default function HomePage() {
 	return (
 		<div className="flex-1 space-y-6 px-8 py-4">
 			{/* Breadcrumb */}
-			<nav className="flex items-center space-x-2 text-sm text-muted-foreground">
-				<HomeIcon className="h-4 w-4 mr-2" />
-				Tenants
+			<nav className="flex items-center text-muted-foreground gap-1">
+				<Button
+					variant="ghost"
+					size="icon"
+					className="h-6 w-6"
+					onClick={toggleSidebar}
+				>
+					<PanelLeft className="h-4 w-4" />
+					<span className="sr-only">Toggle sidebar</span>
+				</Button>
+				<Separator
+					orientation="vertical"
+					className="h-4 mr-2 text-secondary-foreground"
+				/>
+				<Link
+					to="/"
+					className="hover:text-foreground transition-colors font-lg"
+				>
+					<span style={{ color: "#558f6f" }} className="font-extrabold">
+						d
+					</span>
+				</Link>
+				/
 			</nav>
 
 			{/* Page Header */}
@@ -59,7 +83,7 @@ export default function HomePage() {
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead>Tenant Name</TableHead>
+								<TableHead>Tenant</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -69,7 +93,7 @@ export default function HomePage() {
 									onClick={() => handleTenantClick(tenantName)}
 									className="cursor-pointer"
 								>
-									<TableCell className="font-medium">{tenantName}</TableCell>
+									<TableCell className="font-medium">d/{tenantName}</TableCell>
 								</TableRow>
 							))}
 						</TableBody>
