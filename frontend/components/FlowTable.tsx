@@ -103,7 +103,7 @@ export function FlowTable({
 		setDetailOpen(true);
 	};
 
-	const totalPages = Math.ceil(flows?.length || 0 / ITEMS_PER_PAGE);
+	const totalPages = Math.ceil((flows?.length || 0) / ITEMS_PER_PAGE);
 	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 	const endIndex = startIndex + ITEMS_PER_PAGE;
 	const paginatedFlows = flows?.slice(startIndex, endIndex) || [];

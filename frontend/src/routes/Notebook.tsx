@@ -99,9 +99,9 @@ export default function NotebookPage() {
 	]);
 
 	return (
-		<div className="flex-1 flex h-screen">
+		<div className="flex-1 flex h-screen min-w-0">
 			{/* Main Content Area */}
-			<div className="flex-1 flex flex-col">
+			<div className="flex-1 flex flex-col min-w-0">
 				{/* Toolbar */}
 				<div className="flex items-center justify-between gap-4 px-8 py-3">
 					{/* Breadcrumb */}

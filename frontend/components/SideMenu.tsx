@@ -182,7 +182,7 @@ export default function SideMenu({
 			{/* Sidebar when expanded */}
 			{!isCollapsed && (
 				<aside
-					className="fixed left-0 top-0 flex h-screen w-64 flex-col border-r transition-all duration-300 z-30 hidden md:flex"
+					className="flex h-screen w-64 flex-col border-r transition-all duration-300 hidden md:flex"
 					style={{ backgroundColor: "#f9f8f7" }}
 				>
 					<div className="flex h-14 items-center border-b px-3">

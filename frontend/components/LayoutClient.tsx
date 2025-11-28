@@ -29,8 +29,8 @@ export default function LayoutClient({
 	return (
 		<>
 			<Toaster position="top-right" richColors closeButton />
-			<div className="relative flex min-h-screen">
-				{/* Desktop Sidebar - Fixed */}
+			<div className="flex min-h-screen w-screen overflow-hidden">
+				{/* Desktop Sidebar */}
 				<SideMenu
 					isCollapsed={sidebarCollapsed}
 					onToggleCollapse={setSidebarCollapsed}
@@ -43,10 +43,8 @@ export default function LayoutClient({
 					</DrawerContent>
 				</Drawer>
 
-				{/* Main Content - With left margin to account for fixed sidebar */}
-				<div
-					className={`flex flex-1 flex-col transition-all duration-300 overflow-hidden ${sidebarCollapsed ? "md:ml-0" : "md:ml-64"}`}
-				>
+				{/* Main Content */}
+				<div className="flex flex-1 flex-col min-w-0">
 					<header className="border-b bg-background"></header>
 					<main className="flex-1 overflow-y-auto overflow-x-hidden">
 						{children}
