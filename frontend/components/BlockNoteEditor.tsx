@@ -69,11 +69,6 @@ export default function BlockNoteEditor({
 	const [initialized, setInitialized] = useState(false);
 	const [mounted, setMounted] = useState(false);
 
-	// Get store functions and state
-	const startDate = useNotebooksStore((state) => state.startDate);
-	const endDate = useNotebooksStore((state) => state.endDate);
-	const fetchComments = useNotebooksStore((state) => state.fetchComments);
-
 	// Create BlockNote editor instance
 	// biome-ignore lint/correctness/noUnusedVariables: removing table from defaultSpecs
 	const { table, ...defaultSpecs } = defaultBlockSpecs;
@@ -118,12 +113,6 @@ export default function BlockNoteEditor({
 		editor.replaceBlocks(editor.document, (notebook.blocks || []) as any);
 		setInitialized(true);
 	}, [notebook.id, editor, mounted]);
-
-	// Fetch comments when start or end dates change
-	useEffect(() => {
-		if (startDate === null || endDate === null) return;
-		void fetchComments(undefined, startDate, endDate);
-	}, [startDate, endDate, fetchComments]);
 
 	// Save editor content changes (debounced in store)
 	useEditorChange((editor) => {
