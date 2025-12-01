@@ -1,0 +1,46 @@
+name: Dashfrog
+
+on:
+  pull_request:
+    paths:
+      - 'dashfrog/**'
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: "dashfrog/.python-version"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-suffix: "dashfrog"
+
+      - name: Install dependencies
+        run: |
+          cd dashfrog
+          uv sync --all-groups
+
+      - name: Run tests
+        run: |
+          cd dashfrog
+          uv run pytest
+
+      - name: Run lint
+        run: |
+          cd dashfrog
+          uv run pyright
+          uv run ruff check
