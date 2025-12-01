@@ -72,6 +72,7 @@ class FlowHistory(BaseModel):
 TransformT = Literal["ratePerSecond", "ratePerMinute", "ratePerHour", "ratePerDay", "p50", "p90", "p95", "p99", "ratio"]
 TimeAggregationT = Literal["last", "avg", "min", "max", "match"]
 GroupByFnT = Literal["sum", "avg", "min", "max"]
+MetricTypeT = Literal["ratio", "histogram", "gauge", "increase", "rate"]
 
 
 class MetricResponse(BaseModel):

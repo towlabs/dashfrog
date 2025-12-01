@@ -2,9 +2,9 @@
 
 from sqlalchemy.orm import Session
 
-from dashfrog_python_sdk import flow, get_dashfrog_instance
-from dashfrog_python_sdk.constants import EVENT_FLOW_FAIL, EVENT_FLOW_START, EVENT_FLOW_SUCCESS
-from dashfrog_python_sdk.models import FlowEvent
+from dashfrog import flow, get_dashfrog_instance
+from dashfrog.constants import EVENT_FLOW_FAIL, EVENT_FLOW_START, EVENT_FLOW_SUCCESS
+from dashfrog.models import FlowEvent
 
 import pytest
 
@@ -29,14 +29,14 @@ class TestSync:
             # Verify START event
             start_event = events[0]
             assert start_event.event_name == EVENT_FLOW_START
-            assert start_event.labels["flow_name"] == "test_flow"
+            assert start_event.flow_metadata["flow_name"] == "test_flow"
             assert start_event.labels["customer_id"] == "123"
-            assert start_event.labels["tenant"] == "test_tenant"
+            assert start_event.tenant == "test_tenant"
 
             # Verify SUCCESS event
             success_event = events[1]
             assert success_event.event_name == EVENT_FLOW_SUCCESS
-            assert success_event.labels["flow_name"] == "test_flow"
+            assert success_event.flow_metadata["flow_name"] == "test_flow"
 
             # Verify flow_id is consistent
             assert start_event.flow_id == success_event.flow_id
@@ -63,7 +63,7 @@ class TestSync:
             # Verify FAIL event
             fail_event = events[1]
             assert fail_event.event_name == EVENT_FLOW_FAIL
-            assert fail_event.labels["flow_name"] == "failing_flow"
+            assert fail_event.flow_metadata["flow_name"] == "failing_flow"
 
             # Verify flow_id is consistent
             assert start_event.flow_id == fail_event.flow_id

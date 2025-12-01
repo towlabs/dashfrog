@@ -2,7 +2,7 @@ import time
 
 import requests
 
-from dashfrog_python_sdk import get_dashfrog_instance
+from dashfrog import get_dashfrog_instance
 
 
 def wait_for_metric_in_prometheus(query: str, max_wait: int = 30):
@@ -27,5 +27,7 @@ def wait_for_metric_in_prometheus(query: str, max_wait: int = 30):
         except (AssertionError, Exception) as e:
             last_error = e
             if time.time() - start_time > max_wait:
-                raise TimeoutError(f"Metric {query} did not appear in Prometheus after {max_wait}s. Last error: {last_error}")
+                raise TimeoutError(
+                    f"Metric {query} did not appear in Prometheus after {max_wait}s. Last error: {last_error}"
+                )
             time.sleep(0.5)

@@ -4,9 +4,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from dashfrog_python_sdk import flow, get_dashfrog_instance
-from dashfrog_python_sdk.constants import EVENT_FLOW_START, EVENT_FLOW_SUCCESS
-from dashfrog_python_sdk.models import FlowEvent
+from dashfrog import flow, get_dashfrog_instance
+from dashfrog.constants import EVENT_FLOW_START, EVENT_FLOW_SUCCESS
+from dashfrog.models import FlowEvent
 
 
 class TestAsync:
@@ -18,7 +18,7 @@ class TestAsync:
         app = FastAPI()
 
         # Instrument FastAPI to propagate trace context
-        from dashfrog_python_sdk import with_fastapi
+        from dashfrog import with_fastapi
 
         with_fastapi(app)
 
@@ -47,13 +47,13 @@ class TestAsync:
             # Verify START event
             start_event = events[0]
             assert start_event.event_name == EVENT_FLOW_START
-            assert start_event.labels["flow_name"] == "process_order"
+            assert start_event.flow_metadata["flow_name"] == "process_order"
             assert start_event.labels["order_id"] == "123"
 
             # Verify SUCCESS event
             success_event = events[1]
             assert success_event.event_name == EVENT_FLOW_SUCCESS
-            assert success_event.labels["flow_name"] == "process_order"
+            assert success_event.flow_metadata["flow_name"] == "process_order"
 
             # Verify same trace_id
             assert start_event.flow_id == success_event.flow_id

@@ -182,9 +182,8 @@ class FlowDetailRequest(BaseModel):
 
 
 @router.post("/search", response_model=list[FlowResponse])
-async def search_flows(request: FlowSearchRequest, 
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
-
+async def search_flows(
+    request: FlowSearchRequest, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
 ) -> list[FlowResponse]:
     """Search/list flows with optional label filters.
 
@@ -196,6 +195,7 @@ async def search_flows(request: FlowSearchRequest,
             "start": "2024-01-01T00:00:00Z",
             "end": "2024-01-31T23:59:59Z",
             "tenant": "acme-corp",
+            "notebook_id": "123e4567-e89b-12d3-a456-426614174000",
             "labels": [
                 {"label": "environment", "value": "production"}
             ]
@@ -224,8 +224,15 @@ async def search_flows(request: FlowSearchRequest,
             notebook = session.execute(select(Notebook).where(Notebook.id == request.notebook_id)).scalar_one()
         except NoResultFound:
             raise HTTPException(status_code=404, detail=f"Notebook {request.notebook_id} not found")
-        verify_has_access_to_notebook(credentials, notebook, request.tenant, request.start, request.end, flow_filter=BlockFilters(names=[], filters=request.labels))
-        
+        verify_has_access_to_notebook(
+            credentials,
+            notebook,
+            request.tenant,
+            request.start,
+            request.end,
+            flow_filter=BlockFilters(names=[], filters=request.labels),
+        )
+
         return list(flow_generator(session, base_filters))
 
 
@@ -236,9 +243,8 @@ class FlowHistoryResponse(BaseModel):
 
 
 @router.post("/history", response_model=FlowHistoryResponse)
-async def get_flow_history(request: FlowDetailRequest, 
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
-
+async def get_flow_history(
+    request: FlowDetailRequest, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
 ) -> FlowHistoryResponse:
     """Get detailed flow information with run history.
 
@@ -282,9 +288,18 @@ async def get_flow_history(request: FlowDetailRequest,
             notebook = session.execute(select(Notebook).where(Notebook.id == request.notebook_id)).scalar_one()
         except NoResultFound:
             raise HTTPException(status_code=404, detail=f"Notebook {request.notebook_id} not found")
-        verify_has_access_to_notebook(credentials, notebook, request.tenant, request.start, request.end, flow_filter=BlockFilters(names=[request.flow_name], filters=request.labels))
+        verify_has_access_to_notebook(
+            credentials,
+            notebook,
+            request.tenant,
+            request.start,
+            request.end,
+            flow_filter=BlockFilters(names=[request.flow_name], filters=request.labels),
+        )
 
-        history_query = select(FlowEvent).where(and_(*base_filters)).order_by(FlowEvent.flow_id, FlowEvent.event_dt.asc())
+        history_query = (
+            select(FlowEvent).where(and_(*base_filters)).order_by(FlowEvent.flow_id, FlowEvent.event_dt.asc())
+        )
         # Get all events grouped by flow_id
         history_result = session.execute(history_query).scalars()
 
@@ -428,8 +443,10 @@ async def get_all_flow_tenants(auth: Annotated[None, Depends(verify_token)]) -> 
 
 class FlowStaticResponse(BaseModel):
     """Response for a flow."""
+
     name: str
-    labels: list[str]   
+    labels: list[str]
+
 
 @router.get("/", response_model=list[FlowStaticResponse])
 async def get_all_flows(auth: Annotated[None, Depends(verify_token)]) -> list[FlowStaticResponse]:

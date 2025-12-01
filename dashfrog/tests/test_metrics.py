@@ -4,9 +4,9 @@ import time
 
 from sqlalchemy import select
 
-from dashfrog_python_sdk import get_dashfrog_instance
-from dashfrog_python_sdk.metrics import Counter, Histogram
-from dashfrog_python_sdk.models import Metric
+from dashfrog import get_dashfrog_instance
+from dashfrog.metrics import Counter, Histogram
+from dashfrog.models import Metric
 
 from tests.utils import wait_for_metric_in_prometheus
 
@@ -22,7 +22,6 @@ class TestCounter:
             labels=["environment", "status"],
             pretty_name="Test Counter",
             unit="count",
-            aggregation="increase",
         )
 
         # Increment the counter
@@ -40,7 +39,6 @@ class TestCounter:
             assert result.type == "counter"
             assert result.pretty_name == "Test Counter"
             assert result.unit == "count"
-            assert result.aggregation == "increase"
             assert set(result.labels) == {"environment", "status"}
 
     def test_counter_data_in_prometheus(self, setup_dashfrog):
@@ -51,7 +49,6 @@ class TestCounter:
             labels=["status"],
             pretty_name="Prometheus Test Counter",
             unit="requests",
-            aggregation="increase",
         )
 
         # Increment the counter
@@ -97,7 +94,6 @@ class TestHistogram:
             labels=["endpoint", "method"],
             pretty_name="Test Histogram",
             unit="milliseconds",
-            aggregation="p95",
         )
 
         # Record some values
@@ -115,7 +111,6 @@ class TestHistogram:
             assert result.type == "histogram"
             assert result.pretty_name == "Test Histogram"
             assert result.unit == "milliseconds"
-            assert result.aggregation == "p95"
             assert set(result.labels) == {"endpoint", "method"}
 
     def test_histogram_data_in_prometheus(self, setup_dashfrog):
@@ -126,7 +121,6 @@ class TestHistogram:
             labels=["endpoint"],
             pretty_name="Prometheus Test Histogram",
             unit="milliseconds",
-            aggregation="p99",
         )
 
         # Record values to create a distribution

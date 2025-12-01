@@ -2,9 +2,9 @@
 
 from sqlalchemy import create_engine
 
-from dashfrog_python_sdk import setup
-from dashfrog_python_sdk.config import Config
-from dashfrog_python_sdk.migrations import run_migrations
+from dashfrog import setup
+from dashfrog.config import Config
+from dashfrog.migrations import run_migrations
 
 import pytest
 
@@ -25,8 +25,8 @@ def test_engine():
 @pytest.fixture
 def setup_dashfrog(test_engine):
     """Initialize DashFrog with test database."""
-    from dashfrog_python_sdk import get_dashfrog_instance
-    from dashfrog_python_sdk.models import Base
+    from dashfrog import get_dashfrog_instance
+    from dashfrog.models import Base
 
     config = Config()
     setup(config)

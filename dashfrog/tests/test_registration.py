@@ -2,8 +2,8 @@
 
 from sqlalchemy.orm import Session
 
-from dashfrog_python_sdk import flow, get_dashfrog_instance
-from dashfrog_python_sdk.models import Flow
+from dashfrog import flow, get_dashfrog_instance
+from dashfrog.models import Flow
 
 
 class TestRegistration:
