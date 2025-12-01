@@ -27,7 +27,6 @@ import {
 	History,
 	LayoutGrid,
 	RectangleEllipsis,
-	SquareDivide,
 	SquareDot,
 	Table2,
 } from "lucide-react";
@@ -41,7 +40,6 @@ import { FlowStatusBlock } from "@/src/blocks/FlowStatusBlock";
 import { HeatmapBlock } from "@/src/blocks/HeatmapBlock";
 import { MetricBlock } from "@/src/blocks/MetricBlock";
 import { MetricHistoryBlock } from "@/src/blocks/MetricHistoryBlock";
-import { MetricRatioBlock } from "@/src/blocks/MetricRatioBlock";
 import type { Filter } from "@/src/types/filter";
 import type { Notebook } from "@/src/types/notebook";
 import { customEditor, getSlashMenuItems } from "@/src/utils/editor";
@@ -82,7 +80,6 @@ export default function BlockNoteEditor({
 					heatmap: HeatmapBlock,
 					metric: MetricBlock,
 					metricHistory: MetricHistoryBlock,
-					metricRatio: MetricRatioBlock,
 				},
 			}),
 		),
@@ -109,7 +106,6 @@ export default function BlockNoteEditor({
 
 		if (!mounted) return;
 
-		// biome-ignore lint/suspicious/noExplicitAny: json payload
 		editor.replaceBlocks(editor.document, (notebook.blocks || []) as any);
 		setInitialized(true);
 	}, [notebook.id, editor, mounted]);
@@ -140,15 +136,6 @@ export default function BlockNoteEditor({
 				metricBlocksFilters.push({
 					names: [block.props.metricName],
 					filters: JSON.parse(block.props.blockFilters as string),
-				});
-			} else if (block.type === "metricRatio") {
-				metricBlocksFilters.push({
-					names: [block.props.metricAName],
-					filters: JSON.parse(block.props.filtersA as string),
-				});
-				metricBlocksFilters.push({
-					names: [block.props.metricBName],
-					filters: JSON.parse(block.props.filtersB as string),
 				});
 			}
 		});
@@ -315,20 +302,6 @@ export default function BlockNoteEditor({
 												"Chart showing metric history over time. For example, the number of signups over time.",
 											icon: <ChartLine className="size-4.5" />,
 											aliases: ["metric history"],
-										},
-										{
-											title: "Metric Ratio",
-											onItemClick: () => {
-												const block = insertOrUpdateBlock(editor, {
-													type: "metricRatio",
-												});
-												openBlockSettings(block.id);
-											},
-											group: "Metrics",
-											subtext:
-												"Display ratio between two metrics. For example, the ratio of US signups to global signups.",
-											icon: <SquareDivide className="size-4.5" />,
-											aliases: ["metric ratio", "percentage"],
 										},
 									]);
 									const q = query.trim().toLowerCase();

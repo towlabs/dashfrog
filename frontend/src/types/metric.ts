@@ -11,28 +11,20 @@ export type Transform =
 	| "p50"
 	| "p90"
 	| "p95"
-	| "p99";
+	| "p99"
+	| "ratio"
+	| string;
 export type TimeAggregation = "last" | "avg" | "min" | "max" | "match";
 export type GroupByFn = "sum" | "avg" | "min" | "max";
-export type MetricType = "counter" | "histogram" | "gauge";
+export type MetricType = "ratio" | "histogram" | "gauge" | "increase" | "rate";
 
-export interface RangeMetric {
+export interface Metric {
+	id: string;
 	prometheusName: string;
 	prettyName: string;
 	labels: string[];
 	unit: string | null;
 	type: MetricType;
-	transform: Transform | null;
-	groupBy: GroupByFn[];
-}
-
-export interface InstantMetric {
-	prometheusName: string;
-	prettyName: string;
-	labels: string[];
-	unit: string | null;
-	type: MetricType;
-	transform: Transform | null;
 	groupBy: GroupByFn[];
 	timeAggregation: TimeAggregation[];
 }

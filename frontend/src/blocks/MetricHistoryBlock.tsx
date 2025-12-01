@@ -5,9 +5,8 @@ import { ChartLine } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
-import { FilterBadgesEditor } from "@/components/FilterBadgesEditor";
 import { MetricHistoryChart } from "@/components/MetricHistoryChart";
-import { RangeMetricSelector } from "@/components/MetricSelector";
+import { MetricSelector } from "@/components/MetricSelector";
 import {
 	Sheet,
 	SheetContent,
@@ -15,20 +14,25 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { type MetricRangeHistory, Metrics } from "@/src/services/api/metrics";
-import { useLabelsStore } from "@/src/stores/labels";
 import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
-import type { GroupByFn, RangeMetric, Transform } from "../types/metric";
+import type { GroupByFn, Metric, Transform } from "../types/metric";
 
 export const MetricHistoryBlock = createReactBlockSpec(
 	{
 		type: "metricHistory" as const,
 		propSchema: {
+			metricId: {
+				default: "",
+			},
 			metricName: {
 				default: "",
 			},
 			transform: {
 				default: "" as Transform | "",
+			},
+			transformMetadata: {
+				default: "{}",
 			},
 			groupBy: {
 				default: "[]",
@@ -55,9 +59,7 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			const openBlockSettings = useNotebooksStore(
 				(state) => state.openBlockSettings,
 			);
-			const labels = useLabelsStore((state) => state.labels);
-			const rangeMetrics = useNotebooksStore((state) => state.rangeMetrics);
-			const metricsLoading = useNotebooksStore((state) => state.metricsLoading);
+			const metrics = useNotebooksStore((state) => state.metrics);
 			const startDate = useNotebooksStore((state) => state.startDate);
 			const endDate = useNotebooksStore((state) => state.endDate);
 			const notebookFilters = useNotebooksStore(
@@ -87,8 +89,9 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			});
 			const [_, setLoading] = useState(false);
 
-			const metricName = props.block.props.metricName as string;
+			const metricId = props.block.props.metricId as string;
 			const transform = props.block.props.transform as Transform | "";
+			const metricName = props.block.props.metricName as string;
 			const groupBy: string[] = useMemo(() => {
 				try {
 					return JSON.parse(props.block.props.groupBy as string);
@@ -97,24 +100,28 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				}
 			}, [props.block.props.groupBy]);
 			const groupByFn = props.block.props.groupByFn as GroupByFn;
+			const transformMetadata: any = useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.transformMetadata as string);
+				} catch {
+					return {};
+				}
+			}, [props.block.props.transformMetadata]);
 
 			const selectedMetric = React.useMemo(() => {
-				return rangeMetrics.find(
-					(m) =>
-						m.prometheusName === metricName &&
-						m.transform === (transform || null),
-				);
-			}, [metricName, transform, rangeMetrics]);
+				return metrics.find((m) => m.id === metricId);
+			}, [metricId, metrics]);
 
 			// Fetch metric history when metric is selected
 			useEffect(() => {
 				if (
 					!tenantName ||
-					!metricName ||
+					!metricId ||
 					!startDate ||
 					!endDate ||
 					filters === undefined ||
-					!currentNotebookId
+					!currentNotebookId ||
+					!metricName
 				) {
 					setHistoryData({
 						prettyName: "",
@@ -132,6 +139,7 @@ export const MetricHistoryBlock = createReactBlockSpec(
 							tenantName,
 							metricName,
 							transform || null,
+							transformMetadata,
 							startDate,
 							endDate,
 							filters,
@@ -156,8 +164,10 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				void fetchHistory();
 			}, [
 				tenantName,
+				metricId,
 				metricName,
 				transform,
+				transformMetadata,
 				startDate,
 				endDate,
 				filters,
@@ -178,12 +188,12 @@ export const MetricHistoryBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleMetricSelect = (metric: RangeMetric) => {
+			const handleMetricSelect = (metric: Metric) => {
 				props.editor.updateBlock(props.block, {
 					props: {
 						...props.block.props,
+						metricId: metric.id,
 						metricName: metric.prometheusName,
-						transform: metric.transform || "",
 					},
 				});
 			};
@@ -214,9 +224,21 @@ export const MetricHistoryBlock = createReactBlockSpec(
 				});
 			};
 
+			const handleTransformChange = (
+				transform: Transform | null,
+				metadata: any,
+			) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						transform: transform || "",
+						transformMetadata: JSON.stringify(metadata),
+					},
+				});
+			};
+
 			// Render content based on state
 			const renderContent = () => {
-				if (!metricName) {
+				if (!metricId) {
 					return (
 						<EmptyState
 							icon={ChartLine}
@@ -272,27 +294,20 @@ export const MetricHistoryBlock = createReactBlockSpec(
 							</SheetHeader>
 
 							<div className="mt-6 space-y-6">
-								<RangeMetricSelector
-									metrics={rangeMetrics}
-									metricsLoading={metricsLoading}
+								<MetricSelector
+									metrics={metrics.filter((m) => m.type !== "increase")}
+									blockFilters={blockFilters}
+									selectedTransform={transform || null}
+									selectedTransformMetadata={transformMetadata}
 									selectedMetric={selectedMetric ?? null}
 									selectedGroupBy={groupBy}
 									selectedGroupByFn={groupByFn}
 									onMetricSelect={handleMetricSelect}
 									onGroupByChange={handleGroupByChange}
 									onGroupByFnChange={handleGroupByFnChange}
+									onFiltersChange={handleFiltersChange}
+									onTransformChange={handleTransformChange}
 								/>
-
-								<div className="space-y-3 mt-6">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-										Additional Filters
-									</h3>
-									<FilterBadgesEditor
-										availableLabels={labels}
-										filters={blockFilters}
-										onFiltersChange={handleFiltersChange}
-									/>
-								</div>
 							</div>
 						</SheetContent>
 					</Sheet>

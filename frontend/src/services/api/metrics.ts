@@ -3,9 +3,8 @@ import { NewRestAPI } from "@/src/services/api/_helper";
 import type { Filter } from "@/src/types/filter";
 import type {
 	GroupByFn,
-	InstantMetric,
+	Metric,
 	MetricType,
-	RangeMetric,
 	TimeAggregation,
 	Transform,
 } from "@/src/types/metric";
@@ -47,7 +46,7 @@ export type MetricRangeHistory = {
 };
 
 export type MetricScalar = {
-	type: MetricType;
+	type: "counter" | "gauge" | "histogram";
 	prettyName: string;
 	unit: string | null;
 	transform: Transform | null;
@@ -58,10 +57,7 @@ const Metrics = {
 	/**
 	 * Get metrics for a specific tenant with optional time range and filters
 	 */
-	list: async (): Promise<{
-		instant: InstantMetric[];
-		range: RangeMetric[];
-	}> => {
+	list: async (): Promise<Metric[]> => {
 		const response = await fetchWithAuth(`/api/metrics/search`, {
 			method: "GET",
 			headers: {
@@ -80,6 +76,8 @@ const Metrics = {
 		tenant: string,
 		metricName: string,
 		transform: Transform | null,
+		transformMetadata: any,
+
 		startTime: Date,
 		endTime: Date,
 		labels: Filter[],
@@ -95,6 +93,7 @@ const Metrics = {
 			body: JSON.stringify({
 				metric_name: metricName,
 				transform,
+				transform_metadata: transformMetadata,
 				group_by: groupBy,
 				group_fn: groupByFn,
 				start_time: startTime.toISOString(),
@@ -124,6 +123,7 @@ const Metrics = {
 		startTime: Date,
 		endTime: Date,
 		transform: Transform | null,
+		transformMetadata: any,
 		groupBy: string[],
 		groupByFn: GroupByFn,
 		timeAggregation: TimeAggregation,
@@ -132,10 +132,10 @@ const Metrics = {
 		labels: Filter[],
 		notebookId: string,
 	): Promise<MetricScalar> => {
-		// biome-ignore lint/suspicious/noExplicitAny: json payload
 		const payload: Record<string, any> = {
 			metric_name: metricName,
 			transform,
+			transform_metadata: transformMetadata,
 			group_by: groupBy,
 			group_fn: groupByFn,
 			time_aggregation: timeAggregation,

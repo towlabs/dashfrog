@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { LabelBadge } from "@/components/LabelBadge";
 import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
-import { InstantMetricSelector } from "@/components/MetricSelector";
+import { MetricSelector } from "@/components/MetricSelector";
 import {
 	Card,
 	CardDescription,
@@ -30,7 +30,7 @@ import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type {
 	GroupByFn,
-	InstantMetric,
+	Metric,
 	TimeAggregation,
 	Transform,
 } from "@/src/types/metric";
@@ -40,6 +40,9 @@ export const MetricBlock = createReactBlockSpec(
 	{
 		type: "metric" as const,
 		propSchema: {
+			metricId: {
+				default: "",
+			},
 			metricName: {
 				default: "",
 			},
@@ -73,6 +76,9 @@ export const MetricBlock = createReactBlockSpec(
 			blockFilters: {
 				default: "[]",
 			},
+			transformMetadata: {
+				default: "{}",
+			},
 		},
 		content: "none",
 	},
@@ -86,7 +92,7 @@ export const MetricBlock = createReactBlockSpec(
 			const closeBlockSettings = useNotebooksStore(
 				(state) => state.closeBlockSettings,
 			);
-			const instantMetrics = useNotebooksStore((state) => state.instantMetrics);
+			const metrics = useNotebooksStore((state) => state.metrics);
 
 			const notebookFilters = useNotebooksStore(
 				(state) => state.currentNotebook?.filters,
@@ -103,6 +109,7 @@ export const MetricBlock = createReactBlockSpec(
 				Record<string, string>
 			>({});
 
+			const metricId = props.block.props.metricId as string;
 			const metricName = props.block.props.metricName as string;
 			const title = props.block.props.title as string;
 			const transform = props.block.props.transform as Transform | "";
@@ -135,6 +142,13 @@ export const MetricBlock = createReactBlockSpec(
 					return [];
 				}
 			}, [props.block.props.blockFilters]);
+			const transformMetadata: any = useMemo(() => {
+				try {
+					return JSON.parse(props.block.props.transformMetadata as string);
+				} catch {
+					return {};
+				}
+			}, [props.block.props.transformMetadata]);
 
 			// Merge notebook filters with block filters
 			const filters = useMemo(
@@ -143,12 +157,8 @@ export const MetricBlock = createReactBlockSpec(
 			);
 
 			const selectedMetric = React.useMemo(() => {
-				return instantMetrics.find(
-					(m) =>
-						m.prometheusName === metricName &&
-						m.transform === (transform || null),
-				);
-			}, [metricName, transform, instantMetrics]);
+				return metrics.find((m) => m.id === metricId);
+			}, [metricId, metrics]);
 
 			// Fetch scalar data when metric and aggregation are selected
 			useEffect(() => {
@@ -178,6 +188,7 @@ export const MetricBlock = createReactBlockSpec(
 							startDate,
 							endDate,
 							transform || null,
+							transformMetadata,
 							groupBy,
 							groupByFn,
 							timeAggregation,
@@ -198,8 +209,8 @@ export const MetricBlock = createReactBlockSpec(
 				void fetchScalar();
 			}, [
 				tenantName,
-				metricName,
 				transform,
+				transformMetadata,
 				timeAggregation,
 				groupBy,
 				groupByFn,
@@ -209,6 +220,7 @@ export const MetricBlock = createReactBlockSpec(
 				endDate,
 				filters,
 				currentNotebookId,
+				metricName,
 			]);
 
 			if (!tenantName) {
@@ -223,11 +235,24 @@ export const MetricBlock = createReactBlockSpec(
 
 			const isSettingsOpen = settingsOpenBlockId === props.block.id;
 
-			const handleMetricSelect = (metric: InstantMetric) => {
+			const handleMetricSelect = (metric: Metric) => {
 				props.editor.updateBlock(props.block, {
 					props: {
+						metricId: metric.id,
 						metricName: metric.prometheusName,
-						transform: metric.transform || "",
+						groupBy: metric.type === "gauge" ? "avg" : "sum",
+					},
+				});
+			};
+
+			const handleTransformChange = (
+				transform: Transform | null,
+				metadata: any,
+			) => {
+				props.editor.updateBlock(props.block, {
+					props: {
+						transform: transform || "",
+						transformMetadata: JSON.stringify(metadata),
 					},
 				});
 			};
@@ -291,7 +316,7 @@ export const MetricBlock = createReactBlockSpec(
 
 			// Render content based on state
 			const renderContent = () => {
-				if (loading && scalarData === null && metricName) {
+				if (loading && scalarData === null && selectedMetric) {
 					return (
 						<Card className="@container/card shadow-none">
 							<CardHeader>
@@ -356,8 +381,9 @@ export const MetricBlock = createReactBlockSpec(
 					if (isMatchRate) {
 						return `${scalarData.prettyName} ${matchOperator} ${matchValue}`;
 					}
-					if (!transform && scalarData.type === "counter")
+					if (transform === "increase")
 						return `${scalarData.prettyName} - Increase`;
+					if (transform === "ratio") return `${scalarData.prettyName} - Ratio`;
 					if (timeAggregation === "last") {
 						return `${scalarData.prettyName} - Last value`;
 					}
@@ -457,13 +483,15 @@ export const MetricBlock = createReactBlockSpec(
 								</div>
 
 								<div className="space-y-3">
-									<InstantMetricSelector
-										metrics={instantMetrics}
+									<MetricSelector
+										metrics={metrics}
 										selectedMetric={selectedMetric ?? null}
 										selectedTimeAggregation={timeAggregation}
 										selectedGroupBy={groupBy}
 										selectedGroupByFn={groupByFn}
+										selectedTransform={transform || null}
 										onMetricSelect={handleMetricSelect}
+										onTransformChange={handleTransformChange}
 										onTimeAggregationChange={handleTimeAggregationChange}
 										onGroupByChange={handleGroupByChange}
 										onGroupByFnChange={handleGroupByFnChange}
@@ -471,6 +499,7 @@ export const MetricBlock = createReactBlockSpec(
 										blockFilters={blockFilters}
 										matchOperator={matchOperator}
 										matchValue={matchValue}
+										selectedTransformMetadata={transformMetadata}
 										onMatchConditionChange={(operator, value) => {
 											props.editor.updateBlock(props.block, {
 												props: {
@@ -523,12 +552,13 @@ export const MetricBlock = createReactBlockSpec(
 					{/* Metric Detail Drawer */}
 					{startDate !== null && endDate !== null && currentNotebookId && (
 						<MetricDetailDrawer
-							metricName={metricName}
+							metricName={metricName ?? ""}
 							prettyName={scalarData?.prettyName ?? ""}
+							transformMetadata={transformMetadata}
 							transform={
-								scalarData?.type === "counter" && !transform
+								!transform && scalarData?.type === "counter"
 									? "ratePerSecond"
-									: transform || null
+									: transform
 							}
 							unit={scalarData?.unit ?? null}
 							tenantName={tenantName}

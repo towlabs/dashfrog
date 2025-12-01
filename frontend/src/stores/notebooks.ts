@@ -7,7 +7,7 @@ import { Notebooks } from "@/src/services/api/notebooks";
 import type { BaseComment, Comment } from "@/src/types/comment";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
-import type { InstantMetric, RangeMetric } from "@/src/types/metric";
+import type { Metric } from "@/src/types/metric";
 import type { Notebook } from "@/src/types/notebook";
 import { resolveTimeWindow } from "@/src/types/timewindow";
 
@@ -22,8 +22,7 @@ interface NotebooksState {
 	currentNotebook: Notebook | null;
 	flows: Flow[];
 	flowsLoading: boolean;
-	instantMetrics: InstantMetric[];
-	rangeMetrics: RangeMetric[];
+	metrics: Metric[];
 	metricsLoading: boolean;
 	comments: Comment[];
 	commentsLoading: boolean;
@@ -83,8 +82,7 @@ export const useNotebooksStore = create<NotebooksState>()(
 			notebookCreating: false,
 			flows: [],
 			flowsLoading: false,
-			instantMetrics: [],
-			rangeMetrics: [],
+			metrics: [],
 			metricsLoading: false,
 			comments: [],
 			commentsLoading: false,
@@ -134,15 +132,14 @@ export const useNotebooksStore = create<NotebooksState>()(
 			fetchMetrics: async () => {
 				set({ metricsLoading: true });
 				try {
-					const { instant, range } = await Metrics.list();
+					const metrics = await Metrics.list();
 					set({
-						instantMetrics: instant,
-						rangeMetrics: range,
+						metrics,
 						metricsLoading: false,
 					});
 				} catch (error) {
 					console.error("Failed to fetch metrics:", error);
-					set({ instantMetrics: [], rangeMetrics: [], metricsLoading: false });
+					set({ metrics: [], metricsLoading: false });
 				}
 			},
 			fetchComments: async (notebookId?: string, start?: Date, end?: Date) => {

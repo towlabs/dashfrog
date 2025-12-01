@@ -1,7 +1,7 @@
 "use client";
 
-import { Check, ChevronsUpDown, HelpCircle } from "lucide-react";
-import { useState } from "react";
+import { Check, ChevronsUpDown, HelpCircle, SquareStack } from "lucide-react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Command,
@@ -35,242 +35,26 @@ import { useLabelsStore } from "@/src/stores/labels";
 import type { Filter } from "@/src/types/filter";
 import type {
 	GroupByFn,
-	InstantMetric,
-	MetricType,
-	RangeMetric,
+	Metric,
 	TimeAggregation,
 	Transform,
 } from "@/src/types/metric";
 import { FilterBadgesEditor } from "./FilterBadgesEditor";
+import { Separator } from "./ui/separator";
 
-type RangeMetricSelectorProps = {
-	metrics: RangeMetric[];
-	metricsLoading: boolean;
-	selectedMetric: RangeMetric | null;
-	selectedGroupBy: string[];
-	selectedGroupByFn: GroupByFn | null;
-	onMetricSelect: (metric: RangeMetric) => void;
-	onGroupByChange: (labels: string[]) => void;
-	onGroupByFnChange: (groupByFn: GroupByFn) => void;
-};
-
-export function RangeMetricSelector({
-	metrics,
-	metricsLoading,
-	selectedMetric,
-	selectedGroupBy,
-	selectedGroupByFn,
-	onMetricSelect,
-	onGroupByChange,
-	onGroupByFnChange,
-}: RangeMetricSelectorProps) {
-	const [comboboxOpen, setComboboxOpen] = useState(false);
-
-	if (metricsLoading && metrics.length === 0) {
-		return (
-			<div className="text-sm text-muted-foreground">Loading metrics...</div>
-		);
-	}
-
-	if (metrics.length === 0) {
-		return (
-			<div className="text-sm text-muted-foreground">No metrics available</div>
-		);
-	}
-
-	// Group metrics by transform type
-	const groupedMetrics: Record<string, RangeMetric[]> = {};
-	for (const metric of metrics) {
-		const groupKey = getAggregationGroupKey(metric.transform, metric.type);
-		if (!groupedMetrics[groupKey]) {
-			groupedMetrics[groupKey] = [];
-		}
-		groupedMetrics[groupKey].push(metric);
-	}
-
-	const hasMultipleGroupByFnOptions =
-		selectedMetric && selectedMetric.groupBy.length > 1;
-
-	return (
-		<div className="space-y-2">
-			<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-				Metric
-			</h3>
-			<Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal={true}>
-				<PopoverTrigger asChild>
-					<Button
-						variant="outline"
-						role="combobox"
-						aria-expanded={comboboxOpen}
-						className="w-full justify-between"
-					>
-						{selectedMetric ? selectedMetric.prettyName : "Select a metric..."}
-						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-					</Button>
-				</PopoverTrigger>
-				<PopoverContent className="w-[400px] p-0">
-					<Command>
-						<CommandInput placeholder="Search metrics..." />
-						<CommandList>
-							<CommandEmpty>No metric found.</CommandEmpty>
-							{Object.entries(groupedMetrics).map(
-								([groupKey, groupMetrics]) => (
-									<CommandGroup
-										key={groupKey}
-										heading={
-											<div className="flex items-center gap-1.5">
-												<span>{getAggregationGroupLabel(groupKey)}</span>
-												<TooltipProvider delayDuration={300}>
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<HelpCircle className="size-3 text-muted-foreground" />
-														</TooltipTrigger>
-														<TooltipContent side="right">
-															<p className="max-w-xs text-sm">
-																{getAggregationGroupDescription(groupKey)}
-															</p>
-														</TooltipContent>
-													</Tooltip>
-												</TooltipProvider>
-											</div>
-										}
-									>
-										{groupMetrics.map((metric) => (
-											<CommandItem
-												key={`${metric.prometheusName}-${metric.transform}`}
-												value={metric.prettyName}
-												onSelect={() => {
-													onMetricSelect(metric);
-													// Set default groupByFn if not already set
-													if (!selectedGroupByFn && metric.groupBy.length > 0) {
-														onGroupByFnChange(metric.groupBy[0]);
-													}
-													setComboboxOpen(false);
-												}}
-												className="flex items-center justify-between"
-											>
-												<span>{metric.prettyName}</span>
-												<Check
-													className={cn(
-														"mr-2 h-4 w-4",
-														selectedMetric?.prometheusName ===
-															metric.prometheusName &&
-															selectedMetric?.transform === metric.transform
-															? "opacity-100"
-															: "opacity-0",
-													)}
-												/>
-											</CommandItem>
-										))}
-									</CommandGroup>
-								),
-							)}
-						</CommandList>
-					</Command>
-				</PopoverContent>
-			</Popover>
-
-			{selectedMetric && (
-				<>
-					<div className="space-y-2 flex-1">
-						<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-							Group By
-						</h3>
-						<Popover>
-							<PopoverTrigger asChild>
-								<Button
-									variant="outline"
-									className="w-full justify-start text-left"
-								>
-									{selectedGroupBy.length > 0 ? (
-										<span>{selectedGroupBy.join(", ")}</span>
-									) : (
-										<span className="text-muted-foreground">
-											Select labels to group by...
-										</span>
-									)}
-								</Button>
-							</PopoverTrigger>
-							<PopoverContent className="w-[300px] p-0" align="start">
-								<Command>
-									<CommandInput placeholder="Search labels..." />
-									<CommandList>
-										<CommandEmpty>No labels found.</CommandEmpty>
-										<CommandGroup heading="Available Labels">
-											{selectedMetric.labels.map((label) => (
-												<CommandItem
-													key={label}
-													value={label}
-													onSelect={() => {
-														const newGroupBy = selectedGroupBy.includes(label)
-															? selectedGroupBy.filter((l) => l !== label)
-															: [...selectedGroupBy, label];
-														onGroupByChange(newGroupBy);
-													}}
-												>
-													<Check
-														className={cn(
-															"mr-2 h-4 w-4",
-															selectedGroupBy.includes(label)
-																? "opacity-100"
-																: "opacity-0",
-														)}
-													/>
-													{label}
-												</CommandItem>
-											))}
-										</CommandGroup>
-									</CommandList>
-								</Command>
-							</PopoverContent>
-						</Popover>
-					</div>
-					{hasMultipleGroupByFnOptions && (
-						<div className="space-y-2">
-							<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-								Group Function
-							</h3>
-							<Select
-								value={selectedGroupByFn || selectedMetric.groupBy[0]}
-								onValueChange={onGroupByFnChange}
-							>
-								<SelectTrigger className="w-full">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{selectedMetric.groupBy.includes("sum") && (
-										<SelectItem value="sum">Sum</SelectItem>
-									)}
-									{selectedMetric.groupBy.includes("avg") && (
-										<SelectItem value="avg">Average</SelectItem>
-									)}
-									{selectedMetric.groupBy.includes("min") && (
-										<SelectItem value="min">Min</SelectItem>
-									)}
-									{selectedMetric.groupBy.includes("max") && (
-										<SelectItem value="max">Max</SelectItem>
-									)}
-								</SelectContent>
-							</Select>
-						</div>
-					)}
-				</>
-			)}
-		</div>
-	);
-}
-
-type InstantMetricSelectorProps = {
-	metrics: InstantMetric[];
-	selectedMetric: InstantMetric | null;
-	selectedTimeAggregation: TimeAggregation | null;
+type MetricSelectorProps = {
+	metrics: Metric[];
+	selectedMetric: Metric | null;
+	selectedTimeAggregation?: TimeAggregation | null;
 	selectedGroupBy: string[];
 	selectedGroupByFn: GroupByFn | null;
 	blockFilters: Filter[];
 	matchOperator?: "==" | ">" | "<" | ">=" | "<=" | "!=";
 	matchValue?: string;
-	onMetricSelect: (metric: InstantMetric) => void;
-	onTimeAggregationChange: (timeAggregation: TimeAggregation) => void;
+	selectedTransform: Transform | null;
+	selectedTransformMetadata: any;
+	onMetricSelect: (metric: Metric) => void;
+	onTimeAggregationChange?: (timeAggregation: TimeAggregation) => void;
 	onGroupByChange: (labels: string[]) => void;
 	onGroupByFnChange: (groupByFn: GroupByFn) => void;
 	onFiltersChange: (filters: Filter[]) => void;
@@ -278,28 +62,53 @@ type InstantMetricSelectorProps = {
 		operator: "==" | ">" | "<" | ">=" | "<=" | "!=",
 		value: string,
 	) => void;
-	disableGroupBy?: boolean;
+	onTransformChange: (transform: Transform | null, metadata: any) => void;
 };
 
-export function InstantMetricSelector({
+export function MetricSelector({
 	metrics,
 	selectedMetric,
 	selectedTimeAggregation,
 	selectedGroupBy,
 	selectedGroupByFn,
+	selectedTransform,
+	selectedTransformMetadata,
 	blockFilters,
 	matchOperator = "==",
 	matchValue = "",
 	onMetricSelect,
+	onTransformChange,
 	onTimeAggregationChange,
 	onGroupByChange,
 	onGroupByFnChange,
 	onFiltersChange,
 	onMatchConditionChange,
-	disableGroupBy = false,
-}: InstantMetricSelectorProps) {
+}: MetricSelectorProps) {
 	const labels = useLabelsStore((state) => state.labels);
 	const [comboboxOpen, setComboboxOpen] = useState(false);
+	const [groupedByExpanded, setGroupedByExpanded] = useState(
+		selectedGroupBy.length > 0,
+	);
+
+	const hasMultipleTimeAggregations =
+		selectedMetric && selectedMetric.timeAggregation.length > 1;
+	const hasMultipleGroupByFnOptions =
+		selectedMetric && selectedMetric.groupBy.length > 1;
+	const groupByLabels = React.useMemo(() => {
+		if (selectedTransform === "ratio") {
+			const ratioFilters = (selectedTransformMetadata.filters || []).map(
+				(filter: Filter) => filter.label,
+			);
+			return selectedMetric?.labels.filter(
+				(label) => !ratioFilters.includes(label),
+			);
+		}
+		return selectedMetric?.labels;
+	}, [selectedMetric, selectedTransform, selectedTransformMetadata]);
+	const disableGroupBy = React.useMemo(
+		() => (groupByLabels?.length ?? 0) === 0,
+		[groupByLabels],
+	);
 
 	if (metrics.length === 0) {
 		return (
@@ -307,238 +116,339 @@ export function InstantMetricSelector({
 		);
 	}
 
-	// Group metrics by transform type
-	const groupedMetrics: Record<string, InstantMetric[]> = {};
-	for (const metric of metrics) {
-		const groupKey = getAggregationGroupKey(metric.transform, metric.type);
-		if (!groupedMetrics[groupKey]) {
-			groupedMetrics[groupKey] = [];
-		}
-		groupedMetrics[groupKey].push(metric);
-	}
-
-	const hasMultipleTimeAggregations =
-		selectedMetric && selectedMetric.timeAggregation.length > 1;
-	const hasMultipleGroupByFnOptions =
-		selectedMetric && selectedMetric.groupBy.length > 1;
-
 	return (
-		<div className="space-y-2">
-			<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-				Metric
-			</h3>
-			<Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal={true}>
-				<PopoverTrigger asChild>
-					<Button
-						variant="outline"
-						role="combobox"
-						aria-expanded={comboboxOpen}
-						className="w-full justify-between"
+		<div className="space-y-4">
+			<div className={cn("space-y-2", "full-w")}>
+				<div className="flex items-center gap-1.5">
+					<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+						Additional Filters
+					</h3>
+				</div>
+				<FilterBadgesEditor
+					availableLabels={labels}
+					filters={blockFilters}
+					onFiltersChange={onFiltersChange}
+				/>
+			</div>
+
+			<Separator className="w-full" />
+
+			<div className={cn("space-y-2", "full-w")}>
+				<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+					Show
+				</h3>
+				<div className="flex items-center justify-between w-full gap-1">
+					<Popover
+						open={comboboxOpen}
+						onOpenChange={setComboboxOpen}
+						modal={true}
 					>
-						{selectedMetric ? selectedMetric.prettyName : "Select a metric..."}
-						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-					</Button>
-				</PopoverTrigger>
-				<PopoverContent className="w-[400px] p-0">
-					<Command>
-						<CommandInput placeholder="Search metrics..." />
-						<CommandList>
-							<CommandEmpty>No metric found.</CommandEmpty>
-							{Object.entries(groupedMetrics).map(
-								([groupKey, groupMetrics]) => (
-									<CommandGroup
-										key={groupKey}
-										heading={
-											<div className="flex items-center gap-1.5">
-												<span>{getAggregationGroupLabel(groupKey)}</span>
-												<TooltipProvider delayDuration={300}>
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<HelpCircle className="size-3 text-muted-foreground" />
-														</TooltipTrigger>
-														<TooltipContent side="right">
-															<p className="max-w-xs text-sm">
-																{getAggregationGroupDescription(groupKey)}
-															</p>
-														</TooltipContent>
-													</Tooltip>
-												</TooltipProvider>
-											</div>
-										}
-									>
-										{groupMetrics.map((metric) => (
+						<PopoverTrigger asChild>
+							<Button
+								variant="outline"
+								role="combobox"
+								aria-expanded={comboboxOpen}
+								className="justify-between flex-1"
+							>
+								{selectedMetric
+									? selectedMetric.prettyName
+									: "Select a metric..."}
+								<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+							</Button>
+						</PopoverTrigger>
+						<PopoverContent className="w-[400px] p-0">
+							<Command>
+								<CommandInput placeholder="Search metrics..." />
+								<CommandList>
+									<CommandEmpty>No metric found.</CommandEmpty>
+									<CommandGroup>
+										{metrics.map((metric) => {
+											return (
+												<CommandItem
+													key={metric.id}
+													value={metric.prettyName}
+													onSelect={() => {
+														onMetricSelect(metric);
+														// Set default timeAggregation if not already set
+														if (
+															(!selectedTimeAggregation ||
+																!metric.timeAggregation.includes(
+																	selectedTimeAggregation,
+																)) &&
+															onTimeAggregationChange
+														) {
+															onTimeAggregationChange(
+																metric.timeAggregation[0],
+															);
+														}
+														// Set default groupBy if not already set
+														if (
+															!selectedGroupByFn ||
+															!metric.groupBy.includes(selectedGroupByFn)
+														) {
+															onGroupByFnChange(metric.groupBy[0]);
+														}
+														setComboboxOpen(false);
+														// Set default transform
+														if (metric.type === "rate") {
+															onTransformChange("ratePerSecond", {});
+														} else if (metric.type === "histogram") {
+															onTransformChange("p50", {});
+														} else if (metric.type === "ratio") {
+															onTransformChange("ratio", {
+																filters: [],
+															});
+														} else {
+															onTransformChange(null, {});
+														}
+													}}
+												>
+													<TooltipProvider>
+														<Tooltip>
+															<TooltipTrigger asChild>
+																<div className="flex items-center justify-between w-full">
+																	<span>{metric.prettyName}</span>
+																	<Check
+																		className={cn(
+																			"mr-2 h-4 w-4",
+																			selectedMetric?.id === metric.id
+																				? "opacity-100"
+																				: "opacity-0",
+																		)}
+																	/>
+																</div>
+															</TooltipTrigger>
+															<TooltipContent side="left">
+																{getMetricTooltip(metric)}
+															</TooltipContent>
+														</Tooltip>
+													</TooltipProvider>
+												</CommandItem>
+											);
+										})}
+									</CommandGroup>
+								</CommandList>
+							</Command>
+						</PopoverContent>
+					</Popover>
+					{selectedMetric && selectedMetric.type === "histogram" && (
+						<Select
+							value={selectedTransform || ""}
+							onValueChange={(transform) => {
+								onTransformChange(transform as Transform, {});
+							}}
+						>
+							<SelectTrigger className="w-[180px]">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="p50">P50</SelectItem>
+								<SelectItem value="p90">P90</SelectItem>
+								<SelectItem value="p95">P95</SelectItem>
+								<SelectItem value="p99">P99</SelectItem>
+							</SelectContent>
+						</Select>
+					)}
+					{selectedMetric && selectedMetric.type === "rate" && (
+						<Select
+							value={selectedTransform || ""}
+							onValueChange={(transform) => {
+								onTransformChange(transform as Transform, {});
+							}}
+						>
+							<SelectTrigger className="w-[180px]">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="ratePerSecond">/second</SelectItem>
+								<SelectItem value="ratePerMinute">/minute</SelectItem>
+								<SelectItem value="ratePerHour">/hour</SelectItem>
+								<SelectItem value="ratePerDay">/day</SelectItem>
+							</SelectContent>
+						</Select>
+					)}
+					<div className="flex items-center gap-0">
+						{!groupedByExpanded && !disableGroupBy && (
+							<TooltipProvider delayDuration={300}>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<Button
+											variant="ghost"
+											className="text-muted-foreground cursor-pointer"
+											size="icon"
+											onClick={() => setGroupedByExpanded(!groupedByExpanded)}
+										>
+											<SquareStack className="size-4" />
+										</Button>
+									</TooltipTrigger>
+									<TooltipContent side="right">
+										Labels to group by. If no labels are selected, all values
+										will be combined into a single one.
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
+						)}
+					</div>
+				</div>
+			</div>
+
+			{selectedMetric && selectedMetric.type === "ratio" && (
+				<div className={cn("space-y-2", "full-w")}>
+					<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+						Of
+						<TooltipProvider>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<HelpCircle className="size-3 text-muted-foreground cursor-help" />
+								</TooltipTrigger>
+								<TooltipContent side="right">
+									<p className="max-w-xs text-sm">
+										Which ratio condition to apply to the metric.
+									</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					</h3>
+					<div className="flex items-center justify-between w-full gap-1">
+						<FilterBadgesEditor
+							availableLabels={labels}
+							filters={selectedTransformMetadata.filters ?? []}
+							onFiltersChange={(filters) => {
+								onTransformChange(selectedTransform, {
+									filters,
+								});
+							}}
+						/>
+					</div>
+				</div>
+			)}
+
+			{groupedByExpanded && selectedMetric && !disableGroupBy && (
+				<div className="space-y-2 flex-1">
+					<div className="flex items-center gap-1.5">
+						<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+							Grouped by
+						</h3>
+						<TooltipProvider delayDuration={300}>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<HelpCircle className="size-3 text-muted-foreground cursor-help" />
+								</TooltipTrigger>
+								<TooltipContent side="right">
+									<p className="max-w-xs text-sm">
+										Labels to group by. If no labels are selected, all values
+										will be combined into a single one.
+									</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
+					</div>
+					<Popover>
+						<PopoverTrigger asChild>
+							<Button
+								variant="outline"
+								className="w-full justify-start text-left"
+							>
+								{selectedGroupBy.length > 0 ? (
+									<span>{selectedGroupBy.join(", ")}</span>
+								) : (
+									<span className="text-muted-foreground">
+										Select labels to group by...
+									</span>
+								)}
+							</Button>
+						</PopoverTrigger>
+						<PopoverContent className="w-[300px] p-0" align="start">
+							<Command>
+								<CommandInput placeholder="Search labels..." />
+								<CommandList>
+									<CommandEmpty>No labels found.</CommandEmpty>
+									<CommandGroup heading="Available Labels">
+										{groupByLabels?.map((label) => (
 											<CommandItem
-												key={`${metric.prometheusName}-${metric.transform}`}
-												value={metric.prettyName}
+												key={label}
+												value={label}
 												onSelect={() => {
-													onMetricSelect(metric);
-													// Set default timeAggregation if not already set
-													if (
-														!selectedTimeAggregation ||
-														!metric.timeAggregation.includes(
-															selectedTimeAggregation,
-														)
-													) {
-														onTimeAggregationChange(metric.timeAggregation[0]);
-													}
-													// Set default groupBy if not already set
-													if (
-														!selectedGroupByFn ||
-														!metric.groupBy.includes(selectedGroupByFn)
-													) {
-														onGroupByFnChange(metric.groupBy[0]);
-													}
-													setComboboxOpen(false);
+													const newGroupBy = selectedGroupBy.includes(label)
+														? selectedGroupBy.filter((l) => l !== label)
+														: [...selectedGroupBy, label];
+													onGroupByChange(newGroupBy);
 												}}
-												className="flex items-center justify-between"
 											>
-												<span>{metric.prettyName}</span>
 												<Check
 													className={cn(
 														"mr-2 h-4 w-4",
-														selectedMetric?.prometheusName ===
-															metric.prometheusName &&
-															selectedMetric?.transform === metric.transform
+														selectedGroupBy.includes(label)
 															? "opacity-100"
 															: "opacity-0",
 													)}
 												/>
+												{label}
 											</CommandItem>
 										))}
 									</CommandGroup>
-								),
-							)}
-						</CommandList>
-					</Command>
-				</PopoverContent>
-			</Popover>
+								</CommandList>
+							</Command>
+						</PopoverContent>
+					</Popover>
+				</div>
+			)}
 
-			{selectedMetric && (
-				<>
-					<div className="flex gap-2">
-						{!disableGroupBy && (
-							<div className="space-y-2 flex-1">
-								<div className="flex items-center gap-1.5">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-										Group By
-									</h3>
-									<TooltipProvider delayDuration={300}>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<HelpCircle className="size-3 text-muted-foreground cursor-help" />
-											</TooltipTrigger>
-											<TooltipContent side="right">
-												<p className="max-w-xs text-sm">
-													Labels to group by. If no labels are selected, all
-													values will be combined into a single one.
-												</p>
-											</TooltipContent>
-										</Tooltip>
-									</TooltipProvider>
-								</div>
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											className="w-full justify-start text-left"
-										>
-											{selectedGroupBy.length > 0 ? (
-												<span>{selectedGroupBy.join(", ")}</span>
-											) : (
-												<span className="text-muted-foreground">
-													Select labels to group by...
-												</span>
-											)}
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-[300px] p-0" align="start">
-										<Command>
-											<CommandInput placeholder="Search labels..." />
-											<CommandList>
-												<CommandEmpty>No labels found.</CommandEmpty>
-												<CommandGroup heading="Available Labels">
-													{selectedMetric.labels.map((label) => (
-														<CommandItem
-															key={label}
-															value={label}
-															onSelect={() => {
-																const newGroupBy = selectedGroupBy.includes(
-																	label,
-																)
-																	? selectedGroupBy.filter((l) => l !== label)
-																	: [...selectedGroupBy, label];
-																onGroupByChange(newGroupBy);
-															}}
-														>
-															<Check
-																className={cn(
-																	"mr-2 h-4 w-4",
-																	selectedGroupBy.includes(label)
-																		? "opacity-100"
-																		: "opacity-0",
-																)}
-															/>
-															{label}
-														</CommandItem>
-													))}
-												</CommandGroup>
-											</CommandList>
-										</Command>
-									</PopoverContent>
-								</Popover>
-							</div>
-						)}
-						{hasMultipleGroupByFnOptions && (
-							<div
-								className={cn("space-y-2", disableGroupBy ? "flex-1" : "w-32")}
-							>
-								<div className="flex items-center gap-1.5">
-									<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-										Apply
-									</h3>
-									<TooltipProvider delayDuration={300}>
-										<Tooltip>
-											<TooltipTrigger asChild>
-												<HelpCircle className="size-3 text-muted-foreground cursor-help" />
-											</TooltipTrigger>
-											<TooltipContent side="right">
-												<p className="max-w-xs text-sm">
-													What function to apply when combining values from
-													multiple labels. For example, when combining
-													temperature values across different rooms, this allows
-													you to choose whether to max, min, or average the
-													values.
-												</p>
-											</TooltipContent>
-										</Tooltip>
-									</TooltipProvider>
-								</div>
-								<Select
-									value={selectedGroupByFn || selectedMetric.groupBy[0]}
-									onValueChange={onGroupByFnChange}
-								>
-									<SelectTrigger className="w-full">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{selectedMetric.groupBy.includes("sum") && (
-											<SelectItem value="sum">Sum</SelectItem>
-										)}
-										{selectedMetric.groupBy.includes("avg") && (
-											<SelectItem value="avg">Average</SelectItem>
-										)}
-										{selectedMetric.groupBy.includes("min") && (
-											<SelectItem value="min">Min</SelectItem>
-										)}
-										{selectedMetric.groupBy.includes("max") && (
-											<SelectItem value="max">Max</SelectItem>
-										)}
-									</SelectContent>
-								</Select>
-							</div>
-						)}
+			{hasMultipleGroupByFnOptions && (
+				<div className={cn("space-y-2", "full-w")}>
+					<div className="flex items-center gap-1.5">
+						<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+							Cross-label aggregation
+						</h3>
+						<TooltipProvider delayDuration={300}>
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<HelpCircle className="size-3 text-muted-foreground cursor-help" />
+								</TooltipTrigger>
+								<TooltipContent side="right">
+									<p className="max-w-xs text-sm">
+										If we have values from different labels, this allows us to
+										specify how to combine them.
+									</p>
+								</TooltipContent>
+							</Tooltip>
+						</TooltipProvider>
 					</div>
+					<Select
+						value={selectedGroupByFn || selectedMetric.groupBy[0]}
+						onValueChange={onGroupByFnChange}
+					>
+						<SelectTrigger className="w-full">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{selectedMetric.groupBy.includes("sum") && (
+								<SelectItem value="sum">Sum values across labels</SelectItem>
+							)}
+							{selectedMetric.groupBy.includes("avg") && (
+								<SelectItem value="avg">
+									Average values across labels
+								</SelectItem>
+							)}
+							{selectedMetric.groupBy.includes("min") && (
+								<SelectItem value="min">
+									Keep the lowest value across labels
+								</SelectItem>
+							)}
+							{selectedMetric.groupBy.includes("max") && (
+								<SelectItem value="max">
+									Keep the highest value across labels
+								</SelectItem>
+							)}
+						</SelectContent>
+					</Select>
+				</div>
+			)}
 
+			<Separator className="w-full" />
+
+			{selectedMetric && onTimeAggregationChange && (
+				<>
 					{hasMultipleTimeAggregations && (
 						<div className="space-y-2 flex-1">
 							<div className="flex items-center gap-1.5">
@@ -573,11 +483,13 @@ export function InstantMetricSelector({
 										{selectedMetric.timeAggregation.includes("last") && (
 											<Tooltip>
 												<TooltipTrigger asChild>
-													<SelectItem value="last">Last value</SelectItem>
+													<SelectItem value="last">
+														Most recent value
+													</SelectItem>
 												</TooltipTrigger>
 												<TooltipContent side="right">
 													<p className="max-w-xs text-sm">
-														Returns the most recent value in the time window
+														Keep the most recent value in the time window
 													</p>
 												</TooltipContent>
 											</Tooltip>
@@ -585,7 +497,9 @@ export function InstantMetricSelector({
 										{selectedMetric.timeAggregation.includes("avg") && (
 											<Tooltip>
 												<TooltipTrigger asChild>
-													<SelectItem value="avg">Average over time</SelectItem>
+													<SelectItem value="avg">
+														Average over period
+													</SelectItem>
 												</TooltipTrigger>
 												<TooltipContent side="right">
 													<p className="max-w-xs text-sm">
@@ -597,7 +511,9 @@ export function InstantMetricSelector({
 										{selectedMetric.timeAggregation.includes("min") && (
 											<Tooltip>
 												<TooltipTrigger asChild>
-													<SelectItem value="min">Minimum over time</SelectItem>
+													<SelectItem value="min">
+														Minimum over period
+													</SelectItem>
 												</TooltipTrigger>
 												<TooltipContent side="right">
 													<p className="max-w-xs text-sm">
@@ -609,7 +525,9 @@ export function InstantMetricSelector({
 										{selectedMetric.timeAggregation.includes("max") && (
 											<Tooltip>
 												<TooltipTrigger asChild>
-													<SelectItem value="max">Maximum over time</SelectItem>
+													<SelectItem value="max">
+														Maximum over period
+													</SelectItem>
 												</TooltipTrigger>
 												<TooltipContent side="right">
 													<p className="max-w-xs text-sm">
@@ -621,7 +539,9 @@ export function InstantMetricSelector({
 										{selectedMetric.timeAggregation.includes("match") && (
 											<Tooltip>
 												<TooltipTrigger asChild>
-													<SelectItem value="match">Match rate</SelectItem>
+													<SelectItem value="match">
+														Match percentage
+													</SelectItem>
 												</TooltipTrigger>
 												<TooltipContent side="right">
 													<p className="max-w-xs text-sm">
@@ -678,59 +598,21 @@ export function InstantMetricSelector({
 							</p>
 						</div>
 					)}
-
-					<div className="space-y-2">
-						<div className="flex gap-2 flex-col">
-							<h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-								Additional Filters
-							</h3>
-
-							<FilterBadgesEditor
-								availableLabels={labels}
-								filters={blockFilters}
-								onFiltersChange={onFiltersChange}
-							/>
-						</div>
-					</div>
 				</>
 			)}
 		</div>
 	);
 }
 
-// Helper functions for grouping
-function getAggregationGroupKey(
-	transform: Transform | null,
-	type: MetricType,
-): string {
-	if (transform?.startsWith("rate")) return "rate";
-	else if (transform?.startsWith("p")) return "percentile";
-	else if (type === "counter") return "increase";
-	return "raw";
-}
-
-function getAggregationGroupLabel(groupKey: string): string {
-	switch (groupKey) {
-		case "increase":
-			return "Increase";
-		case "rate":
-			return "Rate";
-		case "percentile":
-			return "Percentile";
-		default:
-			return "Raw";
+function getMetricTooltip(metric: Metric): string {
+	if (metric.type === "rate") {
+		return "Answers questions like: how many signups do we have per second/minute/hour/day?";
+	} else if (metric.type === "increase") {
+		return "Answers questions like: how many new signups did we have in the last hour?";
+	} else if (metric.type === "ratio") {
+		return `Answers questions like: what percentage of signups are from the USA?`;
+	} else if (metric.type === "histogram") {
+		return "Answers questions like: what is the response time for 95% of requests?";
 	}
-}
-
-function getAggregationGroupDescription(groupKey: string): string {
-	switch (groupKey) {
-		case "increase":
-			return "Total increase of a counter over the time window. For example: number of new signups in the last hour.";
-		case "rate":
-			return "Shows the rate of change per time unit (second, minute, hour, or day). For example: number of signups per second.";
-		case "percentile":
-			return "Shows the value below which a given percentage of observations fall. For example: 90th percentile of response time.";
-		default:
-			return "Shows the raw value of the metric. For example: Current stock price.";
-	}
+	return "Raw value of the metric.";
 }

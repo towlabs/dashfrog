@@ -1,10 +1,8 @@
 "use client";
 
-import { addDays } from "date-fns";
-import { CaseUpper, ChartLine, Tags } from "lucide-react";
+import { CaseUpper, Tags } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { LabelBadge } from "@/components/LabelBadge";
-import { MetricDetailDrawer } from "@/components/MetricDetailDrawer";
 import { SimplePagination } from "@/components/SimplePagination";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import {
@@ -15,13 +13,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Metrics } from "@/src/services/api/metrics";
-import type { RangeMetric } from "@/src/types/metric";
+import type { Metric } from "@/src/types/metric";
 
 type MetricsTableProps = {
 	tenant: string;
@@ -30,23 +23,19 @@ type MetricsTableProps = {
 const ITEMS_PER_PAGE = 14;
 
 export function MetricsTable({ tenant }: MetricsTableProps) {
-	const [rangeMetrics, setRangeMetrics] = useState<RangeMetric[]>([]);
+	const [metrics, setMetrics] = useState<Metric[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [currentPage, setCurrentPage] = useState(1);
-	const [drawerOpen, setDrawerOpen] = useState(false);
-	const [selectedMetric, setSelectedMetric] = useState<RangeMetric | null>(
-		null,
-	);
 
 	useEffect(() => {
 		const fetchMetrics = async () => {
 			setLoading(true);
 			try {
-				const { range } = await Metrics.list();
-				setRangeMetrics(range);
+				const metrics = await Metrics.list();
+				setMetrics(metrics);
 			} catch (error) {
 				console.error("Failed to fetch metrics:", error);
-				setRangeMetrics([]);
+				setMetrics([]);
 			} finally {
 				setLoading(false);
 			}
@@ -57,10 +46,10 @@ export function MetricsTable({ tenant }: MetricsTableProps) {
 		}
 	}, [tenant]);
 
-	const totalPages = Math.ceil(rangeMetrics.length / ITEMS_PER_PAGE);
+	const totalPages = Math.ceil(metrics.length / ITEMS_PER_PAGE);
 	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
 	const endIndex = startIndex + ITEMS_PER_PAGE;
-	const paginatedRows = rangeMetrics.slice(startIndex, endIndex);
+	const paginatedRows = metrics.slice(startIndex, endIndex);
 
 	const handlePreviousPage = () => {
 		setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -70,33 +59,12 @@ export function MetricsTable({ tenant }: MetricsTableProps) {
 		setCurrentPage((prev) => Math.min(totalPages, prev + 1));
 	};
 
-	const handleRowClick = (metric: RangeMetric) => {
-		setSelectedMetric(metric);
-		setDrawerOpen(true);
-	};
-
 	if (loading) {
 		return <TableSkeleton columns={2} rows={5} />;
 	}
 
 	return (
 		<>
-			{selectedMetric && (
-				<MetricDetailDrawer
-					open={drawerOpen}
-					onOpenChange={setDrawerOpen}
-					metricName={selectedMetric.prometheusName}
-					prettyName={selectedMetric.prettyName}
-					unit={selectedMetric.unit}
-					transform={selectedMetric.transform}
-					tenantName={tenant}
-					startDate={addDays(new Date(), -7)}
-					endDate={new Date()}
-					filters={[]}
-					groupBy={selectedMetric.labels}
-					groupByFn={selectedMetric.groupBy[0]}
-				/>
-			)}
 			<Table>
 				<TableHeader>
 					<TableRow>
@@ -124,28 +92,7 @@ export function MetricsTable({ tenant }: MetricsTableProps) {
 							>
 								<TableRow className="group cursor-pointer hover:bg-muted/50">
 									<TableCell>
-										<div className="relative flex items-center gap-2">
-											<span>{metric.prettyName}</span>
-											<Tooltip>
-												<TooltipTrigger asChild>
-													<div
-														className="absolute -right-3 -top-2 px-2 py-1.5 rounded-b-lg border border-t-0 bg-background group-hover:opacity-100 transition-opacity cursor-pointer z-10 flex items-center gap-1 opacity-0 shadow-xs "
-														onClick={(e) => {
-															e.stopPropagation();
-															handleRowClick(metric);
-														}}
-													>
-														<ChartLine className="size-4 text-muted-foreground" />
-														<span className="text-xs text-muted-foreground ">
-															History
-														</span>
-													</div>
-												</TooltipTrigger>
-												<TooltipContent>
-													<p>View metric history</p>
-												</TooltipContent>
-											</Tooltip>
-										</div>
+										<span>{metric.prettyName}</span>
 									</TableCell>
 									<TableCell>
 										<div className="flex flex-wrap gap-1">

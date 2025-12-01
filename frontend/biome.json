@@ -28,7 +28,8 @@
 			},
 			"suspicious": {
 				"noUnknownAtRules": "off",
-				"noArrayIndexKey": "off"
+				"noArrayIndexKey": "off",
+				"noExplicitAny": "off"
 			},
 			"correctness": {
 				"useUniqueElementIds": "off"

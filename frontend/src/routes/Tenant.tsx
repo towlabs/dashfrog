@@ -69,12 +69,10 @@ export default function TenantPage() {
 			<div className="space-y-1">
 				<h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
 					<Database className="h-8 w-8 text-muted-foreground" />
-					{tenantName}
+					Data Library
 				</h1>
 				<p className="text-sm text-secondary-foreground">
-					{activeTab === "metrics" &&
-						"Overview of key metrics and performance indicators"}
-					{activeTab === "flows" && "View and analyze workflow executions"}
+					View existing metrics and flows
 				</p>
 			</div>
 

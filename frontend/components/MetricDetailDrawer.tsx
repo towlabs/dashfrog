@@ -25,6 +25,7 @@ type MetricDetailDrawerProps = {
 	groupByFn: GroupByFn;
 	metricName: string;
 	transform: Transform | null;
+	transformMetadata: any;
 	prettyName: string;
 	unit: string | null;
 };
@@ -36,6 +37,7 @@ export function MetricDetailDrawer({
 	metricName,
 	prettyName,
 	transform,
+	transformMetadata,
 	tenantName,
 	startDate,
 	endDate,
@@ -58,6 +60,7 @@ export function MetricDetailDrawer({
 					tenantName,
 					metricName,
 					transform,
+					transformMetadata,
 					startDate,
 					endDate,
 					filters,
@@ -85,6 +88,7 @@ export function MetricDetailDrawer({
 		groupByFn,
 		open,
 		notebookId,
+		transformMetadata,
 	]);
 
 	return (
