@@ -69,7 +69,7 @@ jobs:
 
       - name: Run tests
         working-directory: dashfrog
-        run: DASHFROG_POSTGRES_HOST=localhost uv run pytest
+        run: uv run pytest
 
       - name: Run lint
         working-directory: dashfrog
