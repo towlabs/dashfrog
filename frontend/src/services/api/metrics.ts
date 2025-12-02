@@ -4,12 +4,16 @@ import type { Filter } from "@/src/types/filter";
 import type {
 	GroupByFn,
 	Metric,
-	MetricType,
 	TimeAggregation,
-	Transform,
+	Transform
 } from "@/src/types/metric";
 
 const MetricsAPI = NewRestAPI(`api`);
+
+/**
+ * Backend metric kinds (before conversion)
+ */
+type BackendMetricKind = "counter" | "gauge" | "stats" | "other" | string;
 
 /**
  * Metric history data point
@@ -160,4 +164,5 @@ const Metrics = {
 	},
 };
 
-export { MetricsAPI, Metrics };
+export { Metrics, MetricsAPI };
+

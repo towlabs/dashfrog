@@ -1,8 +1,8 @@
-import type { Block } from "@blocknote/core";
 import { fetchWithAuth } from "@/src/lib/fetch-wrapper";
 import type { Filter } from "@/src/types/filter";
 import type { Notebook } from "@/src/types/notebook";
 import type { RelativeTimeValue } from "@/src/types/timewindow";
+import type { Block } from "@blocknote/core";
 
 type NotebookResponse = {
 	id: string;
