@@ -15,6 +15,14 @@ concurrency:
 jobs:
   test-and-lint:
     runs-on: ubuntu-latest
+    env:
+      DASHFROG_POSTGRES_HOST: localhost
+      DASHFROG_POSTGRES_PORT: 5432
+      DASHFROG_POSTGRES_DBNAME: dashfrog_test
+      DASHFROG_POSTGRES_USER: postgres
+      DASHFROG_POSTGRES_PASSWORD: postgres
+      DASHFROG_OTLP_ENDPOINT: grpc://localhost:4317
+      DASHFROG_PROMETHEUS_ENDPOINT: http://localhost:9090
     services:
       postgres:
         image: postgres:16
@@ -61,14 +69,6 @@ jobs:
 
       - name: Run tests
         working-directory: dashfrog
-        env:
-          DASHFROG_POSTGRES_HOST: localhost
-          DASHFROG_POSTGRES_PORT: 5432
-          DASHFROG_POSTGRES_DBNAME: dashfrog_test
-          DASHFROG_POSTGRES_USER: postgres
-          DASHFROG_POSTGRES_PASSWORD: postgres
-          DASHFROG_OTLP_ENDPOINT: grpc://localhost:4317
-          DASHFROG_PROMETHEUS_ENDPOINT: http://localhost:9090
         run: uv run pytest
 
       - name: Run lint
