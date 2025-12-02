@@ -1,107 +1,183 @@
-import { NewRestAPI } from "@/src/services/api/_helper";
-import type { ApiFilter } from "@/src/types/filter";
-import type { Flow } from "@/src/types/flow";
-import type { Step } from "@/src/types/step";
-
-const FlowsAPI = NewRestAPI(`api/flows`);
+import { parseJSON } from "date-fns";
+import { fetchWithAuth } from "@/src/lib/fetch-wrapper";
+import type { Filter } from "@/src/types/filter";
+import type {
+	Flow,
+	FlowHistory,
+	FlowHistoryEvent,
+	FlowHistoryStep,
+	StaticFlow,
+} from "@/src/types/flow";
 
 /**
- * Pagination parameters for API requests
+ * Raw flow response from backend API (snake_case)
  */
-export interface PaginationParams {
-	/** Page number (1-indexed) */
-	page?: number;
-	/** Number of items per page */
-	nb_items?: number;
+interface FlowApiResponse {
+	groupId: string;
+	name: string;
+	labels: Record<string, string>;
+	lastRunStatus: "success" | "failure" | "running";
+	lastRunStartedAt: string;
+	lastRunEndedAt: string | null;
+	runCount: number;
+	successCount: number;
+	pendingCount: number;
+	failedCount: number;
+	lastDurationInSeconds: number | null;
+	avgDurationInSeconds: number | null;
+	minDurationInSeconds: number | null;
+	maxDurationInSeconds: number | null;
+}
+
+interface FlowDetailsApiResponse {
+	history: {
+		groupId: string;
+		status: "success" | "failure" | "running";
+		flowId: string;
+		startTime: string;
+		endTime: string | null;
+		events: FlowHistoryEventApiResponse[];
+		steps: FlowHistoryStepApiResponse[];
+		labels: Record<string, string>;
+	}[];
 }
 
 /**
- * Date range parameters for filtering API requests
+ * Raw flow history event response from backend API (snake_case)
  */
-export interface DateRangeParams {
-	/** Start date in ISO string format */
-	from_date?: string;
-	/** End date in ISO string format */
-	to_date?: string;
+interface FlowHistoryEventApiResponse {
+	eventName: string;
+	eventDt: string; // ISO date string
 }
 
 /**
- * Generic paginated response structure from the API
- *
- * @template T - The type of items being paginated
+ * Raw flow history step response from backend API (snake_case)
  */
-export interface PaginatedResponse<T> {
-	/** Array of items for the current page */
-	items: T[];
-	/** Total number of items across all pages */
-	total: number;
-	/** Total number of pages */
-	total_pages: number;
-	/** Current page number */
-	page: number;
-	/** Number of items per page */
-	nb_items: number;
+interface FlowHistoryStepApiResponse {
+	name: string;
+	startTime: string; // ISO date string
+	endTime: string | null; // ISO date string
+	status: "success" | "failure" | "running";
+}
+
+/**
+ * Convert backend API response to frontend Flow type
+ */
+function toFlow(apiFlow: FlowApiResponse): Flow {
+	return {
+		...apiFlow,
+		lastRunStartedAt: parseJSON(apiFlow.lastRunStartedAt),
+		lastRunEndedAt: apiFlow.lastRunEndedAt
+			? parseJSON(apiFlow.lastRunEndedAt)
+			: null,
+	};
+}
+
+/**
+ * Convert backend API response to frontend FlowHistoryEvent type
+ */
+function toFlowHistoryEvent(
+	apiEvent: FlowHistoryEventApiResponse,
+): FlowHistoryEvent {
+	return {
+		...apiEvent,
+		eventDt: parseJSON(apiEvent.eventDt),
+	};
+}
+
+/**
+ * Convert backend API response to frontend FlowHistoryStep type
+ */
+function toFlowHistoryStep(
+	apiStep: FlowHistoryStepApiResponse,
+): FlowHistoryStep {
+	return {
+		...apiStep,
+		startTime: parseJSON(apiStep.startTime),
+		endTime: apiStep.endTime ? parseJSON(apiStep.endTime) : null,
+	};
+}
+
+/**
+ * Convert backend API response to frontend FlowHistory type
+ */
+function toFlowHistory(
+	apiFlowHistory: FlowDetailsApiResponse["history"],
+): FlowHistory[] {
+	return apiFlowHistory.map((h) => ({
+		...h,
+		startTime: parseJSON(h.startTime),
+		endTime: h.endTime ? parseJSON(h.endTime) : null,
+		events: h.events.map(toFlowHistoryEvent),
+		steps: h.steps.map(toFlowHistoryStep),
+	}));
 }
 
 const Flows = {
-	latest: (filters?: ApiFilter[], pagination?: PaginationParams) => {
-		const params = new URLSearchParams();
-		if (pagination?.page !== undefined) {
-			params.append("page", pagination.page.toString());
-		}
-		if (pagination?.nb_items !== undefined) {
-			params.append("nb_items", pagination.nb_items.toString());
-		}
-
-		const queryString = params.toString();
-		const path = queryString ? `latest?${queryString}` : "latest";
-
-		if (filters && filters.length > 0) {
-			return FlowsAPI.post<Flow[]>(path, {
-				data: { filters },
-				meta: { action: "fetch", resource: "flows" },
-			});
-		}
-		return FlowsAPI.get<Flow[]>(path, {
-			meta: { action: "fetch", resource: "flows" },
-		});
-	},
-	history: (
-		name: string,
-		filters?: ApiFilter[],
-		pagination?: PaginationParams,
-		dateRange?: DateRangeParams,
+	/**
+	 * Get flows for a specific tenant with optional time range and filters
+	 */
+	getByTenant: async (
+		tenant: string,
+		start: Date,
+		end: Date,
+		labels: Filter[],
+		notebookId: string,
 	) => {
-		const params = new URLSearchParams();
-		if (pagination?.page !== undefined) {
-			params.append("page", pagination.page.toString());
-		}
-		if (pagination?.nb_items !== undefined) {
-			params.append("nb_items", pagination.nb_items.toString());
-		}
-
-		const queryString = params.toString();
-		const path = queryString ? `${name}?${queryString}` : name;
-
-		if (filters && filters.length > 0) {
-			return FlowsAPI.post<PaginatedResponse<Flow>>(path, {
-				data: {
-					filters,
-					from_date: dateRange?.from_date,
-					to_date: dateRange?.to_date,
-				},
-				meta: { action: "fetch", resource: "flow history" },
-			});
-		}
-		return FlowsAPI.get<PaginatedResponse<Flow>>(path, {
-			meta: { action: "fetch", resource: "flow history" },
+		const response = await fetchWithAuth(`/api/flows/search`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				start: start.toISOString(),
+				end: end.toISOString(),
+				tenant,
+				labels,
+				notebook_id: notebookId,
+			}),
 		});
+		const data = (await response.json()) as FlowApiResponse[];
+		return data.map(toFlow);
 	},
-	getSteps: (name: string, traceId: string) => {
-		return FlowsAPI.get<Step[]>(`${name}/${traceId}/steps`, {
-			meta: { action: "fetch", resource: "flow steps" },
+
+	/**
+	 * Get flow history
+	 */
+	getFlowHistory: async (
+		tenant: string,
+		flowName: string,
+		start: Date,
+		end: Date,
+		labels: Filter[],
+		notebookId: string,
+	): Promise<FlowHistory[]> => {
+		const response = await fetchWithAuth(`/api/flows/history`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				flow_name: flowName,
+				start: start.toISOString(),
+				end: end.toISOString(),
+				labels,
+				tenant,
+				notebook_id: notebookId,
+			}),
 		});
+		if (!response.ok) {
+			throw new Error(`Failed to fetch flow details: ${response.statusText}`);
+		}
+		const data = (await response.json()) as FlowDetailsApiResponse;
+		return toFlowHistory(data.history);
+	},
+
+	list: async (): Promise<StaticFlow[]> => {
+		const response = await fetchWithAuth(`/api/flows/`);
+		const data = await response.json();
+		return data;
 	},
 };
 
-export { FlowsAPI, Flows };
+export { Flows, toFlow, toFlowHistory, toFlowHistoryEvent, toFlowHistoryStep };

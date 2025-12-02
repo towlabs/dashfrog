@@ -1,0 +1,205 @@
+"use client";
+
+import { format } from "date-fns";
+import { CircleDot, Clock, PlayCircle, Search, Timer, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { Input } from "@/components/ui/input";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { formatDuration, formatTimeAgo } from "@/src/lib/formatters";
+import type { Filter } from "@/src/types/filter";
+import type { Flow, FlowHistory } from "@/src/types/flow";
+import { FlowStatus } from "@/components/FlowStatus";
+
+type Props = {
+	flow: Flow;
+	flowHistories: FlowHistory[];
+	onAddFilter?: (filter: Filter) => void;
+};
+
+type StatusFilter = "all" | "running" | "success" | "failure";
+
+export function FlowHistoryTable({ flow, flowHistories, onAddFilter }: Props) {
+	const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+	const [searchQuery, setSearchQuery] = useState("");
+
+	const handleAddFilter = (label: string, value: string) => {
+		if (onAddFilter) {
+			onAddFilter({ label, value });
+		}
+	};
+
+	return (
+		<TooltipProvider>
+			<div className="space-y-4">
+				{/* Status Filter Buttons */}
+				<div className="flex flex-col items-stretch border rounded-lg !p-0 sm:flex-row">
+					<button
+						type="button"
+						data-active={statusFilter === "all"}
+						className="data-[active=true]:bg-muted/50 relative z-30 flex flex-1 flex-col justify-center gap-1 border-b px-6 py-4 text-left sm:border-b-0 sm:border-r sm:px-8 sm:py-6"
+						onClick={() => setStatusFilter("all")}
+					>
+						<span className="text-muted-foreground text-xs">All</span>
+						<span className="text-lg leading-none font-bold sm:text-3xl">
+							{flow.runCount.toLocaleString()}
+						</span>
+					</button>
+					<button
+						type="button"
+						data-active={statusFilter === "success"}
+						className="data-[active=true]:bg-muted/50 relative z-30 flex flex-1 flex-col justify-center gap-1 border-b px-6 py-4 text-left sm:border-b-0 sm:border-r sm:px-8 sm:py-6"
+						onClick={() => setStatusFilter("success")}
+					>
+						<span className="text-muted-foreground text-xs">Success</span>
+						<span className="text-lg leading-none font-bold sm:text-3xl">
+							{flow.successCount.toLocaleString()}
+						</span>
+					</button>
+					<button
+						type="button"
+						data-active={statusFilter === "failure"}
+						className="data-[active=true]:bg-muted/50 relative z-30 flex flex-1 flex-col justify-center gap-1 border-b px-6 py-4 text-left sm:border-b-0 sm:border-r sm:px-8 sm:py-6"
+						onClick={() => setStatusFilter("failure")}
+					>
+						<span className="text-muted-foreground text-xs">Failed</span>
+						<span className="text-lg leading-none font-bold sm:text-3xl">
+							{flow.failedCount.toLocaleString()}
+						</span>
+					</button>
+					<button
+						type="button"
+						data-active={statusFilter === "running"}
+						className="data-[active=true]:bg-muted/50 relative z-30 flex flex-1 flex-col justify-center gap-1 px-6 py-4 text-left sm:px-8 sm:py-6"
+						onClick={() => setStatusFilter("running")}
+					>
+						<span className="text-muted-foreground text-xs">Running</span>
+						<span className="text-lg leading-none font-bold sm:text-3xl">
+							{flow.pendingCount.toLocaleString()}
+						</span>
+					</button>
+				</div>
+
+				{/* Table */}
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<PlayCircle className="h-4 w-4" />
+									<span>Name</span>
+								</div>
+							</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Clock className="h-4 w-4" />
+									<span>Start</span>
+								</div>
+							</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Clock className="h-4 w-4" />
+									<span>End</span>
+								</div>
+							</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<Timer className="h-4 w-4" />
+									<span>Duration</span>
+								</div>
+							</TableHead>
+							<TableHead>
+								<div className="flex items-center gap-2">
+									<CircleDot className="h-4 w-4" />
+									<span>Status</span>
+								</div>
+							</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{flowHistories.map((flow, index) => (
+							<TableRow key={`${flow.name}-${index}`}>
+								<TableCell>
+									<div className="space-y-2">
+										<div className="font-medium">{flow.name}</div>
+										<div className="flex flex-wrap gap-1">
+											{Object.entries(flow.labels).map(([key, value]) => (
+												<ContextMenu key={key}>
+													<ContextMenuTrigger>
+														<Badge
+															variant="secondary"
+															className="h-5 px-2 text-xs font-normal border-0"
+														>
+															{key}={value}
+														</Badge>
+													</ContextMenuTrigger>
+													<ContextMenuContent>
+														<ContextMenuItem
+															onClick={() => handleAddFilter(key, value)}
+														>
+															Add to filters
+														</ContextMenuItem>
+													</ContextMenuContent>
+												</ContextMenu>
+											))}
+										</div>
+									</div>
+								</TableCell>
+								<TableCell className="text-muted-foreground text-sm">
+									<Tooltip>
+										<TooltipTrigger className="cursor-default">
+											{formatTimeAgo(flow.startTime)}
+										</TooltipTrigger>
+										<TooltipContent>
+											{format(flow.startTime, "PPpp")}
+										</TooltipContent>
+									</Tooltip>
+								</TableCell>
+								<TableCell className="text-muted-foreground text-sm">
+									{flow.endTime ? (
+										<Tooltip>
+											<TooltipTrigger className="cursor-default">
+												{formatTimeAgo(flow.endTime)}
+											</TooltipTrigger>
+											<TooltipContent>
+												{format(flow.endTime, "PPpp")}
+											</TooltipContent>
+										</Tooltip>
+									) : (
+										"-"
+									)}
+								</TableCell>
+								<TableCell className="text-muted-foreground text-sm">
+									{formatDuration(flow.startTime, flow.endTime)}
+								</TableCell>
+								<TableCell>
+									<FlowStatus status={flow.status} />
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</div>
+		</TooltipProvider>
+	);
+}

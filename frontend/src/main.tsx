@@ -4,59 +4,59 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import "@/src/globals.css";
 import LayoutClient from "@/components/LayoutClient";
-import CatalogPage from "@/src/routes/Catalog";
-import EventsPage from "@/src/routes/Events";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/src/routes/Home";
-import LabelsPage from "@/src/routes/Labels";
-import NotebookById from "@/src/routes/NotebookById";
+import Login from "@/src/routes/Login";
+import Notebook from "@/src/routes/Notebook";
 import NotebookView from "@/src/routes/NotebookView";
+import Tenant from "@/src/routes/Tenant";
+import { ProtectedRoute } from "../components/ProtectedRoute";
 
 const router = createBrowserRouter([
 	{
+		path: "/login",
+		element: <Login />,
+	},
+	{
+		path: "/view/:tenant/notebooks/:notebookId",
+		element: <NotebookView />,
+	},
+	{
 		path: "/",
 		element: (
-			<LayoutClient>
-				<Home />
-			</LayoutClient>
+			<ProtectedRoute>
+				<LayoutClient>
+					<Home />
+				</LayoutClient>
+			</ProtectedRoute>
 		),
 	},
 	{
-		path: "/events",
+		path: "/tenants/:tenant",
 		element: (
-			<LayoutClient>
-				<EventsPage />
-			</LayoutClient>
+			<ProtectedRoute>
+				<LayoutClient>
+					<Tenant />
+				</LayoutClient>
+			</ProtectedRoute>
 		),
 	},
 	{
-		path: "/notebook/:id",
+		path: "/tenants/:tenant/notebooks/:notebookId",
 		element: (
-			<LayoutClient>
-				<NotebookById />
-			</LayoutClient>
-		),
-	},
-	{ path: "/view/:viewId", element: <NotebookView /> },
-	{
-		path: "/catalog",
-		element: (
-			<LayoutClient>
-				<CatalogPage />
-			</LayoutClient>
-		),
-	},
-	{
-		path: "/labels",
-		element: (
-			<LayoutClient>
-				<LabelsPage />
-			</LayoutClient>
+			<ProtectedRoute>
+				<LayoutClient>
+					<Notebook />
+				</LayoutClient>
+			</ProtectedRoute>
 		),
 	},
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
 	<React.StrictMode>
-		<RouterProvider router={router} />
+		<TooltipProvider delayDuration={200}>
+			<RouterProvider router={router} />
+		</TooltipProvider>
 	</React.StrictMode>,
 );

@@ -1,9 +1,16 @@
+/** biome-ignore-all lint/complexity/noImportantStyles: overriding prosemirror styles */
 @import "tailwindcss";
 @import "react-day-picker/style.css";
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap");
 @plugin "tailwindcss-animate";
 @source "../node_modules/@blocknote/shadcn";
 
 @theme {
+	--font-family-sans:
+		ui-sans-serif, -apple-system, BlinkMacSystemFont,
+		"Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji",
+		Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+	--font-family-triodon: "Lexend", sans-serif;
 	--color-background: oklch(100% 0 0);
 	--color-foreground: oklch(3.9% 0 0);
 	--color-card: oklch(100% 0 0);
@@ -13,14 +20,14 @@
 	--color-primary: oklch(9% 0 0);
 	--color-primary-foreground: oklch(98% 0 0);
 	--color-secondary: oklch(96.1% 0 0);
-	--color-secondary-foreground: oklch(9% 0 0);
+	--color-secondary-foreground: #a19e99;
 	--color-muted: oklch(96.1% 0 0);
 	--color-muted-foreground: oklch(45.1% 0 0);
 	--color-accent: oklch(96.1% 0 0);
 	--color-accent-foreground: oklch(9% 0 0);
 	--color-destructive: oklch(60.2% 0.223 25.03);
 	--color-destructive-foreground: oklch(98% 0 0);
-	--color-border: oklch(89.8% 0 0);
+	--color-border: rgba(42, 28, 0, 0.07);
 	--color-input: oklch(89.8% 0 0);
 	--color-ring: oklch(3.9% 0 0);
 
@@ -34,6 +41,27 @@
 	--color-chart-3: oklch(33.59% 0.051 214.57);
 	--color-chart-4: oklch(76.94% 0.135 85.24);
 	--color-chart-5: oklch(79.18% 0.118 56.38);
+
+	--text-xl: 18px;
+
+	--bn-colors-highlights-gray-text: #9b9a97;
+	--bn-colors-highlights-gray-background: #ebeced;
+	--bn-colors-highlights-brown-text: #64473a;
+	--bn-colors-highlights-brown-background: #e9e5e3;
+	--bn-colors-highlights-red-text: #e03e3e;
+	--bn-colors-highlights-red-background: #fbe4e4;
+	--bn-colors-highlights-orange-text: #d9730d;
+	--bn-colors-highlights-orange-background: #f6e9d9;
+	--bn-colors-highlights-yellow-text: #dfab01;
+	--bn-colors-highlights-yellow-background: #fbf3db;
+	--bn-colors-highlights-green-text: #4d6461;
+	--bn-colors-highlights-green-background: #ddedea;
+	--bn-colors-highlights-blue-text: #0b6e99;
+	--bn-colors-highlights-blue-background: #ddebf1;
+	--bn-colors-highlights-purple-text: #6940a5;
+	--bn-colors-highlights-purple-background: #eae4f2;
+	--bn-colors-highlights-pink-text: #ad1a72;
+	--bn-colors-highlights-pink-background: #f4dfeb;
 }
 
 .dark {
@@ -68,8 +96,79 @@
 	@apply border-border;
 }
 
+html {
+	font-size: 15px;
+}
+
 body {
 	@apply bg-background text-foreground;
+	font-weight: 500;
+	line-height: 1.5;
+	letter-spacing: -0.03em;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.bn-default-styles {
+	font-size: 15px;
+}
+
+.ProseMirror-selectednode > .bn-block-content > * {
+	outline: none !important;
+}
+
+/* Remove border from last table cell in each row */
+tbody tr td:last-child {
+	border-right: none !important;
+}
+
+.bn-container[data-color-scheme] {
+	--bn-font-family: var(--font-family-sans);
+	font-weight: 500;
+}
+
+.bn-default-styles {
+	font-size: 15px !important;
+	font-weight: 500 !important;
+	font-family: var(--font-family-sans) !important;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+	vertical-align: middle !important;
+}
+
+.ProseMirror table {
+	table-layout: auto !important;
+}
+
+.bn-suggestion-menu {
+	min-width: 20rem !important;
+}
+
+.bn-container {
+	[data-floating-ui-focusable] {
+		left: -15px;
+	}
+}
+
+.bn-color-picker-dropdown {
+	@apply max-h-96 overflow-y-auto min-w-[16rem];
+}
+
+.bn-color-picker-dropdown div[data-slot="dropdown-menu-label"] {
+	@apply text-muted-foreground text-xs;
+}
+
+.bn-color-picker-dropdown div[data-slot="dropdown-menu-checkbox-item"] {
+	@apply pl-2 cursor-pointer;
+}
+
+.bn-color-picker-dropdown
+	[data-slot="dropdown-menu-checkbox-item"]
+	> span.pointer-events-none {
+	left: auto !important;
+	right: 0.5rem;
 }
 
 /* Override ProseMirror table styles that conflict with shadcn/ui tables */

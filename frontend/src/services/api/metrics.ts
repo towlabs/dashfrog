@@ -1,96 +1,159 @@
-import { NewRestAPI } from "@/src/services/api/_helper";
+import { fetchWithAuth } from "@/src/lib/fetch-wrapper";
+import type { Filter } from "@/src/types/filter";
 import type {
+	GroupByFn,
 	Metric,
-	MetricKind,
-	MetricScope,
-	MetricsStore,
-	MetricUnits,
+	TimeAggregation,
+	Transform,
 } from "@/src/types/metric";
 
-const MetricsAPI = NewRestAPI(`api`);
-
 /**
- * Backend metric kinds (before conversion)
+ * Metric history data point
  */
-type BackendMetricKind = "counter" | "gauge" | "stats" | "other" | string;
+export type MetricHistoryPoint = {
+	timestamp: Date;
+	value: number;
+};
 
-/**
- * Raw metric response from backend API (snake_case)
- * This is internal to the API service and converted to Metric (camelCase)
- */
-interface MetricApiResponse {
-	id: number;
-	key: string;
-	kind: BackendMetricKind;
-	scope: MetricScope;
-	unit: MetricUnits;
-	display_as: string;
-	description: string;
-	associated_identifiers: string[];
-	labels: number[];
-}
+export type MetricHistoryResponse = {
+	prettyName: string;
+	unit: string | null;
+	transform: Transform | null;
+	series: {
+		labels: Record<string, string>;
+		values: {
+			timestamp: string;
+			value: number;
+		}[];
+	}[];
+};
 
-type MetricsApiResponse = MetricApiResponse[];
+export type MetricRangeHistory = {
+	prettyName: string;
+	unit: string | null;
+	transform: Transform | null;
+	series: {
+		labels: Record<string, string>;
+		values: {
+			timestamp: Date;
+			value: number;
+		}[];
+	}[];
+};
 
-/**
- * Convert backend kind to frontend MetricKind
- */
-function convertKind(backendKind: BackendMetricKind): MetricKind {
-	if (backendKind === "other" || backendKind === "stats") {
-		return "distribution";
-	}
-	if (backendKind === "counter") {
-		return "events";
-	}
-	if (backendKind === "gauge") {
-		return "values";
-	}
-	// Default fallback
-	return "values";
-}
-
-/**
- * Convert backend API response to frontend Metric type
- * Transforms snake_case to camelCase
- */
-function toMetric(apiMetric: MetricApiResponse): Metric {
-	return {
-		id: apiMetric.id,
-		key: apiMetric.key,
-		kind: convertKind(apiMetric.kind),
-		scope: apiMetric.scope,
-		unit: apiMetric.unit,
-		displayAs: apiMetric.display_as,
-		description: apiMetric.description,
-		prometheusName: apiMetric.key,
-		prometheusMetricName:
-			apiMetric.associated_identifiers?.[0] || apiMetric.key,
-		// Labels will be converted to label names in MetricQueryBuilder
-		labels: apiMetric.labels.map(String),
-	};
-}
-
-/**
- * Process metrics from API into indexed store
- * Converts API response format to JavaScript conventions
- */
-function processMetrics(apiMetrics: MetricApiResponse[]): MetricsStore {
-	const store: MetricsStore = {};
-
-	apiMetrics.forEach((apiMetric) => {
-		const metric = toMetric(apiMetric);
-		store[metric.id] = metric;
-	});
-
-	return store;
-}
+export type MetricScalar = {
+	type: "counter" | "gauge" | "histogram";
+	prettyName: string;
+	unit: string | null;
+	transform: Transform | null;
+	scalars: { labels: Record<string, string>; value: number }[];
+};
 
 const Metrics = {
-	getAll: () => {
-		return MetricsAPI.get<MetricsApiResponse>("metrics", {
-			meta: { action: "fetch", resource: "metrics" },
+	/**
+	 * Get metrics for a specific tenant with optional time range and filters
+	 */
+	list: async (): Promise<Metric[]> => {
+		const response = await fetchWithAuth(`/api/metrics/search`, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+			},
 		});
+		const data = await response.json();
+
+		return data;
+	},
+
+	/**
+	 * Get metric history for a specific metric with labels
+	 */
+	getHistory: async (
+		tenant: string,
+		metricName: string,
+		transform: Transform | null,
+		transformMetadata: any,
+
+		startTime: Date,
+		endTime: Date,
+		labels: Filter[],
+		groupBy: string[],
+		groupByFn: GroupByFn,
+		notebookId: string | null,
+	): Promise<MetricRangeHistory> => {
+		const response = await fetchWithAuth(`/api/metrics/range`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				metric_name: metricName,
+				transform,
+				transform_metadata: transformMetadata,
+				group_by: groupBy,
+				group_fn: groupByFn,
+				start_time: startTime.toISOString(),
+				end_time: endTime.toISOString(),
+				labels: [...labels, { label: "tenant", value: tenant }],
+				notebook_id: notebookId,
+			}),
+		});
+		const data = (await response.json()) as MetricHistoryResponse;
+		return {
+			prettyName: data.prettyName,
+			unit: data.unit,
+			transform: data.transform,
+			series: data.series.map((series) => ({
+				labels: series.labels,
+				values: series.values.map((value) => ({
+					timestamp: new Date(value.timestamp),
+					value: value.value,
+				})),
+			})),
+		};
+	},
+
+	getScalar: async (
+		tenant: string,
+		metricName: string,
+		startTime: Date,
+		endTime: Date,
+		transform: Transform | null,
+		transformMetadata: any,
+		groupBy: string[],
+		groupByFn: GroupByFn,
+		timeAggregation: TimeAggregation,
+		matchOperator: "==" | ">" | "<" | ">=" | "<=" | "!=" | null,
+		matchValue: string | null,
+		labels: Filter[],
+		notebookId: string,
+	): Promise<MetricScalar> => {
+		const payload: Record<string, any> = {
+			metric_name: metricName,
+			transform,
+			transform_metadata: transformMetadata,
+			group_by: groupBy,
+			group_fn: groupByFn,
+			time_aggregation: timeAggregation,
+			start_time: startTime.toISOString(),
+			end_time: endTime.toISOString(),
+			labels: [...labels, { label: "tenant", value: tenant }],
+			notebook_id: notebookId,
+		};
+		if (timeAggregation === "match") {
+			payload.match_operator = matchOperator;
+			payload.match_value = matchValue;
+		}
+		const response = await fetchWithAuth(`/api/metrics/instant`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(payload),
+		});
+		const data = (await response.json()) as MetricScalar;
+		return data;
 	},
 };
 
-export { MetricsAPI, Metrics, processMetrics };
+export { Metrics };

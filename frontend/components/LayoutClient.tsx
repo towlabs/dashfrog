@@ -1,10 +1,8 @@
 import * as React from "react";
 import { Toaster } from "sonner";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { EventsProvider } from "@/src/contexts/events";
-import { LabelsProvider } from "@/src/contexts/labels";
-import { MetricsProvider } from "@/src/contexts/metrics";
-import { NotebooksProvider } from "../src/contexts/notebooks";
+import { useLabelsStore } from "@/src/stores/labels";
+import { useUIStore } from "@/src/stores/ui";
 import SideMenu from "./SideMenu";
 
 export default function LayoutClient({
@@ -13,39 +11,42 @@ export default function LayoutClient({
 	children: React.ReactNode;
 }) {
 	const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-	const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+	const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
+	const fetchLabelsAndTenants = useLabelsStore(
+		(state) => state.fetchLabelsAndTenants,
+	);
+
+	// Load labels on app startup
+	React.useEffect(() => {
+		// fetch every 5 seconds
+		const interval = setInterval(() => {
+			void fetchLabelsAndTenants();
+		}, 5000);
+		return () => clearInterval(interval);
+	}, [fetchLabelsAndTenants]);
 
 	return (
-		<LabelsProvider>
-			<MetricsProvider>
-				<EventsProvider>
-					<NotebooksProvider>
-						<Toaster position="top-right" richColors closeButton />
-						<div className="relative flex min-h-screen">
-							{/* Desktop Sidebar - Fixed */}
-							<SideMenu
-								isCollapsed={sidebarCollapsed}
-								onToggleCollapse={setSidebarCollapsed}
-							/>
+		<>
+			<Toaster position="top-right" richColors closeButton />
+			<div className="flex min-h-screen w-screen overflow-hidden">
+				{/* Desktop Sidebar */}
+				<SideMenu isCollapsed={sidebarCollapsed} />
 
-							{/* Mobile Sidebar */}
-							<Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-								<DrawerContent side="left" className="p-0">
-									<SideMenu />
-								</DrawerContent>
-							</Drawer>
+				{/* Mobile Sidebar */}
+				<Drawer open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+					<DrawerContent side="left" className="p-0">
+						<SideMenu />
+					</DrawerContent>
+				</Drawer>
 
-							{/* Main Content - With left margin to account for fixed sidebar */}
-							<div
-								className={`flex flex-1 flex-col transition-all duration-300 ${sidebarCollapsed ? "md:ml-16" : "md:ml-64"}`}
-							>
-								<header className="border-b bg-background"></header>
-								<main className="flex-1 overflow-y-auto">{children}</main>
-							</div>
-						</div>
-					</NotebooksProvider>
-				</EventsProvider>
-			</MetricsProvider>
-		</LabelsProvider>
+				{/* Main Content */}
+				<div className="flex flex-1 flex-col min-w-0">
+					<header className="border-b bg-background"></header>
+					<main className="flex-1 overflow-y-auto overflow-x-hidden">
+						{children}
+					</main>
+				</div>
+			</div>
+		</>
 	);
 }

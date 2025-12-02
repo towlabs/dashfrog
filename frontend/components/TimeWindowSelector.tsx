@@ -1,11 +1,4 @@
-import {
-	endOfWeek,
-	format,
-	startOfWeek,
-	subDays,
-	subHours,
-	subMinutes,
-} from "date-fns";
+import { format } from "date-fns";
 import { CalendarIcon, ChevronLeft } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -18,160 +11,106 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import type { RelativeTimeValue, TimeWindowConfig } from "@/src/types/notebook";
-
-export type TimeWindow = {
-	start: Date;
-	end: Date;
-	label?: string;
-};
+import {
+	type RelativeTimeValue,
+	resolveTimeWindow,
+	type TimeWindow,
+} from "@/src/types/timewindow";
 
 interface TimeWindowSelectorProps {
-	value?: TimeWindow;
-	config?: TimeWindowConfig;
-	onChange?: (timeWindow: TimeWindow, config: TimeWindowConfig) => void;
+	value: TimeWindow;
+	onChange: (timeWindow: TimeWindow) => void;
 	className?: string;
 }
 
 const QUICK_RANGES: Array<{
 	label: string;
 	value: RelativeTimeValue;
-	getValue: () => { start: Date; end: Date };
 }> = [
 	{
 		label: "Last 15 minutes",
 		value: "15m",
-		getValue: () => ({ start: subMinutes(new Date(), 15), end: new Date() }),
+	},
+	{
+		label: "Last 30 minutes",
+		value: "30m",
 	},
 	{
 		label: "Last hour",
 		value: "1h",
-		getValue: () => ({ start: subHours(new Date(), 1), end: new Date() }),
 	},
 	{
 		label: "Last 6 hours",
 		value: "6h",
-		getValue: () => ({ start: subHours(new Date(), 6), end: new Date() }),
 	},
 	{
 		label: "Last 12 hours",
 		value: "12h",
-		getValue: () => ({ start: subHours(new Date(), 12), end: new Date() }),
 	},
 	{
 		label: "Last 24 hours",
 		value: "24h",
-		getValue: () => ({ start: subHours(new Date(), 24), end: new Date() }),
 	},
 	{
 		label: "Last 7 days",
 		value: "7d",
-		getValue: () => ({ start: subDays(new Date(), 7), end: new Date() }),
 	},
 	{
 		label: "Last 30 days",
 		value: "30d",
-		getValue: () => ({ start: subDays(new Date(), 30), end: new Date() }),
+	},
+	{
+		label: "Today",
+		value: "today",
 	},
 	{
 		label: "This week",
 		value: "w",
-		getValue: () => ({
-			start: startOfWeek(new Date(), { weekStartsOn: 0 }),
-			end: endOfWeek(new Date(), { weekStartsOn: 0 }),
-		}),
 	},
 ];
 
 export function TimeWindowSelector({
 	value,
-	config,
 	onChange,
 	className,
 }: TimeWindowSelectorProps) {
 	const [open, setOpen] = React.useState(false);
-	const [customStart, setCustomStart] = React.useState<Date | undefined>(
-		value?.start,
-	);
-	const [customEnd, setCustomEnd] = React.useState<Date | undefined>(
-		value?.end,
-	);
-	const [customStartTime, setCustomStartTime] = React.useState(
-		value?.start ? format(value.start, "HH:mm") : "00:00",
-	);
-	const [customEndTime, setCustomEndTime] = React.useState(
-		value?.end ? format(value.end, "HH:mm") : "23:59",
-	);
 	const [showCustom, setShowCustom] = React.useState(false);
+	const [customStart, setCustomStart] = React.useState<Date | undefined>(
+		undefined,
+	);
+	const [customEnd, setCustomEnd] = React.useState<Date | undefined>(undefined);
 
-	const currentWindow = value || {
-		start: subHours(new Date(), 24),
-		end: new Date(),
-	};
-
-	const getDisplayLabel = () => {
-		if (value?.label) return value.label;
-
-		// If we have config, use it to determine the label
-		if (config?.type === "relative") {
-			const range = QUICK_RANGES.find((r) => r.value === config.metadata.value);
-			if (range) return range.label;
-		}
-
-		// Check if matches a quick range (for backwards compatibility)
-		for (const range of QUICK_RANGES) {
-			const rangeValue = range.getValue();
-			const diff = Math.abs(
-				rangeValue.start.getTime() - currentWindow.start.getTime(),
-			);
-			if (diff < 60000) {
-				// Within 1 minute
-				return range.label;
-			}
-		}
-
-		// Custom range
-		return `${format(currentWindow.start, "MMM d, HH:mm")} - ${format(currentWindow.end, "MMM d, HH:mm")}`;
-	};
-
-	const handleQuickRange = (range: (typeof QUICK_RANGES)[0]) => {
-		const { start, end } = range.getValue();
-		// Prepopulate custom inputs so switching to custom shows coherent defaults
+	const { start, end } = React.useMemo(() => resolveTimeWindow(value), [value]);
+	React.useEffect(() => {
 		setCustomStart(start);
 		setCustomEnd(end);
-		setCustomStartTime(format(start, "HH:mm"));
-		setCustomEndTime(format(end, "HH:mm"));
+	}, [start, end]);
 
-		const timeWindowConfig: TimeWindowConfig = {
+	const getDisplayLabel = () => {
+		if (value.type === "relative") {
+			const range = QUICK_RANGES.find((r) => r.value === value.metadata.value);
+			if (range) return range.label;
+		}
+		return `${format(start, "MMM d, HH:mm")} - ${format(end, "MMM d, HH:mm")}`;
+	};
+
+	const handleQuickRange = (value: RelativeTimeValue) => {
+		const timeWindow: TimeWindow = {
 			type: "relative",
-			metadata: { value: range.value },
+			metadata: { value },
 		};
-		onChange?.({ start, end, label: range.label }, timeWindowConfig);
+		onChange(timeWindow);
 		setOpen(false);
 	};
 
 	const handleCustomApply = () => {
 		if (!customStart || !customEnd) return;
-
-		const [startHours, startMinutes] = customStartTime.split(":").map(Number);
-		const [endHours, endMinutes] = customEndTime.split(":").map(Number);
-
-		const start = new Date(customStart);
-		start.setHours(startHours, startMinutes, 0, 0);
-
-		const end = new Date(customEnd);
-		end.setHours(endHours, endMinutes, 59, 999);
-
-		// validation: end must be after start
-		if (!(end.getTime() > start.getTime())) {
-			return;
-		}
-
-		const timeWindowConfig: TimeWindowConfig = {
+		const timeWindow: TimeWindow = {
 			type: "absolute",
-			metadata: { start, end },
+			metadata: { start: customStart, end: customEnd },
 		};
-		onChange?.({ start, end }, timeWindowConfig);
+		onChange(timeWindow);
 		setOpen(false);
 	};
 
@@ -182,7 +121,7 @@ export function TimeWindowSelector({
 					variant="ghost"
 					size="sm"
 					className={cn(
-						"justify-between text-sm text-muted-foreground",
+						"justify-between text-sm text-muted-foreground gap-0",
 						className,
 					)}
 				>
@@ -190,34 +129,41 @@ export function TimeWindowSelector({
 					{getDisplayLabel()}
 				</Button>
 			</PopoverTrigger>
-			<PopoverContent className="w-[280px] p-0" align="end">
+			<PopoverContent className="w-80 p-0" align="end">
 				{!showCustom ? (
-					<div className="p-2">
-						<div className="space-y-1">
-							{QUICK_RANGES.map((range) => (
-								<Button
-									key={range.label}
-									variant="ghost"
-									size="sm"
-									className="w-full justify-start"
-									onClick={() => handleQuickRange(range)}
-								>
-									{range.label}
-								</Button>
-							))}
+					<div className="p-3 space-y-3">
+						<div>
+							<label className="text-xs font-medium text-muted-foreground mb-2 block">
+								Quick Ranges
+							</label>
+							<div className="grid grid-cols-2 gap-2">
+								{QUICK_RANGES.map((range) => (
+									<Button
+										key={range.label}
+										variant={
+											value?.type === "relative" &&
+											value.metadata.value === range.value
+												? "default"
+												: "outline"
+										}
+										size="sm"
+										className="text-xs h-7"
+										onClick={() => handleQuickRange(range.value)}
+									>
+										{range.label}
+									</Button>
+								))}
+							</div>
 						</div>
-						<Separator className="my-2" />
+						<Separator />
 						<Button
-							variant="ghost"
+							variant="outline"
 							size="sm"
-							className="w-full justify-start"
+							className="w-full text-xs h-7"
 							onClick={() => {
 								// Ensure custom fields reflect the currently selected window
-								const win = value || currentWindow;
-								setCustomStart(win.start);
-								setCustomEnd(win.end);
-								setCustomStartTime(format(win.start, "HH:mm"));
-								setCustomEndTime(format(win.end, "HH:mm"));
+								setCustomStart(start);
+								setCustomEnd(end);
 								setShowCustom(true);
 							}}
 						>
@@ -257,21 +203,7 @@ export function TimeWindowSelector({
 								<ChevronLeft className="h-3.5 w-3.5" />
 								Back
 							</Button>
-							<Button
-								variant="default"
-								size="sm"
-								onClick={handleCustomApply}
-								disabled={(() => {
-									if (!customStart || !customEnd) return true;
-									const [sh, sm] = customStartTime.split(":").map(Number);
-									const [eh, em] = customEndTime.split(":").map(Number);
-									const s = new Date(customStart);
-									s.setHours(sh, sm, 0, 0);
-									const e = new Date(customEnd);
-									e.setHours(eh, em, 59, 999);
-									return !(e.getTime() > s.getTime());
-								})()}
-							>
+							<Button variant="default" size="sm" onClick={handleCustomApply}>
 								Apply
 							</Button>
 						</div>

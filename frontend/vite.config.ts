@@ -13,7 +13,16 @@ export default defineConfig({
 	optimizeDeps: {
 		include: ["react", "react-dom", "react/jsx-runtime"],
 	},
+	build: {
+		outDir: "../dashfrog/src/dashfrog/api/static",
+	},
 	server: {
 		port: 5173,
+		proxy: {
+			"/api": {
+				target: "http://localhost:8000",
+				changeOrigin: true,
+			},
+		},
 	},
 });

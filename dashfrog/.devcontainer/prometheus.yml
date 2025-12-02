@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'dashfrog-dev'
+    environment: 'development'
+
+# Remote write receiver is enabled by default in newer Prometheus versions
+# Metrics are pushed from OTLP Collector via /api/v1/write endpoint
+
+# Enable native histogram support
+# Native histograms provide better accuracy and lower cardinality than classic histograms
+# Exponential histograms from OTLP are automatically converted to Prometheus native histograms
+
+scrape_configs:
+  # Scrape Prometheus itself for self-monitoring
+  - job_name: 'prometheus'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:9090']
+    # Enable native histograms for Prometheus self-monitoring
+    native_histogram_bucket_limit: 160
+    native_histogram_min_bucket_factor: 1.1
