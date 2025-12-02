@@ -28,7 +28,7 @@ from opentelemetry.trace import (
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
-    from flask import Flask
+    from flask import Flask  # pyright: ignore[reportMissingImports]
 
 
 @dataclass
@@ -290,7 +290,5 @@ def setup(
 def get_dashfrog_instance() -> Dashfrog:
     """Raise error if setup() hasn't been called."""
     if _dashfrog is None:
-        raise RuntimeError(
-            "DashFrog not initialized. Call setup() first:\n\n  from dashfrog import setup\n  setup()\n"
-        )
+        raise RuntimeError("DashFrog not initialized. Call setup() first:\n\n  from dashfrog import setup\n  setup()\n")
     return _dashfrog

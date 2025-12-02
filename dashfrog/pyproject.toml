@@ -22,6 +22,7 @@ dependencies = [
 api = [
     "fastapi>=0.118.0",
     "uvicorn>=0.30.0",
+    "python-jose[cryptography]>=3.3.0,<4.0.0",
 ]
 
 # Instrumentation packages (optional, imported on-demand)
@@ -40,6 +41,7 @@ dev = [
     "pytest>=8.4.2",
     "pyright>=1.1.405",
     "ruff>=0.13.2",
+    "python-jose[cryptography]>=3.3.0,<4.0.0",
 ]
 
 # Testing dependencies (includes instrumentation for tests)
@@ -48,6 +50,7 @@ test = [
     "fastapi>=0.118.0",
     "httpx>=0.28.0",
     "opentelemetry-instrumentation-fastapi>=0.58b0",
+    "python-jose[cryptography]>=3.3.0,<4.0.0",
 ]
 
 [tool.ruff]
