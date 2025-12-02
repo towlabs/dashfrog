@@ -35,12 +35,9 @@ jobs:
           uv sync --all-groups
 
       - name: Run tests
-        run: |
-          cd dashfrog
-          uv run pytest
+        run: uv run pytest
 
       - name: Run lint
         run: |
-          cd dashfrog
           uv run pyright
           uv run ruff check
