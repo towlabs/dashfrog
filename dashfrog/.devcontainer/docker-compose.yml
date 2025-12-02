@@ -14,53 +14,19 @@ services:
       DASHFROG_TEST_DB_URL: postgresql://postgres:postgres@postgres:5432/dashfrog_test
 
   postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    networks:
-      - dashfrog
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: dashfrog_test
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+    extends:
+      file: ../docker-compose.test.yml
+      service: postgres
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    restart: unless-stopped
-    command: ["--config=/etc/otel-collector-config.yml"]
-    networks:
-      - dashfrog
-    volumes:
-      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
-    ports:
-      - "4317:4317" # OTLP gRPC receiver
-      - "4318:4318" # OTLP HTTP receiver
-      - "8888:8888" # Collector internal metrics
-    depends_on:
-      - prometheus
+    extends:
+      file: ../docker-compose.test.yml
+      service: otel-collector
 
   prometheus:
-    image: prom/prometheus:latest
-    restart: unless-stopped
-    networks:
-      - dashfrog
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.console.libraries=/etc/prometheus/console_libraries"
-      - "--web.console.templates=/etc/prometheus/consoles"
-      - "--web.enable-lifecycle"
-      - "--enable-feature=native-histograms"
-      - "--enable-feature=created-timestamp-zero-ingestion"
-      - "--web.enable-remote-write-receiver"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    ports:
-      - "9090:9090"
+    extends:
+      file: ../docker-compose.test.yml
+      service: prometheus
 
 networks:
   dashfrog:
