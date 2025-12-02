@@ -1,3 +1,6 @@
+import { Building2, Home, PanelLeft } from "lucide-react";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { TableSkeleton } from "@/components/TableSkeleton";
 import { Button } from "@/components/ui/button";
@@ -11,9 +14,6 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useLabelsStore } from "@/src/stores/labels";
-import { Building2, Home, PanelLeft } from "lucide-react";
-import { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { useUIStore } from "../stores/ui";
 
 export default function HomePage() {
