@@ -30,14 +30,15 @@ jobs:
           cache-suffix: "dashfrog"
 
       - name: Install dependencies
-        run: |
-          cd dashfrog
-          uv sync --all-groups
+        working-directory: dashfrog
+        run: uv sync --all-groups
 
       - name: Run tests
+        working-directory: dashfrog
         run: uv run pytest
 
       - name: Run lint
+        working-directory: dashfrog
         run: |
           uv run pyright
           uv run ruff check
