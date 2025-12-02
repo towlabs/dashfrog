@@ -36,9 +36,6 @@ jobs:
           until docker compose -f docker-compose.test.yml exec -T postgres pg_isready -U postgres; do sleep 1; done
           echo "Waiting for Prometheus..."
           until curl -sf http://localhost:9090/-/healthy; do sleep 1; done
-          echo "Waiting for OTEL Collector..."
-          until curl -sf http://localhost:4318/v1/metrics -o /dev/null 2>/dev/null || curl -sf http://localhost:8888/metrics -o /dev/null; do sleep 1; done
-          echo "All services ready!"
 
       - name: Set up Python
         uses: actions/setup-python@v6
