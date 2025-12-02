@@ -13,7 +13,10 @@ import pytest
 def test_engine():
     """Create SQLAlchemy engine for test database."""
     # Postgres runs as a docker service
-    engine = create_engine("postgresql://postgres:postgres@postgres:5432/dashfrog_test")
+    c = Config()
+    engine = create_engine(
+        f"postgresql://{c.postgres_user}:{c.postgres_password}@{c.postgres_host}:{c.postgres_port}/{c.postgres_dbname}"
+    )
 
     # Run migrations to ensure schema is up to date
     run_migrations(engine)
