@@ -1,0 +1,185 @@
+# Default values for dashfrog
+# This is a YAML-formatted file.
+
+# DashFrog API configuration
+api:
+  replicaCount: 1
+
+  image:
+    repository: dashfrog/dashfrog
+    pullPolicy: IfNotPresent
+    tag: ""  # Defaults to Chart.appVersion
+
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+
+  serviceAccount:
+    create: true
+    automount: true
+    annotations: {}
+    name: ""
+
+  podAnnotations: {}
+  podLabels: {}
+
+  podSecurityContext:
+    fsGroup: 1000
+
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: dashfrog.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 30
+
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  # Environment configuration
+  config:
+    # Database - uses built-in PostgreSQL by default
+    postgresHost: ""  # Leave empty to use built-in PostgreSQL
+    postgresPort: "5432"
+    postgresDbname: "dashfrog"
+    postgresUser: "dashfrog"
+    # OTLP endpoint - uses built-in collector by default
+    otlpEndpoint: ""  # Leave empty to use built-in collector
+    # Prometheus endpoint - uses built-in Prometheus by default
+    prometheusEndpoint: ""  # Leave empty to use built-in Prometheus
+    # API authentication
+    apiUsername: "admin"
+
+  # Secrets - create a secret named dashfrog-secrets with these keys
+  secrets:
+    # Name of existing secret to use (optional)
+    existingSecret: ""
+    # Keys within the secret
+    postgresPasswordKey: "postgres-password"
+    apiPasswordKey: "api-password"
+    apiSecretKeyKey: "api-secret-key"
+
+# OpenTelemetry Collector configuration
+otelCollector:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.114.0"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    grpcPort: 4317
+    httpPort: 4318
+    metricsPort: 8888
+
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  config:
+    # Environment labels
+    environment: "production"
+    cluster: "dashfrog"
+
+# PostgreSQL configuration (Bitnami chart)
+postgresql:
+  enabled: true
+  auth:
+    username: dashfrog
+    database: dashfrog
+    existingSecret: ""  # Use dashfrog-secrets
+    secretKeys:
+      userPasswordKey: postgres-password
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# Prometheus configuration (prometheus-community chart)
+prometheus:
+  enabled: true
+  server:
+    persistentVolume:
+      enabled: true
+      size: 50Gi
+    retention: "15d"
+    extraFlags:
+      - "web.enable-lifecycle"
+      - "enable-feature=native-histograms"
+      - "enable-feature=created-timestamp-zero-ingestion"
+      - "web.enable-remote-write-receiver"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 512Mi
+  alertmanager:
+    enabled: false
+  kube-state-metrics:
+    enabled: false
+  prometheus-node-exporter:
+    enabled: false
+  prometheus-pushgateway:
+    enabled: false

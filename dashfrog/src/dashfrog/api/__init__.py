@@ -1,5 +1,6 @@
 """FastAPI application for DashFrog SDK."""
 
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -9,11 +10,30 @@ from fastapi.staticfiles import StaticFiles
 from dashfrog import Config, setup
 from dashfrog.api import auth_router, comment, flow, metrics, notebook
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup: Initialize DashFrog
+    setup(Config())
+    yield
+    # Shutdown: cleanup if needed
+    pass
+
+
 app = FastAPI(
     title="DashFrog API",
     description="API for DashFrog observability SDK",
     version="0.1.0",
+    lifespan=lifespan,
 )
+
+
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint for container orchestration."""
+    return {"status": "healthy"}
+
 
 # Include routers
 app.include_router(auth_router.router)  # Auth routes (login)
@@ -45,9 +65,3 @@ async def serve_spa(path: str):
     # Fall back to index.html for SPA client-side routing
     return FileResponse(STATIC_DIR / "index.html")
 
-if __name__ == "__main__":
-    import uvicorn
-
-    setup(Config())
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
