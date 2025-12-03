@@ -156,4 +156,4 @@ where = ["src"]
 include = ["dashfrog*"]
 
 [tool.setuptools.package-data]
-dashfrog = ["py.typed", "api/static/**/*", "alembic/**/*"]
+dashfrog = ["py.typed", "api/static/**/*", "alembic.ini", "alembic/**/*"]
