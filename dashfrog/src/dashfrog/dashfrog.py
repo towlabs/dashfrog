@@ -258,7 +258,7 @@ _dashfrog: Dashfrog | None = None
 def setup(
     config: Config | None = None,
     *,
-    run_migrations: bool = True,
+    run_migrations: bool = False,
 ) -> None:
     """
     Initialize DashFrog observability.

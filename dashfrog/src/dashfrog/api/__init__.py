@@ -15,7 +15,7 @@ from dashfrog.api import auth_router, comment, flow, metrics, notebook
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup: Initialize DashFrog
-    setup(Config())
+    setup(Config(), run_migrations=True)
     yield
     # Shutdown: cleanup if needed
     pass
@@ -64,4 +64,3 @@ async def serve_spa(path: str):
         return FileResponse(file_path)
     # Fall back to index.html for SPA client-side routing
     return FileResponse(STATIC_DIR / "index.html")
-
