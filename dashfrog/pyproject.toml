@@ -143,10 +143,10 @@ build-backend = "setuptools.build_meta"
 package = true
 
 [project.urls]
-Homepage = "https://github.com/dashfrog/dashfrog"
-Documentation = "https://github.com/dashfrog/dashfrog#readme"
-Repository = "https://github.com/dashfrog/dashfrog"
-Issues = "https://github.com/dashfrog/dashfrog/issues"
+Homepage = "https://github.com/towlabs/dashfrog"
+Documentation = "https://github.com/towlabs/dashfrog#readme"
+Repository = "https://github.com/towlabs/dashfrog"
+Issues = "https://github.com/towlabs/dashfrog/issues"
 
 [project.scripts]
 dashfrog = "dashfrog.cli:main"
