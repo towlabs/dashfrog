@@ -1,0 +1,83 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+## Accessing DashFrog
+
+{{- if .Values.api.ingress.enabled }}
+
+DashFrog is available at:
+{{- range $host := .Values.api.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.api.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+
+{{- else if contains "NodePort" .Values.api.service.type }}
+
+Get the application URL by running:
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "dashfrog.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+
+{{- else if contains "LoadBalancer" .Values.api.service.type }}
+
+Get the application URL by running:
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+  kubectl get --namespace {{ .Release.Namespace }} svc {{ include "dashfrog.fullname" . }} -w
+
+{{- else if contains "ClusterIP" .Values.api.service.type }}
+
+Get the application URL by running:
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "dashfrog.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8000 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8000:$CONTAINER_PORT
+
+{{- end }}
+
+## Default Credentials
+
+{{- if not .Values.api.secrets.existingSecret }}
+
+Default credentials have been generated and stored in the secret: {{ include "dashfrog.secretName" . }}
+
+To get the API password:
+  kubectl get secret --namespace {{ .Release.Namespace }} {{ include "dashfrog.secretName" . }} -o jsonpath="{.data.{{ .Values.api.secrets.apiPasswordKey }}}" | base64 --decode; echo
+
+Default username: {{ .Values.api.config.apiUsername }}
+
+{{- else }}
+
+Using existing secret: {{ .Values.api.secrets.existingSecret }}
+
+{{- end }}
+
+## Sending Telemetry to DashFrog
+
+{{- if .Values.otelCollector.enabled }}
+
+OTLP Collector is enabled. Send telemetry to:
+  - gRPC: {{ include "dashfrog.otelCollector.fullname" . }}:{{ .Values.otelCollector.service.grpcPort }}
+  - HTTP: {{ include "dashfrog.otelCollector.fullname" . }}:{{ .Values.otelCollector.service.httpPort }}
+
+{{- end }}
+
+## Important Notes
+
+1. For production use, create a secret with your own passwords:
+   kubectl create secret generic dashfrog-secrets \
+     --from-literal=postgres-password=YOUR_DB_PASSWORD \
+     --from-literal=api-password=YOUR_API_PASSWORD \
+     --from-literal=api-secret-key=YOUR_SECRET_KEY
+
+   Then set api.secrets.existingSecret=dashfrog-secrets in your values.
+
+2. Enable ingress for external access by setting api.ingress.enabled=true
+
+3. For high availability, increase api.replicaCount and enable autoscaling

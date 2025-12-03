@@ -46,7 +46,7 @@
     "docker-compose.yml"
   ],
   "service": "app",
-  "postCreateCommand": "uv pip install -e . && uv sync --all-extras && npm install -g @anthropic-ai/claude-code",
+  "postCreateCommand": "uv venv --clear && uv pip install -e . && uv sync --all-extras && npm install -g @anthropic-ai/claude-code",
   "remoteUser": "vscode",
   "workspaceFolder": "/workspaces/dashfrog",
   "remoteEnv": {

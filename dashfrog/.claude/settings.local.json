@@ -48,7 +48,9 @@
       "Bash(.venv/bin/grep:*)",
       "Bash(chmod:*)",
       "Bash(uv pip install:*)",
-      "Bash(uv pip uninstall:*)"
+      "Bash(uv pip uninstall:*)",
+      "Bash(git -C /workspaces/dashfrog log --oneline)",
+      "Bash(.venv/bin/ruff check src/dashfrog/cli.py src/dashfrog/api/__init__.py)"
     ],
     "deny": [],
     "ask": []

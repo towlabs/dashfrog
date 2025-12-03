@@ -1,0 +1,65 @@
+{{- if .Values.otelCollector.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dashfrog.otelCollector.fullname" . }}-config
+  labels:
+    {{- include "dashfrog.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otel-collector
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 400
+        spike_limit_mib: 100
+
+    exporters:
+      prometheusremotewrite:
+        {{- if .Values.prometheus.enabled }}
+        endpoint: "http://{{ .Release.Name }}-prometheus-server:80/api/v1/write"
+        {{- else }}
+        endpoint: {{ .Values.api.config.prometheusEndpoint | quote }}
+        {{- end }}
+        namespace: dashfrog
+        external_labels:
+          environment: {{ .Values.otelCollector.config.environment | quote }}
+          cluster: {{ .Values.otelCollector.config.cluster | quote }}
+        target_info:
+          enabled: true
+        add_metric_suffixes: false
+        send_metadata: true
+
+      debug:
+        verbosity: basic
+
+    service:
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          address: 0.0.0.0:8888
+
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [prometheusremotewrite]
+
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [debug]
+{{- end }}

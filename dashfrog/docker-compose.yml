@@ -1,0 +1,114 @@
+# Docker Compose for DashFrog
+#
+# Quick Start (uses defaults from .env.example):
+#   docker compose up -d
+#
+# Production (create .env with your secrets):
+#   cp .env.example .env
+#   # Edit .env with production values
+#   docker compose up -d
+
+services:
+  # DashFrog API Server
+  dashfrog-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    networks:
+      - dashfrog
+    ports:
+      - "${DASHFROG_API_PORT:-8000}:8000"
+    environment:
+      # Database configuration
+      DASHFROG_POSTGRES_HOST: ${DASHFROG_POSTGRES_HOST:-postgres}
+      DASHFROG_POSTGRES_PORT: ${DASHFROG_POSTGRES_PORT:-5432}
+      DASHFROG_POSTGRES_DBNAME: ${DASHFROG_POSTGRES_DBNAME:-dashfrog_test}
+      DASHFROG_POSTGRES_USER: ${DASHFROG_POSTGRES_USER:-postgres}
+      DASHFROG_POSTGRES_PASSWORD: ${DASHFROG_POSTGRES_PASSWORD:-postgres}
+      # Prometheus configuration
+      DASHFROG_PROMETHEUS_ENDPOINT: ${DASHFROG_PROMETHEUS_ENDPOINT:-http://prometheus:9090}
+      # API authentication
+      DASHFROG_API_USERNAME: ${DASHFROG_API_USERNAME:-admin}
+      DASHFROG_API_PASSWORD: ${DASHFROG_API_PASSWORD:-admin}
+      DASHFROG_API_SECRET_KEY: ${DASHFROG_API_SECRET_KEY:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks:
+      - dashfrog
+    ports:
+      - "${DASHFROG_POSTGRES_EXTERNAL_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${DASHFROG_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${DASHFROG_POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${DASHFROG_POSTGRES_DBNAME:-dashfrog_test}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DASHFROG_POSTGRES_USER:-postgres} -d ${DASHFROG_POSTGRES_DBNAME:-dashfrog_test}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yml"]
+    networks:
+      - dashfrog
+    volumes:
+      - ./deploy/docker/otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    ports:
+      - "${DASHFROG_OTLP_GRPC_PORT:-4317}:4317"   # OTLP gRPC receiver
+      - "${DASHFROG_OTLP_HTTP_PORT:-4318}:4318"   # OTLP HTTP receiver
+      - "8888:8888"                                # Collector internal metrics
+    environment:
+      DASHFROG_ENVIRONMENT: ${DASHFROG_ENVIRONMENT:-production}
+      DASHFROG_CLUSTER: ${DASHFROG_CLUSTER:-dashfrog}
+    depends_on:
+      - prometheus
+
+  # Prometheus for Metrics Storage
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    networks:
+      - dashfrog
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--web.enable-lifecycle"
+      - "--enable-feature=native-histograms"
+      - "--enable-feature=created-timestamp-zero-ingestion"
+      - "--web.enable-remote-write-receiver"
+    volumes:
+      - ./deploy/docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${DASHFROG_PROMETHEUS_PORT:-9090}:9090"
+
+networks:
+  dashfrog:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  prometheus-data:

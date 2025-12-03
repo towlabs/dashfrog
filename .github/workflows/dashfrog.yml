@@ -23,6 +23,8 @@ jobs:
       DASHFROG_POSTGRES_PASSWORD: postgres
       DASHFROG_OTLP_ENDPOINT: localhost:4317
       DASHFROG_PROMETHEUS_ENDPOINT: http://localhost:9090
+      DASHFROG_CLUSTER: dashfrog-test
+      DASHFROG_ENVIRONMENT: test
 
     steps:
       - uses: actions/checkout@v5

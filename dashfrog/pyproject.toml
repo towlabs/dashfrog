@@ -4,6 +4,24 @@ version = "0.1.0"
 description = "Business Observability on OpenTelemetry"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "DashFrog Team"}
+]
+keywords = ["observability", "opentelemetry", "metrics", "monitoring", "business-intelligence"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Monitoring",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: FastAPI",
+]
 dependencies = [
     # Core OpenTelemetry
     "opentelemetry-api>=1.37.0,<2.0.0",
@@ -23,6 +41,7 @@ api = [
     "fastapi>=0.118.0",
     "uvicorn>=0.30.0",
     "python-jose[cryptography]>=3.3.0,<4.0.0",
+    "python-multipart>=0.0.20"
 ]
 
 # Instrumentation packages (optional, imported on-demand)
@@ -123,9 +142,18 @@ build-backend = "setuptools.build_meta"
 [tool.uv]
 package = true
 
-[tool.setuptools]
-packages = ["dashfrog"]
-package-dir = {"" = "src"}
+[project.urls]
+Homepage = "https://github.com/dashfrog/dashfrog"
+Documentation = "https://github.com/dashfrog/dashfrog#readme"
+Repository = "https://github.com/dashfrog/dashfrog"
+Issues = "https://github.com/dashfrog/dashfrog/issues"
+
+[project.scripts]
+dashfrog = "dashfrog.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["dashfrog*"]
 
 [tool.setuptools.package-data]
-dashfrog = ["py.typed"]
+dashfrog = ["py.typed", "api/static/**/*", "alembic/**/*"]
