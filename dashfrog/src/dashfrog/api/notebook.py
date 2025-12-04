@@ -1,12 +1,12 @@
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from dashfrog.api.schemas import BlockFilters, CreateNotebookRequest, SerializedNotebook
+from dashfrog.api.schemas import BlockFilters, CreateNotebookRequest, DuplicateNotebookRequest, SerializedNotebook
 from dashfrog.dashfrog import get_dashfrog_instance
 from dashfrog.models import Notebook
 
@@ -37,8 +37,7 @@ async def get_notebooks(tenant: str, auth: Annotated[None, Depends(verify_token)
 
 @router.get("/{id}")
 async def get_notebook(
-    id: UUID,
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
+    id: UUID, credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)] = None
 ) -> SerializedNotebook:
     with Session(get_dashfrog_instance().db_engine) as session:
         notebook = session.execute(select(Notebook).where(Notebook.id == id)).scalar_one()
@@ -66,6 +65,7 @@ async def get_notebook(
             isPublic=notebook.is_public,
         )
 
+
 @router.post("/{id}/update")
 async def update_notebook(id: UUID, request: SerializedNotebook, auth: Annotated[None, Depends(verify_token)]) -> None:
     with Session(get_dashfrog_instance().db_engine) as session:
@@ -76,8 +76,12 @@ async def update_notebook(id: UUID, request: SerializedNotebook, auth: Annotated
         notebook.filters = request.filters
         notebook.time_window = request.timeWindow
         notebook.is_public = request.isPublic
-        notebook.flow_blocks_filters = [f.model_dump() for f in request.flowBlocksFilters] if request.flowBlocksFilters else None
-        notebook.metric_blocks_filters = [m.model_dump() for m in request.metricBlocksFilters] if request.metricBlocksFilters else None
+        notebook.flow_blocks_filters = (
+            [f.model_dump() for f in request.flowBlocksFilters] if request.flowBlocksFilters else None
+        )
+        notebook.metric_blocks_filters = (
+            [m.model_dump() for m in request.metricBlocksFilters] if request.metricBlocksFilters else None
+        )
         session.commit()
 
 
@@ -99,4 +103,36 @@ async def create_notebook(request: CreateNotebookRequest, auth: Annotated[None, 
 async def delete_notebook(id: UUID, auth: Annotated[None, Depends(verify_token)]) -> None:
     with Session(get_dashfrog_instance().db_engine) as session:
         session.execute(delete(Notebook).where(Notebook.id == id))
+        session.commit()
+
+
+@router.post("/{id}/duplicate")
+async def duplicate_notebook(
+    id: UUID, request: DuplicateNotebookRequest, auth: Annotated[None, Depends(verify_token)]
+) -> None:
+    """Duplicate a notebook to one or more target tenants.
+
+    Creates a copy of the notebook for each specified tenant with a new UUID.
+    Returns the list of created notebooks.
+    """
+    with Session(get_dashfrog_instance().db_engine) as session:
+        original = session.execute(select(Notebook).where(Notebook.id == id)).scalar_one_or_none()
+        if original is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notebook not found")
+
+        for tenant in request.targetTenants:
+            new_notebook = Notebook(
+                id=uuid4(),
+                title=original.title,
+                description=original.description,
+                blocks=original.blocks,
+                tenant=tenant,
+                filters=original.filters,
+                time_window=original.time_window,
+                is_public=original.is_public,
+                flow_blocks_filters=original.flow_blocks_filters,
+                metric_blocks_filters=original.metric_blocks_filters,
+            )
+            session.add(new_notebook)
+
         session.commit()

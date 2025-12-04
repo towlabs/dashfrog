@@ -182,6 +182,12 @@ class CreateNotebookRequest(BaseModel):
     notebook: BaseNotebook
 
 
+class DuplicateNotebookRequest(BaseModel):
+    """Request body for duplicating a notebook to other tenants."""
+
+    targetTenants: list[str]
+
+
 class CommentResponse(BaseModel):
     """Response for comment."""
 

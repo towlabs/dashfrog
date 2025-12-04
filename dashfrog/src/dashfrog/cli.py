@@ -43,6 +43,7 @@ def run_server(host: str, port: int, reload: bool):
         sys.exit(1)
 
     setup(Config())
+    print(f"Starting DashFrog API server on {host}:{port}")
     uvicorn.run("dashfrog.api:app", host=host, port=port, reload=reload)
 
 
