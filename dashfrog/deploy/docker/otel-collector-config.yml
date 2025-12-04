@@ -1,10 +1,20 @@
+extensions:
+  basicauth/server:
+    htpasswd:
+      inline: |
+        dashfrog:${DASHFROG_OTLP_AUTH_TOKEN}
+
 receivers:
   otlp:
     protocols:
       grpc:
         endpoint: 0.0.0.0:4317
+        auth:
+          authenticator: basicauth/server
       http:
         endpoint: 0.0.0.0:4318
+        auth:
+          authenticator: basicauth/server
 
 processors:
   batch:
@@ -14,7 +24,6 @@ processors:
   memory_limiter:
     check_interval: 1s
     limit_mib: 512
-    spike_limit_mib: 128
 
 exporters:
   # Push metrics to Prometheus via remote write with native histograms
@@ -22,28 +31,24 @@ exporters:
     endpoint: "http://prometheus:9090/api/v1/write"
     namespace: dashfrog
     external_labels:
-      environment: ${DASHFROG_ENVIRONMENT}
-      cluster: ${DASHFROG_CLUSTER}
+      environment: dev
+      cluster: dashfrog-dev
+    # Enable native histograms (exponential histograms from OTLP → Prometheus native histograms)
     target_info:
       enabled: true
     add_metric_suffixes: false
     send_metadata: true
 
   debug:
-    verbosity: basic
+    verbosity: detailed
 
 service:
-  telemetry:
-    logs:
-      level: info
-    metrics:
-      address: 0.0.0.0:8888
-
+  extensions: [basicauth/server]
   pipelines:
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [prometheusremotewrite]
+      exporters: [prometheusremotewrite, debug]
 
     traces:
       receivers: [otlp]
