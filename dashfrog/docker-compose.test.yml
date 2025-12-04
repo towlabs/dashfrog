@@ -9,7 +9,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: dashfrog_test
+      POSTGRES_DB: dashfrog
     volumes:
       - postgres-data:/var/lib/postgresql/data
 

@@ -5,9 +5,9 @@ import time
 from fastapi import FastAPI
 import requests
 
-from dashfrog import Config, metrics, setup
+from dashfrog import metrics, setup
 
-setup(Config())
+setup()
 
 app = FastAPI()
 

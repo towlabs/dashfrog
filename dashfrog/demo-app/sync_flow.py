@@ -1,10 +1,10 @@
 import random
 import time
 
-from dashfrog import Config, flow, setup, step
+from dashfrog import flow, setup, step
 
 # Initialize DashFrog
-setup(Config())
+setup()
 
 # Simple customer list
 CUSTOMERS = ["acme-corp", "techcorp", "startup-inc"]

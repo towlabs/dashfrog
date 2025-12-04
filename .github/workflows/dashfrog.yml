@@ -25,7 +25,7 @@ jobs:
       DASHFROG_PROMETHEUS_ENDPOINT: http://localhost:9090
       DASHFROG_CLUSTER: dashfrog-test
       DASHFROG_ENVIRONMENT: test
-
+      DASHFROG_OTLP_AUTH_TOKEN: pwd
     steps:
       - uses: actions/checkout@v5
 

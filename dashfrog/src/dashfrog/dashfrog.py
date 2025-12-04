@@ -1,3 +1,4 @@
+from base64 import b64encode
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal, overload
 import uuid
@@ -60,7 +61,14 @@ class Dashfrog:
 
         # Create meter
         insecure, endpoint = self.parse_otel_config(self.config.otlp_endpoint)
-        exporter = OTLPMetricExporter(endpoint=endpoint, insecure=insecure)
+
+        # Basic Auth format: base64(username:password)
+        # Note: gRPC requires lowercase metadata keys
+        credentials = f"dashfrog:{self.config.otlp_auth_token}"
+        encoded_credentials = b64encode(credentials.encode()).decode("ascii")
+        exporter = OTLPMetricExporter(
+            endpoint=endpoint, insecure=insecure, headers={"authorization": f"Basic {encoded_credentials}"}
+        )
         reader = PeriodicExportingMetricReader(exporter, export_interval_millis=1000)
         meter_provider = MeterProvider(
             metric_readers=[reader],
