@@ -179,7 +179,7 @@ class Dashfrog:
                         name=metric_name,
                         pretty_name=pretty_name,
                         type=metric_type,
-                        unit=unit,
+                        unit=unit or "",
                         labels=list(labels),
                     )
                     .on_conflict_do_update(
@@ -187,7 +187,7 @@ class Dashfrog:
                         set_=dict(
                             pretty_name=pretty_name,
                             type=metric_type,
-                            unit=unit,
+                            unit=unit or "",
                             labels=list(labels),
                         ),
                     )

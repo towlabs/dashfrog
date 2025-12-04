@@ -30,7 +30,7 @@ class Counter:
     name: str
     labels: list[str]
     pretty_name: str
-    unit: MetricUnitT
+    unit: MetricUnitT = None
     _otel_counter: OTelCounter = field(init=False)
 
     def __post_init__(self):

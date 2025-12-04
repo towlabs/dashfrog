@@ -126,7 +126,7 @@ async def search_metrics(auth: Annotated[None, Depends(verify_token)]) -> list[M
                         unit=metric.unit,
                         labels=metric.labels,
                         groupBy=["sum"],
-                        timeAggregation=["last", "avg", "min", "max", "match"],
+                        timeAggregation=["avg", "min", "max"],
                     )
                 )
                 # Increase
@@ -152,7 +152,7 @@ async def search_metrics(auth: Annotated[None, Depends(verify_token)]) -> list[M
                         unit="percent",
                         labels=metric.labels,
                         groupBy=["sum"],
-                        timeAggregation=["last", "avg", "min", "max", "match"],
+                        timeAggregation=["avg", "min", "max"],
                     )
                 )
 
@@ -166,7 +166,7 @@ async def search_metrics(auth: Annotated[None, Depends(verify_token)]) -> list[M
                         unit=metric.unit,
                         labels=metric.labels,
                         groupBy=["sum"],
-                        timeAggregation=["last", "avg", "min", "max", "match"],
+                        timeAggregation=["last"],
                     )
                 )
 
@@ -185,7 +185,7 @@ async def search_metrics(auth: Annotated[None, Depends(verify_token)]) -> list[M
                             "max",
                             "sum",
                         ],
-                        timeAggregation=["last", "avg", "min", "max", "match"],
+                        timeAggregation=["avg", "min", "max"],
                     )
                 )
 
@@ -241,6 +241,11 @@ def get_instant_metric_promql(
 
     if metric.type == "counter" and not transform:
         return group_by(group_fn, f"increase({metric_name}[{window}])", group_by_labels)
+
+    if metric.type == "histogram" and transform:
+        percentile = int(transform.replace("p", "")) / 100
+        rate_promql = f"rate({metric_name}[{window}])"
+        return f"histogram_quantile({percentile}, {group_by('sum', rate_promql, group_by_labels)})"
 
     vector_promql = get_range_metric_promql(metric, transform, transform_metadata, labels, group_by_labels, group_fn)
     if time_aggregation == "last":
