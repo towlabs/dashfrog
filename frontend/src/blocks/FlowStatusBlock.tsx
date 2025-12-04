@@ -45,6 +45,7 @@ import { useNotebooksStore } from "@/src/stores/notebooks";
 import type { Filter } from "@/src/types/filter";
 import type { Flow } from "@/src/types/flow";
 import { Flows } from "../services/api/flows";
+import { roundToMax2 } from "../utils/metricFormatting";
 
 export const FlowStatusBlock = createReactBlockSpec(
 	{
@@ -60,7 +61,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 				default: "[]",
 			},
 			displayMode: {
-				default: "status",
+				default: "percent",
 			},
 		},
 		content: "none",
@@ -93,8 +94,11 @@ export const FlowStatusBlock = createReactBlockSpec(
 			const flowName = props.block.props.flowName as string;
 			const title = props.block.props.title as string;
 			const displayMode =
-				(props.block.props.displayMode as "status" | "runCount" | "") ||
-				"status";
+				(props.block.props.displayMode as
+					| "status"
+					| "runCount"
+					| "percent"
+					| "") || "percent";
 
 			// Parse block filters from JSON string
 			const blockFilters: Filter[] = React.useMemo(() => {
@@ -159,7 +163,6 @@ export const FlowStatusBlock = createReactBlockSpec(
 			const handleFlowSelect = (selectedFlowName: string) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						flowName: selectedFlowName,
 					},
 				});
@@ -168,7 +171,6 @@ export const FlowStatusBlock = createReactBlockSpec(
 			const handleFiltersChange = (newFilters: Filter[]) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						blockFilters: JSON.stringify(newFilters),
 					},
 				});
@@ -303,6 +305,54 @@ export const FlowStatusBlock = createReactBlockSpec(
 										</div>
 									</div>
 								)}
+								{displayMode === "percent" &&
+									(() => {
+										const total =
+											flow.successCount + flow.failedCount + flow.pendingCount;
+										const successPercent =
+											total > 0 ? (flow.successCount / total) * 100 : 0;
+										const failedPercent =
+											total > 0 ? (flow.failedCount / total) * 100 : 0;
+										const runningPercent =
+											total > 0 ? (flow.pendingCount / total) * 100 : 0;
+
+										return (
+											<div className="grid grid-cols-2 sm:grid-cols-3">
+												{/* Success */}
+												<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 px-6 py-2 text-left border-0">
+													<span className="text-muted-foreground text-xs flex items-center gap-2">
+														<div className="h-2 w-2 rounded-full bg-[#5cb660]" />
+														Success
+													</span>
+													<span className="text-lg leading-none font-bold sm:text-3xl">
+														{roundToMax2(successPercent)}%
+													</span>
+												</div>
+
+												{/* Failed */}
+												<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l ">
+													<span className="text-muted-foreground text-xs flex items-center gap-2">
+														<div className="h-2 w-2 rounded-full bg-[#e56458]" />
+														Failed
+													</span>
+													<span className="text-lg leading-none font-bold sm:text-3xl">
+														{roundToMax2(failedPercent)}%
+													</span>
+												</div>
+
+												{/* Running */}
+												<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l">
+													<span className="text-muted-foreground text-xs flex items-center gap-2">
+														<div className="h-2 w-2 rounded-full bg-[#2883df]" />
+														Running
+													</span>
+													<span className="text-lg leading-none font-bold sm:text-3xl">
+														{roundToMax2(runningPercent)}%
+													</span>
+												</div>
+											</div>
+										);
+									})()}
 								{displayMode === "status" && (
 									<div className="grid grid-cols-4 sm:grid-cols-4">
 										{/* Success */}
@@ -395,7 +445,6 @@ export const FlowStatusBlock = createReactBlockSpec(
 										onChange={(e) => {
 											props.editor.updateBlock(props.block, {
 												props: {
-													...props.block.props,
 													title: e.target.value,
 												},
 											});
@@ -413,7 +462,6 @@ export const FlowStatusBlock = createReactBlockSpec(
 											onValueChange={(value) => {
 												props.editor.updateBlock(props.block, {
 													props: {
-														...props.block.props,
 														displayMode: value,
 													},
 												});
@@ -425,10 +473,10 @@ export const FlowStatusBlock = createReactBlockSpec(
 											<SelectContent>
 												<Tooltip>
 													<TooltipTrigger asChild>
-														<SelectItem value="status">Duration</SelectItem>
+														<SelectItem value="percent">Percent</SelectItem>
 													</TooltipTrigger>
 													<TooltipContent side="right">
-														<p>Display flow duration across time period</p>
+														<p>Percentage of flow runs split by status</p>
 													</TooltipContent>
 												</Tooltip>
 												<Tooltip>
@@ -437,6 +485,14 @@ export const FlowStatusBlock = createReactBlockSpec(
 													</TooltipTrigger>
 													<TooltipContent side="right">
 														<p>Count of flow runs split by status</p>
+													</TooltipContent>
+												</Tooltip>
+												<Tooltip>
+													<TooltipTrigger asChild>
+														<SelectItem value="status">Duration</SelectItem>
+													</TooltipTrigger>
+													<TooltipContent side="right">
+														<p>Display flow duration across time period</p>
 													</TooltipContent>
 												</Tooltip>
 											</SelectContent>

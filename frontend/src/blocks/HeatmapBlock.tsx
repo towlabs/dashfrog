@@ -270,7 +270,6 @@ export const HeatmapBlock = createReactBlockSpec(
 			const handleFlowSelect = (selectedFlowName: string) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						flowName: selectedFlowName,
 					},
 				});
@@ -279,7 +278,6 @@ export const HeatmapBlock = createReactBlockSpec(
 			const handleFiltersChange = (newFilters: Filter[]) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						blockFilters: JSON.stringify(newFilters),
 					},
 				});
@@ -477,7 +475,6 @@ export const HeatmapBlock = createReactBlockSpec(
 										onChange={(e) => {
 											props.editor.updateBlock(props.block, {
 												props: {
-													...props.block.props,
 													title: e.target.value,
 												},
 											});

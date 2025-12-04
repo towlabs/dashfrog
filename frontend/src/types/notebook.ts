@@ -12,4 +12,5 @@ export interface Notebook {
 	flowBlocksFilters: { names: string[]; filters: Filter[] }[] | null;
 	metricBlocksFilters: { names: string[]; filters: Filter[] }[] | null;
 	isPublic: boolean;
+	tenant?: string;
 }

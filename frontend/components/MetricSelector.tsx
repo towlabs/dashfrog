@@ -138,99 +138,103 @@ export function MetricSelector({
 					Show
 				</h3>
 				<div className="flex items-center justify-between w-full gap-1">
-					<Popover
-						open={comboboxOpen}
-						onOpenChange={setComboboxOpen}
-						modal={true}
-					>
-						<PopoverTrigger asChild>
-							<Button
-								variant="outline"
-								role="combobox"
-								aria-expanded={comboboxOpen}
-								className="justify-between flex-1"
-							>
-								{selectedMetric
-									? selectedMetric.prettyName
-									: "Select a metric..."}
-								<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-							</Button>
-						</PopoverTrigger>
-						<PopoverContent className="w-[400px] p-0">
-							<Command>
-								<CommandInput placeholder="Search metrics..." />
-								<CommandList>
-									<CommandEmpty>No metric found.</CommandEmpty>
-									<CommandGroup>
-										{metrics.map((metric) => {
-											return (
-												<CommandItem
-													key={metric.id}
-													value={metric.prettyName}
-													onSelect={() => {
-														onMetricSelect(metric);
-														// Set default timeAggregation if not already set
-														if (
-															(!selectedTimeAggregation ||
-																!metric.timeAggregation.includes(
-																	selectedTimeAggregation,
-																)) &&
-															onTimeAggregationChange
-														) {
-															onTimeAggregationChange(
-																metric.timeAggregation[0],
-															);
-														}
-														// Set default groupBy if not already set
-														if (
-															!selectedGroupByFn ||
-															!metric.groupBy.includes(selectedGroupByFn)
-														) {
-															onGroupByFnChange(metric.groupBy[0]);
-														}
-														setComboboxOpen(false);
-														// Set default transform
-														if (metric.type === "rate") {
-															onTransformChange("ratePerSecond", {});
-														} else if (metric.type === "histogram") {
-															onTransformChange("p50", {});
-														} else if (metric.type === "ratio") {
-															onTransformChange("ratio", {
-																filters: [],
-															});
-														} else {
-															onTransformChange(null, {});
-														}
-													}}
-												>
-													<TooltipProvider>
-														<Tooltip>
-															<TooltipTrigger asChild>
-																<div className="flex items-center justify-between w-full">
-																	<span>{metric.prettyName}</span>
-																	<Check
-																		className={cn(
-																			"mr-2 h-4 w-4",
-																			selectedMetric?.id === metric.id
-																				? "opacity-100"
-																				: "opacity-0",
-																		)}
-																	/>
-																</div>
-															</TooltipTrigger>
-															<TooltipContent side="left">
-																{getMetricTooltip(metric)}
-															</TooltipContent>
-														</Tooltip>
-													</TooltipProvider>
-												</CommandItem>
-											);
-										})}
-									</CommandGroup>
-								</CommandList>
-							</Command>
-						</PopoverContent>
-					</Popover>
+					<div className="flex-1 min-w-0">
+						<Popover
+							open={comboboxOpen}
+							onOpenChange={setComboboxOpen}
+							modal={true}
+						>
+							<PopoverTrigger asChild>
+								<Button
+									variant="outline"
+									role="combobox"
+									aria-expanded={comboboxOpen}
+									className="justify-between w-full"
+								>
+									<span className="truncate">
+										{selectedMetric
+											? selectedMetric.prettyName
+											: "Select a metric..."}
+									</span>
+									<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent className="w-[400px] p-0">
+								<Command>
+									<CommandInput placeholder="Search metrics..." />
+									<CommandList>
+										<CommandEmpty>No metric found.</CommandEmpty>
+										<CommandGroup>
+											{metrics.map((metric) => {
+												return (
+													<CommandItem
+														key={metric.id}
+														value={metric.prettyName}
+														onSelect={() => {
+															onMetricSelect(metric);
+															// Set default timeAggregation if not already set
+															if (
+																(!selectedTimeAggregation ||
+																	!metric.timeAggregation.includes(
+																		selectedTimeAggregation,
+																	)) &&
+																onTimeAggregationChange
+															) {
+																onTimeAggregationChange(
+																	metric.timeAggregation[0],
+																);
+															}
+															// Set default groupBy if not already set
+															if (
+																!selectedGroupByFn ||
+																!metric.groupBy.includes(selectedGroupByFn)
+															) {
+																onGroupByFnChange(metric.groupBy[0]);
+															}
+															setComboboxOpen(false);
+															// Set default transform
+															if (metric.type === "rate") {
+																onTransformChange("ratePerSecond", {});
+															} else if (metric.type === "histogram") {
+																onTransformChange("p50", {});
+															} else if (metric.type === "ratio") {
+																onTransformChange("ratio", {
+																	filters: [],
+																});
+															} else {
+																onTransformChange(null, {});
+															}
+														}}
+													>
+														<TooltipProvider>
+															<Tooltip>
+																<TooltipTrigger asChild>
+																	<div className="flex items-center justify-between w-full">
+																		<span>{metric.prettyName}</span>
+																		<Check
+																			className={cn(
+																				"mr-2 h-4 w-4",
+																				selectedMetric?.id === metric.id
+																					? "opacity-100"
+																					: "opacity-0",
+																			)}
+																		/>
+																	</div>
+																</TooltipTrigger>
+																<TooltipContent side="left">
+																	{getMetricTooltip(metric)}
+																</TooltipContent>
+															</Tooltip>
+														</TooltipProvider>
+													</CommandItem>
+												);
+											})}
+										</CommandGroup>
+									</CommandList>
+								</Command>
+							</PopoverContent>
+						</Popover>
+					</div>
 					{selectedMetric && selectedMetric.type === "histogram" && (
 						<Select
 							value={selectedTransform || ""}
@@ -238,7 +242,7 @@ export function MetricSelector({
 								onTransformChange(transform as Transform, {});
 							}}
 						>
-							<SelectTrigger className="w-[180px]">
+							<SelectTrigger className="w-18">
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
@@ -256,7 +260,7 @@ export function MetricSelector({
 								onTransformChange(transform as Transform, {});
 							}}
 						>
-							<SelectTrigger className="w-[180px]">
+							<SelectTrigger className="w-28">
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
@@ -267,7 +271,7 @@ export function MetricSelector({
 							</SelectContent>
 						</Select>
 					)}
-					<div className="flex items-center gap-0">
+					<div>
 						{!groupedByExpanded && !disableGroupBy && (
 							<TooltipProvider delayDuration={300}>
 								<Tooltip>

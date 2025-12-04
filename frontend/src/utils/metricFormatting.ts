@@ -19,7 +19,7 @@ export function formatMetricValue(
 	transform?: Transform | null,
 ): { formattedValue: string; displayUnit: string } {
 	let displayValue = value;
-	let displayUnit = "";
+	let displayUnit = unit || "";
 
 	// Handle percentage (expecting 0-1 range)
 	if (unit === "percent" || unit === "%") {
@@ -29,20 +29,6 @@ export function formatMetricValue(
 			formattedValue: rounded.toLocaleString(),
 			displayUnit: "%",
 		};
-	}
-
-	// Handle bytes - convert to GB
-	if (unit === "bytes") {
-		displayValue = value / 1024 / 1024 / 1024;
-		displayUnit = "GB";
-	}
-	// Handle seconds
-	else if (unit === "seconds" || unit === "s") {
-		displayUnit = "s";
-	}
-	// Handle other units
-	else if (unit && unit !== "count") {
-		displayUnit = unit;
 	}
 
 	// Handle rate aggregations

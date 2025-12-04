@@ -5,22 +5,33 @@ import "@blocknote/shadcn/style.css";
 import {
 	CalendarClock,
 	ChevronsRight,
+	Copy,
 	Globe,
 	Lock,
 	PanelLeft,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import BlockNoteEditor from "@/components/BlockNoteEditor";
 import { CommentsSideMenu } from "@/components/CommentsSideMenu";
 import { TenantControls } from "@/components/TenantControls";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Tenants } from "@/src/services/api/tenants";
 import { useLabelsStore } from "../stores/labels";
 import { useNotebooksStore } from "../stores/notebooks";
 import { useTenantStore } from "../stores/tenant";
@@ -60,6 +71,15 @@ export default function NotebookPage() {
 		(state) => state.toggleCommentsDrawer,
 	);
 	const fetchComments = useNotebooksStore((state) => state.fetchComments);
+	const duplicateNotebook = useNotebooksStore(
+		(state) => state.duplicateNotebook,
+	);
+
+	// State for duplicate dialog
+	const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+	const [availableTenants, setAvailableTenants] = useState<string[]>([]);
+	const [selectedTenants, setSelectedTenants] = useState<string[]>([]);
+	const [duplicating, setDuplicating] = useState(false);
 
 	// Decode the tenant name from the URL
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
@@ -194,6 +214,28 @@ export default function NotebookPage() {
 								</TooltipContent>
 							</Tooltip>
 						)}
+					{/* Duplicate Button */}
+					{currentNotebook && (
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="justify-start text-sm text-muted-foreground h-6"
+									onClick={async () => {
+										setDuplicateDialogOpen(true);
+										const tenants = await Tenants.getAll();
+										setAvailableTenants(
+											tenants.filter((t) => t !== tenantName),
+										);
+									}}
+								>
+									<Copy className="size-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>Duplicate notebook to other tenants</TooltipContent>
+						</Tooltip>
+					)}
 						{/* Comments Button */}
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -242,6 +284,84 @@ export default function NotebookPage() {
 
 			{/* Comments Side Menu */}
 			<CommentsSideMenu visible={commentsDrawerOpen} />
+
+			{/* Duplicate Dialog */}
+			<Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Duplicate Notebook</DialogTitle>
+						<DialogDescription>
+							Select the tenants where you want to duplicate this notebook.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="py-4">
+						{availableTenants.length === 0 ? (
+							<p className="text-sm text-muted-foreground">
+								No other tenants available.
+							</p>
+						) : (
+							<div className="space-y-2">
+								{availableTenants.map((tenant) => (
+									<div key={tenant} className="flex items-center space-x-2">
+										<Checkbox
+											id={tenant}
+											checked={selectedTenants.includes(tenant)}
+											onCheckedChange={(checked) => {
+												if (checked) {
+													setSelectedTenants([...selectedTenants, tenant]);
+												} else {
+													setSelectedTenants(
+														selectedTenants.filter((t) => t !== tenant),
+													);
+												}
+											}}
+										/>
+										<label
+											htmlFor={tenant}
+											className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+										>
+											{tenant}
+										</label>
+									</div>
+								))}
+							</div>
+						)}
+					</div>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => {
+								setDuplicateDialogOpen(false);
+								setSelectedTenants([]);
+							}}
+							disabled={duplicating}
+						>
+							Cancel
+						</Button>
+						<Button
+							onClick={async () => {
+								if (!currentNotebook || selectedTenants.length === 0) return;
+								setDuplicating(true);
+								try {
+									await duplicateNotebook(
+										currentNotebook.id,
+										selectedTenants,
+									);
+									setDuplicateDialogOpen(false);
+									setSelectedTenants([]);
+								} catch (error) {
+									console.error("Failed to duplicate notebook:", error);
+								} finally {
+									setDuplicating(false);
+								}
+							}}
+							disabled={duplicating || selectedTenants.length === 0}
+						>
+							{duplicating ? "Duplicating..." : "Duplicate"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

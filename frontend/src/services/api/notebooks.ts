@@ -13,9 +13,42 @@ type NotebookResponse = {
 		| { type: "relative"; metadata: { value: RelativeTimeValue } }
 		| { type: "absolute"; metadata: { start: string; end: string } };
 	filters: Filter[];
+	flowBlocksFilters: { names: string[]; filters: Filter[] }[] | null;
+	metricBlocksFilters: { names: string[]; filters: Filter[] }[] | null;
+	isPublic: boolean;
+	tenant?: string;
+};
+
+const parseNotebook = (notebook: NotebookResponse): Notebook => {
+	return {
+		...notebook,
+		timeWindow:
+			notebook.timeWindow?.type === "absolute"
+				? {
+						type: "absolute",
+						metadata: {
+							start: new Date(notebook.timeWindow.metadata.start),
+							end: new Date(notebook.timeWindow.metadata.end),
+						},
+					}
+				: notebook.timeWindow || {
+						type: "relative",
+						metadata: { value: "24h" },
+					},
+		filters: notebook.filters || [],
+	};
 };
 
 export const Notebooks = {
+	duplicate: async (notebookId: string, targetTenants: string[]) => {
+		await fetchWithAuth(`/api/notebooks/${notebookId}/duplicate`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ targetTenants }),
+		});
+	},
 	getOne: async (notebookId: string): Promise<Notebook | null> => {
 		const response = await fetchWithAuth(`/api/notebooks/${notebookId}`, {
 			method: "GET",
@@ -26,7 +59,7 @@ export const Notebooks = {
 		if (!response.ok) {
 			return null;
 		}
-		return await response.json();
+		return parseNotebook(await response.json());
 	},
 	// Get all notebooks for a tenant
 	getAll: async (tenant: string): Promise<Notebook[]> => {
@@ -41,23 +74,7 @@ export const Notebooks = {
 				},
 			},
 		);
-		return (await response.json()).map((notebook: NotebookResponse) => ({
-			...notebook,
-			timeWindow:
-				notebook.timeWindow?.type === "absolute"
-					? {
-							type: "absolute",
-							metadata: {
-								start: new Date(notebook.timeWindow.metadata.start),
-								end: new Date(notebook.timeWindow.metadata.end),
-							},
-						}
-					: notebook.timeWindow || {
-							type: "relative",
-							metadata: { value: "24h" },
-						},
-			filters: notebook.filters || [],
-		}));
+		return (await response.json()).map(parseNotebook);
 	},
 
 	// Create a new notebook
