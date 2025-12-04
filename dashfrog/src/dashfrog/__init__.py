@@ -25,7 +25,7 @@ Usage:
     orders.increment(region="us-east")
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.4"
 
 # Core setup and configuration
 # Submodules (users import from these)
