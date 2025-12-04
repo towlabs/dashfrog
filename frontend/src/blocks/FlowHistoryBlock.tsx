@@ -166,7 +166,6 @@ export const FlowHistoryBlock = createReactBlockSpec(
 			const handleFlowSelect = (selectedFlowName: string) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						flowName: selectedFlowName,
 					},
 				});
@@ -183,7 +182,6 @@ export const FlowHistoryBlock = createReactBlockSpec(
 			) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						[column]: value,
 					},
 				});
@@ -192,7 +190,6 @@ export const FlowHistoryBlock = createReactBlockSpec(
 			const handleFiltersChange = (newFilters: Filter[]) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						blockFilters: JSON.stringify(newFilters),
 					},
 				});

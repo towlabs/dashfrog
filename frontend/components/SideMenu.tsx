@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from "uuid";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -95,7 +96,7 @@ export default function SideMenu({ isCollapsed }: SideMenuProps = {}) {
 		if (!selectedTenant) return;
 
 		const newNotebook: Notebook = {
-			id: crypto.randomUUID(),
+			id: uuidv4(),
 			title: "Untitled Notebook",
 			description: "",
 			blocks: null,

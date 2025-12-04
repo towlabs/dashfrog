@@ -43,11 +43,13 @@ const Labels = {
 		const tenants = uniq([...flowTenants, ...metricsTenants]);
 
 		return {
-			labels: Object.entries(groupedLabels).map(([label, values]) => ({
-				label,
-				values: uniq(flatMap(values, (label) => label.values)),
-			})),
-			tenants,
+			labels: Object.entries(groupedLabels)
+				.map(([label, values]) => ({
+					label,
+					values: uniq(flatMap(values, (label) => label.values)),
+				}))
+				.sort((a, b) => a.label.localeCompare(b.label)),
+			tenants: tenants.sort(),
 		};
 	},
 };

@@ -116,7 +116,6 @@ export const FlowBlock = createReactBlockSpec(
 			) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						[column]: value,
 					},
 				});
@@ -125,7 +124,6 @@ export const FlowBlock = createReactBlockSpec(
 			const handleFiltersChange = (newFilters: Filter[]) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						blockFilters: JSON.stringify(newFilters),
 					},
 				});

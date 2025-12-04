@@ -53,7 +53,7 @@ export const MetricBlock = createReactBlockSpec(
 				default: "" as Transform | "",
 			},
 			timeAggregation: {
-				default: "last" as TimeAggregation,
+				default: "avg" as TimeAggregation,
 			},
 			groupBy: {
 				default: "[]",
@@ -374,31 +374,6 @@ export const MetricBlock = createReactBlockSpec(
 				const colorClass =
 					healthMin || healthMax ? getHealthColor(scalar.value) : "";
 
-				// Generate description based on timeAggregation type
-				const getDescription = () => {
-					if (title) return title;
-					if (!scalarData) return "N/A";
-					if (isMatchRate) {
-						return `${scalarData.prettyName} ${matchOperator} ${matchValue}`;
-					}
-					if (transform === "increase")
-						return `${scalarData.prettyName} - Increase`;
-					if (transform === "ratio") return `${scalarData.prettyName} - Ratio`;
-					if (timeAggregation === "last") {
-						return `${scalarData.prettyName} - Last value`;
-					}
-					if (timeAggregation === "avg") {
-						return `${scalarData.prettyName} - Average over time`;
-					}
-					if (timeAggregation === "min") {
-						return `${scalarData.prettyName} - Minimum over time`;
-					}
-					if (timeAggregation === "max") {
-						return `${scalarData.prettyName} - Maximum over time`;
-					}
-					return scalarData.prettyName;
-				};
-
 				return (
 					<div
 						className="group"
@@ -417,7 +392,9 @@ export const MetricBlock = createReactBlockSpec(
 										History
 									</span>
 								</div>
-								<CardDescription>{getDescription()}</CardDescription>
+								<CardDescription>
+									{scalarData?.prettyName ?? "N/A"}
+								</CardDescription>
 								<CardTitle
 									className={cn(
 										"text-2xl font-semibold @[250px]/card:text-3xl",

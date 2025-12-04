@@ -68,6 +68,10 @@ interface NotebooksState {
 		notebook: Omit<Notebook, "id" | "timeWindow" | "filters">,
 	) => Notebook;
 	deleteNotebook: (tenant: string, notebookId: string) => Promise<void>;
+	duplicateNotebook: (
+		notebookId: string,
+		targetTenants: string[],
+	) => Promise<void>;
 	stopTimeWindowRefresh: () => void;
 	deleteComment: (id: number) => Promise<void>;
 	createComment: (comment: BaseComment) => Promise<void>;
@@ -290,6 +294,12 @@ export const useNotebooksStore = create<NotebooksState>()(
 				});
 			},
 
+			duplicateNotebook: async (
+				notebookId: string,
+				targetTenants: string[],
+			) => {
+				await Notebooks.duplicate(notebookId, targetTenants);
+			},
 			stopTimeWindowRefresh: () => {
 				if (timeWindowInterval) {
 					clearInterval(timeWindowInterval);

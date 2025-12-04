@@ -191,7 +191,6 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			const handleMetricSelect = (metric: Metric) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						metricId: metric.id,
 						metricName: metric.prometheusName,
 					},
@@ -201,7 +200,6 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			const handleGroupByChange = (labels: string[]) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						groupBy: JSON.stringify(labels),
 					},
 				});
@@ -210,7 +208,6 @@ export const MetricHistoryBlock = createReactBlockSpec(
 			const handleGroupByFnChange = (grpByFn: GroupByFn) => {
 				props.editor.updateBlock(props.block, {
 					props: {
-						...props.block.props,
 						groupByFn: grpByFn,
 					},
 				});
