@@ -5,10 +5,10 @@ import time
 from fastapi import FastAPI
 import requests
 
-from dashfrog import Config, flow, setup, step, with_fastapi, with_requests
+from dashfrog import flow, setup, step, with_fastapi, with_requests
 
 # Initialize DashFrog
-setup(Config())
+setup()
 with_requests()
 
 # Simple customer list
