@@ -18,7 +18,7 @@ export function formatMetricValue(
 	unit?: string,
 	transform?: Transform | null,
 ): { formattedValue: string; displayUnit: string } {
-	let displayValue = value;
+	const displayValue = value;
 	let displayUnit = unit || "";
 
 	// Handle percentage (expecting 0-1 range)

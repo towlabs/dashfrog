@@ -214,28 +214,30 @@ export default function NotebookPage() {
 								</TooltipContent>
 							</Tooltip>
 						)}
-					{/* Duplicate Button */}
-					{currentNotebook && (
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="justify-start text-sm text-muted-foreground h-6"
-									onClick={async () => {
-										setDuplicateDialogOpen(true);
-										const tenants = await Tenants.getAll();
-										setAvailableTenants(
-											tenants.filter((t) => t !== tenantName),
-										);
-									}}
-								>
-									<Copy className="size-4" />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>Duplicate notebook to other tenants</TooltipContent>
-						</Tooltip>
-					)}
+						{/* Duplicate Button */}
+						{currentNotebook && (
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="justify-start text-sm text-muted-foreground h-6"
+										onClick={async () => {
+											setDuplicateDialogOpen(true);
+											const tenants = await Tenants.getAll();
+											setAvailableTenants(
+												tenants.filter((t) => t !== tenantName),
+											);
+										}}
+									>
+										<Copy className="size-4" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent>
+									Duplicate notebook to other tenants
+								</TooltipContent>
+							</Tooltip>
+						)}
 						{/* Comments Button */}
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -343,10 +345,7 @@ export default function NotebookPage() {
 								if (!currentNotebook || selectedTenants.length === 0) return;
 								setDuplicating(true);
 								try {
-									await duplicateNotebook(
-										currentNotebook.id,
-										selectedTenants,
-									);
+									await duplicateNotebook(currentNotebook.id, selectedTenants);
 									setDuplicateDialogOpen(false);
 									setSelectedTenants([]);
 								} catch (error) {

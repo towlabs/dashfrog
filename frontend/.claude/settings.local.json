@@ -1,34 +1,34 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(npm install:*)",
-      "Bash(npm run build:*)",
-      "Bash(npm run type-check:*)",
-      "Bash(npm run tsc:*)",
-      "Bash(npx tsc:*)",
-      "mcp__ide__getDiagnostics",
-      "WebSearch",
-      "WebFetch(domain:codemirror.net)",
-      "Bash(npx shadcn@latest add:*)",
-      "WebFetch(domain:ui.shadcn.com)",
-      "Bash(timeout 30 npm run dev:*)",
-      "Bash(git checkout:*)",
-      "Bash(npm run dev:*)",
-      "Bash(cat:*)",
-      "Bash(npm:*)",
-      "Bash(npx biome check:*)",
-      "Bash(npx biome migrate:*)",
-      "Bash(npx biome format:*)",
-      "Bash(npx @biomejs/biome check:*)",
-      "Bash(tree:*)",
-      "Bash(npx tsx:*)",
-      "Bash(tee:*)",
-      "Read(//Users/mehdi/Workspace/observability/dashfrog/backend/src/**)",
-      "Read(//Users/mehdi/Workspace/observability/dashfrog/dashfrog_python_sdk/src/dashfrog_python_sdk/api/**)",
-      "Read(//Users/mehdi/Workspace/observability/dashfrog/**)",
-      "Bash(done)"
-    ],
-    "deny": [],
-    "ask": []
-  }
+	"permissions": {
+		"allow": [
+			"Bash(npm install:*)",
+			"Bash(npm run build:*)",
+			"Bash(npm run type-check:*)",
+			"Bash(npm run tsc:*)",
+			"Bash(npx tsc:*)",
+			"mcp__ide__getDiagnostics",
+			"WebSearch",
+			"WebFetch(domain:codemirror.net)",
+			"Bash(npx shadcn@latest add:*)",
+			"WebFetch(domain:ui.shadcn.com)",
+			"Bash(timeout 30 npm run dev:*)",
+			"Bash(git checkout:*)",
+			"Bash(npm run dev:*)",
+			"Bash(cat:*)",
+			"Bash(npm:*)",
+			"Bash(npx biome check:*)",
+			"Bash(npx biome migrate:*)",
+			"Bash(npx biome format:*)",
+			"Bash(npx @biomejs/biome check:*)",
+			"Bash(tree:*)",
+			"Bash(npx tsx:*)",
+			"Bash(tee:*)",
+			"Read(//Users/mehdi/Workspace/observability/dashfrog/backend/src/**)",
+			"Read(//Users/mehdi/Workspace/observability/dashfrog/dashfrog_python_sdk/src/dashfrog_python_sdk/api/**)",
+			"Read(//Users/mehdi/Workspace/observability/dashfrog/**)",
+			"Bash(done)"
+		],
+		"deny": [],
+		"ask": []
+	}
 }
