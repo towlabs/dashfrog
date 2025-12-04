@@ -18,7 +18,7 @@ jobs:
     env:
       DASHFROG_POSTGRES_HOST: localhost
       DASHFROG_POSTGRES_PORT: 5432
-      DASHFROG_POSTGRES_DBNAME: dashfrog_test
+      DASHFROG_POSTGRES_DBNAME: dashfrog
       DASHFROG_POSTGRES_USER: postgres
       DASHFROG_POSTGRES_PASSWORD: postgres
       DASHFROG_OTLP_ENDPOINT: localhost:4317
