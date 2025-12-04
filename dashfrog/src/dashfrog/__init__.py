@@ -25,8 +25,6 @@ Usage:
     orders.increment(region="us-east")
 """
 
-__version__ = "0.1.4"
-
 # Core setup and configuration
 # Submodules (users import from these)
 from . import flow, metrics, migrations, models, step
@@ -42,8 +40,6 @@ with_celery = Dashfrog.with_celery
 with_aws_lambda = Dashfrog.with_aws_lambda
 
 __all__ = [
-    # Version
-    "__version__",
     # Setup
     "setup",
     "get_dashfrog_instance",
