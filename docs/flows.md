@@ -120,8 +120,6 @@ Flows automatically track across services using OpenTelemetry's distributed cont
 > - `with_httpx()` - Instruments httpx library
 > - `with_flask(app)` - Instruments Flask applications
 
-#### HTTP
-
 If you're using instrumented HTTP clients, context propagates automatically:
 
 **Service A:**
@@ -149,6 +147,8 @@ async def process_order(order: dict):
 
     return {"status": "success"}
 ```
+
+**For a complete synchronous flow example**, see [`sync_flow.py`](https://github.com/towlabs/dashfrog/blob/main/dashfrog/demo-app/sync_flow.py)
 
 ### Async Task Flows (Advanced)
 
@@ -209,30 +209,4 @@ def process_data_task(customer_id: str, data: dict):
     return {"status": "success"}
 ```
 
-## Complete Example
-
-Want to see flows in action? Check out our [demo application](../examples/demo-app/README.md) that simulates a data import service.
-
-The demo shows:
-- Multi-step workflows (read → validate → process)
-- Customer-scoped flows with tenant tracking
-- Random failures to demonstrate error handling
-- Integration with metrics (counters and histograms)
-- Real-time flow updates you can watch in DashFrog
-
-**View the code:** [`examples/demo-app/app/main.py`](../examples/demo-app/app/main.py)
-
-Run it locally:
-```bash
-cd examples/demo-app
-docker compose up -d
-docker compose logs -f demo-app  # Watch flows being created
-```
-
-Then open http://localhost:8000 to see the flows in DashFrog.
-
-## Related Documentation
-
-- [Metrics](metrics.md) - Track counters and histograms per customer
-- [Configuration](configuration.md) - Configure OTLP endpoint and other settings
-
+**For a complete asynchronous flow example with Celery**, see [`async_flow.py`](https://github.com/towlabs/dashfrog/blob/main/dashfrog/demo-app/async_flow.py)

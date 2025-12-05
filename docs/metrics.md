@@ -277,6 +277,6 @@ def get_queue_depth(timeout_seconds: int):
 
 ## Complete Example
 
-Want to see metrics in action? Check out our [demo application](../examples/demo-app/README.md) that simulates a data import service.
+**For a complete metrics example**, see [`metrics.py`](https://github.com/towlabs/dashfrog/blob/main/dashfrog/demo-app/metrics.py)
 
 
