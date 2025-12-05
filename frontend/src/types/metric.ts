@@ -12,8 +12,7 @@ export type Transform =
 	| "p90"
 	| "p95"
 	| "p99"
-	| "ratio"
-	| string;
+	| "ratio";
 export type TimeAggregation = "last" | "avg" | "min" | "max" | "match";
 export type GroupByFn = "sum" | "avg" | "min" | "max";
 export type MetricType = "ratio" | "histogram" | "gauge" | "increase" | "rate";
