@@ -309,12 +309,19 @@ wheels = [
 
 [[package]]
 name = "dashfrog"
-version = "0.1.6"
+version = "0.1.7"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp" },
+    { name = "opentelemetry-instrumentation-aws-lambda" },
+    { name = "opentelemetry-instrumentation-botocore" },
+    { name = "opentelemetry-instrumentation-celery" },
+    { name = "opentelemetry-instrumentation-fastapi" },
+    { name = "opentelemetry-instrumentation-flask" },
+    { name = "opentelemetry-instrumentation-httpx" },
+    { name = "opentelemetry-instrumentation-requests" },
     { name = "opentelemetry-sdk" },
     { name = "psycopg2-binary" },
     { name = "pydantic" },
@@ -334,19 +341,9 @@ dev = [
     { name = "python-jose", extra = ["cryptography"] },
     { name = "ruff" },
 ]
-instrumentation = [
-    { name = "opentelemetry-instrumentation-aws-lambda" },
-    { name = "opentelemetry-instrumentation-botocore" },
-    { name = "opentelemetry-instrumentation-celery" },
-    { name = "opentelemetry-instrumentation-fastapi" },
-    { name = "opentelemetry-instrumentation-flask" },
-    { name = "opentelemetry-instrumentation-httpx" },
-    { name = "opentelemetry-instrumentation-requests" },
-]
 test = [
     { name = "fastapi" },
     { name = "httpx" },
-    { name = "opentelemetry-instrumentation-fastapi" },
     { name = "pytest" },
     { name = "python-jose", extra = ["cryptography"] },
 ]
@@ -359,14 +356,13 @@ requires-dist = [
     { name = "httpx", marker = "extra == 'test'", specifier = ">=0.28.0" },
     { name = "opentelemetry-api", specifier = ">=1.37.0,<2.0.0" },
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.37.0,<2.0.0" },
-    { name = "opentelemetry-instrumentation-aws-lambda", marker = "extra == 'instrumentation'", specifier = ">=0.58b0" },
-    { name = "opentelemetry-instrumentation-botocore", marker = "extra == 'instrumentation'", specifier = ">=0.58b0" },
-    { name = "opentelemetry-instrumentation-celery", marker = "extra == 'instrumentation'", specifier = ">=0.58b0" },
-    { name = "opentelemetry-instrumentation-fastapi", marker = "extra == 'instrumentation'", specifier = ">=0.58b0" },
-    { name = "opentelemetry-instrumentation-fastapi", marker = "extra == 'test'", specifier = ">=0.58b0" },
-    { name = "opentelemetry-instrumentation-flask", marker = "extra == 'instrumentation'", specifier = ">=0.58b0" },
-    { name = "opentelemetry-instrumentation-httpx", marker = "extra == 'instrumentation'", specifier = ">=0.58b0" },
-    { name = "opentelemetry-instrumentation-requests", marker = "extra == 'instrumentation'", specifier = ">=0.58b0" },
+    { name = "opentelemetry-instrumentation-aws-lambda", specifier = ">=0.58b0" },
+    { name = "opentelemetry-instrumentation-botocore", specifier = ">=0.58b0" },
+    { name = "opentelemetry-instrumentation-celery", specifier = ">=0.58b0" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.58b0" },
+    { name = "opentelemetry-instrumentation-flask", specifier = ">=0.58b0" },
+    { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.58b0" },
+    { name = "opentelemetry-instrumentation-requests", specifier = ">=0.58b0" },
     { name = "opentelemetry-sdk", specifier = ">=1.37.0,<2.0.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.0" },
     { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
@@ -381,7 +377,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.0,<3.0.0" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.30.0" },
 ]
-provides-extras = ["api", "instrumentation", "dev", "test"]
+provides-extras = ["api", "dev", "test"]
 
 [[package]]
 name = "ecdsa"

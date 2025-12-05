@@ -1,6 +1,6 @@
 [project]
 name = "dashfrog"
-version = "0.1.6"
+version = "0.1.7"
 description = "Business Observability on OpenTelemetry"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,6 +33,14 @@ dependencies = [
     "alembic>=1.13.0,<2.0.0",
     # Configuration
     "pydantic>=2.0.0,<3.0.0",
+    # Instrumentation packages
+    "opentelemetry-instrumentation-aws-lambda>=0.58b0",
+    "opentelemetry-instrumentation-botocore>=0.58b0",
+    "opentelemetry-instrumentation-celery>=0.58b0",
+    "opentelemetry-instrumentation-fastapi>=0.58b0",
+    "opentelemetry-instrumentation-flask>=0.58b0",
+    "opentelemetry-instrumentation-httpx>=0.58b0",
+    "opentelemetry-instrumentation-requests>=0.58b0",
 ]
 
 [project.optional-dependencies]
@@ -42,17 +50,6 @@ api = [
     "uvicorn>=0.30.0",
     "python-jose[cryptography]>=3.3.0,<4.0.0",
     "python-multipart>=0.0.20"
-]
-
-# Instrumentation packages (optional, imported on-demand)
-instrumentation = [
-    "opentelemetry-instrumentation-aws-lambda>=0.58b0",
-    "opentelemetry-instrumentation-botocore>=0.58b0",
-    "opentelemetry-instrumentation-celery>=0.58b0",
-    "opentelemetry-instrumentation-fastapi>=0.58b0",
-    "opentelemetry-instrumentation-flask>=0.58b0",
-    "opentelemetry-instrumentation-httpx>=0.58b0",
-    "opentelemetry-instrumentation-requests>=0.58b0",
 ]
 
 # Development tools
@@ -68,7 +65,6 @@ test = [
     "pytest>=8.4.2",
     "fastapi>=0.118.0",
     "httpx>=0.28.0",
-    "opentelemetry-instrumentation-fastapi>=0.58b0",
     "python-jose[cryptography]>=3.3.0,<4.0.0",
 ]
 
