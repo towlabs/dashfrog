@@ -535,7 +535,7 @@ export const MetricBlock = createReactBlockSpec(
 							transform={
 								!transform && scalarData?.type === "counter"
 									? "ratePerSecond"
-									: transform
+									: transform || null
 							}
 							unit={scalarData?.unit ?? null}
 							tenantName={tenantName}

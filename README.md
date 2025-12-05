@@ -23,6 +23,8 @@ See DashFrog in action with a 2-minute demo:
 **Step 1: Install DashFrog**
 
 ```bash
+# setup demo dir
+mkdir dashfrog-demo && cd dashfrog-demo
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/towlabs/dashfrog/main/bin/deploy)"
 ```
 
@@ -33,8 +35,7 @@ This installs DashFrog with Docker Compose and exposes:
 **Step 2: Run the demo**
 
 ```bash
-# Create a directory and install dependencies
-mkdir dashfrog-demo && cd dashfrog-demo
+# Install dependencies
 python -m venv .venv && source .venv/bin/activate
 pip install dashfrog requests
 
@@ -52,32 +53,7 @@ Open the links in your browser to explore the data!
 
 > **For production:** See the [Deployment Guide](docs/deployment.md) for Kubernetes, custom configuration, and security hardening.
 
-## Pushing data
-
-### Setup
-
-Install the DashFrog SDK:
-
-```bash
-pip install dashfrog
-```
-
-Initialize DashFrog in your application:
-
-```python
-from dashfrog import setup
-
-setup()  # Reads from environment variables
-```
-
-By default, `setup()` uses the same credentials from the deployment above. If you customized the deployment `.env` file, set matching environment variables in your application:
-
-```bash
-export DASHFROG_OTLP_ENDPOINT=grpc://localhost:4317
-export DASHFROG_OTLP_AUTH_TOKEN=pwd  # Match deployment
-export DASHFROG_POSTGRES_HOST=localhost
-export DASHFROG_POSTGRES_PASSWORD=postgres  # Match deployment
-```
+## Key concepts
 
 ### Flows
 
@@ -149,35 +125,12 @@ Build customer-specific dashboards with a block-based editor. Combine metrics an
 
 → See [Notebooks documentation](docs/notebooks.md) for details
 
-
-## Try the Demo
-
-Want to see DashFrog in action? Download and run demo scripts that simulate data imports with flows and metrics.
-
-```bash
-pip install dashfrog fastapi  # fastapi required for async demo
-
-# Download demo scripts
-wget https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/demo-app/sync_flow.py
-wget https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/demo-app/async_flow.py
-wget https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/demo-app/metrics.py
-
-# Run them
-python sync_flow.py     # Synchronous flow example
-python async_flow.py    # Async flow example
-python metrics.py       # Metrics example
-```
-
-These scripts generate flows and metrics for multiple customers. Some imports succeed, some fail — you can start exploring the data in notebooks.
-
 ## Roadmap
 
 Ideas we're exploring:
 - Helpdesk integrations (Zendesk, Intercom)
 - Alerting rules
-- External API data sources
-
-See [GitHub Issues](https://github.com/towlabs/dashfrog/issues) for what's planned.
+- External data sources(API, Prometheus, ...)
 
 ## License
 
