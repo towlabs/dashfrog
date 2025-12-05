@@ -393,11 +393,11 @@ export const MetricBlock = createReactBlockSpec(
 									</span>
 								</div>
 								<CardDescription>
-									{scalarData?.prettyName ?? "N/A"}
+									{title || scalarData?.prettyName || "N/A"}
 								</CardDescription>
 								<CardTitle
 									className={cn(
-										"text-2xl font-semibold @[250px]/card:text-3xl",
+										"text-2xl font-semibold @[250px]/card:text-3xl whitespace-nowrap",
 										colorClass,
 									)}
 								>

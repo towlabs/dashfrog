@@ -1,5 +1,7 @@
 # Flows
 
+![Flow overview](assets/flow.png)
+
 Flows let you track distributed workflows from your customer's perspective.
 
 ## What Are Flows?

@@ -62,15 +62,13 @@ def run():
         iteration += 1
         print(f"\n--- Iteration {iteration} ---")
 
-        # Pick random customer
-        customer = random.choice(CUSTOMERS)
-
         # Run import
-        for env in ("prod", "staging"):
-            try:
-                import_csv(customer, env)
-            except Exception as e:
-                print(f"❌ {customer}: Import failed - {e}")
+        for customer in CUSTOMERS:
+            for env in ("prod", "staging"):
+                try:
+                    import_csv(customer, env)
+                except Exception as e:
+                    print(f"❌ {customer}: Import failed - {e}")
 
         # Wait 2-5 seconds
         time.sleep(random.uniform(2, 5))

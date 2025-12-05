@@ -2,7 +2,7 @@
 
 Customer-scoped observability for B2B SaaS
 
-![Screenshot or GIF placeholder]
+![DashFrog Status Page](docs/assets/main.png)
 
 ## What is DashFrog?
 
@@ -18,83 +18,19 @@ It sits on OpenTelemetry but abstracts away the complexity. Customer namespaces 
 
 ## Deploying DashFrog
 
-You can deploy DashFrog either through docker compose or by using the provided helm chart.
-
-For configuration options, see the [Configuration Guide](docs/configuration.md).
-
-### Docker Compose
-
-**Quick start** (works immediately with defaults):
+**Quick start:**
 
 ```bash
-cd dashfrog
-docker compose up -d
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/towlabs/dashfrog/main/bin/deploy)"
 ```
 
-Access at `http://localhost:8000` (login: `admin` / `admin`).
+This installs DashFrog with Docker Compose and exposes:
+- **API** on http://localhost:8000 (login: `admin` / `admin`)
+- **OTLP endpoints** on ports 4317 (gRPC) and 4318 (HTTP)
 
-**Production deployment** (uses pre-built images):
+Once installed, proceed to the next section to start pushing data.
 
-```bash
-# Download configuration files
-mkdir -p dashfrog/deploy/docker && cd dashfrog
-curl -O https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/docker-compose.production.yml
-curl -O https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/.env.example
-curl -o deploy/docker/otel-collector-config.yml https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/deploy/docker/otel-collector-config.yml
-curl -o deploy/docker/prometheus.yml https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/deploy/docker/prometheus.yml
-
-# Configure
-cp .env.example .env
-# Edit .env with production secrets (API keys, passwords, etc.)
-
-# Deploy
-docker compose -f docker-compose.production.yml up -d
-```
-
-This deploys:
-- **DashFrog API** on port 8000
-- **PostgreSQL** for flow and metadata storage
-- **Prometheus** for metrics storage
-- **OpenTelemetry Collector** on ports 4317 (gRPC) and 4318 (HTTP)
-
-→ See [Configuration Guide](docs/configuration.md) for detailed environment variable documentation.
-
-### Helm
-
-**Quick start** (includes PostgreSQL and Prometheus):
-
-```bash
-helm install dashfrog oci://ghcr.io/towlabs/dashfrog \
-  --version 0.1.0 \
-  -n dashfrog --create-namespace
-```
-
-Access via port-forward:
-```bash
-kubectl port-forward -n dashfrog svc/dashfrog 8000:8000
-```
-
-**Production deployment**:
-
-```bash
-# Create secret with strong credentials
-kubectl create namespace dashfrog
-kubectl create secret generic dashfrog-secrets \
-  --namespace dashfrog \
-  --from-literal=postgres-password=$(openssl rand -base64 32) \
-  --from-literal=api-password=YOUR_SECURE_PASSWORD \
-  --from-literal=api-secret-key=$(openssl rand -hex 32)
-
-# Install with custom values
-helm install dashfrog oci://ghcr.io/towlabs/dashfrog \
-  --version 0.1.0 \
-  -n dashfrog \
-  --set api.secrets.existingSecret=dashfrog-secrets \
-  --set api.ingress.enabled=true \
-  --set api.ingress.hosts[0].host=dashfrog.yourdomain.com
-```
-
-→ See the [Helm Chart README](dashfrog/deploy/helm/dashfrog/README.md) for detailed configuration options.
+> **For production:** See the [Deployment Guide](docs/deployment.md) for Kubernetes, custom configuration, and security hardening.
 
 ## Pushing data
 
@@ -103,15 +39,24 @@ helm install dashfrog oci://ghcr.io/towlabs/dashfrog \
 Install the DashFrog SDK:
 
 ```bash
-pip install dashfrog
+pip install dashfrog fastapi
 ```
 
 Initialize DashFrog in your application:
 
 ```python
-from dashfrog import Config, setup
+from dashfrog import setup
 
-setup(Config())
+setup()  # Reads from environment variables
+```
+
+By default, `setup()` uses the same credentials from the deployment above. If you customized the deployment `.env` file, set matching environment variables in your application:
+
+```bash
+export DASHFROG_OTLP_ENDPOINT=grpc://localhost:4317
+export DASHFROG_OTLP_AUTH_TOKEN=pwd  # Match deployment
+export DASHFROG_POSTGRES_HOST=localhost
+export DASHFROG_POSTGRES_PASSWORD=postgres  # Match deployment
 ```
 
 ### Flows
@@ -175,29 +120,46 @@ Metrics data is automatically available in notebooks for querying and visualizat
 
 ## Notebooks
 
-Notebooks let you build simple views that combine flows and metrics for a customer.
+Notebooks are customer-specific dashboards built with a block-based editor. Each notebook combines metrics and flows to give you (or your customers) a complete view of what's happening.
 
-You can share notebooks directly with customers — give them visibility into their own data without building a custom dashboard.
+### Key Features
+
+**Drill-down** - Click any metric or flow to explore historical data and dig deeper
+
+**Shareable** - Make a notebook public and share the URL directly with your customer
+
+**Time annotations** - Mark releases, incidents, or important events on the timeline for context
+
+### Use Cases
+
+**Support dashboards** - Give your support team a single page to understand what's happening with a customer
+
+**Customer visibility** - Share a public notebook so customers can see their own metrics and workflows
+
+**Incident review** - Add time annotations to document what happened during an outage
+
+**Release tracking** - Annotate deployment windows to see before/after impact
+
 
 ## Try the Demo
 
-Want to see DashFrog in action? We've built a simple demo that continuously simulates data imports with multi-step workflows.
+Want to see DashFrog in action? Download and run demo scripts that simulate data imports with flows and metrics.
 
 ```bash
-cd examples/demo-app
-docker compose up -d
+pip install dashfrog
+
+# Download demo scripts
+wget https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/demo-app/sync_flow.py
+wget https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/demo-app/async_flow.py
+wget https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/demo-app/metrics.py
+
+# Run them
+python sync_flow.py     # Synchronous flow example
+python async_flow.py    # Async flow example
+python metrics.py       # Metrics example
 ```
 
-This starts DashFrog and a simulator that generates flows and metrics for 3 customers. Some imports succeed, some fail — you'll see everything tracked in real-time.
-
-**Watch it run:**
-```bash
-docker compose logs -f demo-app
-```
-
-**View in DashFrog:** http://localhost:8000 (login: `admin` / `admin`)
-
-→ See the [Demo README](examples/demo-app/README.md) for details.
+These scripts generate flows and metrics for multiple customers. Some imports succeed, some fail — you can start exploring the data in notebooks.
 
 ## Roadmap
 
@@ -215,4 +177,4 @@ Ideas we're exploring:
 
 ## License
 
-[TODO]
+MIT License - see [LICENSE](LICENSE) for details.
