@@ -358,7 +358,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 										{/* Success */}
 										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 px-6 py-2 text-left border-0">
 											<span className="text-muted-foreground text-xs flex items-center gap-2">
-												Last duration
+												Last
 											</span>
 											<span className="text-lg leading-none font-bold sm:text-3xl">
 												{formatDuration({
@@ -370,7 +370,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 										{/* Failed */}
 										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l ">
 											<span className="text-muted-foreground text-xs flex items-center gap-2">
-												Average duration
+												Average
 											</span>
 											<span className="text-lg leading-none font-bold sm:text-3xl">
 												{formatDuration({
@@ -382,7 +382,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 										{/* Running */}
 										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l">
 											<span className="text-muted-foreground text-xs flex items-center gap-2">
-												Min duration
+												Min
 											</span>
 											<span className="text-lg leading-none font-bold sm:text-3xl">
 												{formatDuration({
@@ -394,7 +394,7 @@ export const FlowStatusBlock = createReactBlockSpec(
 										{/* Running */}
 										<div className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-2 text-left even:border-l sm:border-t-0 sm:border-l">
 											<span className="text-muted-foreground text-xs flex items-center gap-2">
-												Max duration
+												Max
 											</span>
 											<span className="text-lg leading-none font-bold sm:text-3xl">
 												{formatDuration({

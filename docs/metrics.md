@@ -1,5 +1,7 @@
 # Metrics
 
+![DashFrog Metric](assets/metric.png)
+
 Track customer-scoped metrics.
 
 ## What Are Metrics?

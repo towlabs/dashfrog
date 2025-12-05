@@ -59,8 +59,9 @@ def import_csv(customer_id: str, env: str):
         with step.start("read"):
             read_csv()
 
-        response = requests.get(f"http://localhost:5000/import/{customer_id}")
+        response = requests.get(f"http://localhost:4000/import/{customer_id}")
         if response.status_code != 200:
+            print(response.status_code)
             raise ValueError("Import failed")
 
         print(f"✅ {customer_id}: Import successful")
@@ -76,15 +77,13 @@ def run():
         iteration += 1
         print(f"\n--- Iteration {iteration} ---")
 
-        # Pick random customer
-        customer = random.choice(CUSTOMERS)
-
-        # Run import
-        for env in ("prod", "staging"):
-            try:
-                import_csv(customer, env)
-            except Exception as e:
-                print(f"❌ {customer}: Import failed - {e}")
+        for customer in CUSTOMERS:
+            # Run import
+            for env in ("prod", "staging"):
+                try:
+                    import_csv(customer, env)
+                except Exception as e:
+                    print(f"❌ {customer}: Import failed - {e}")
 
         # Wait 2-5 seconds
         time.sleep(random.uniform(2, 5))
@@ -93,7 +92,7 @@ def run():
 def run_api_in_thread():
     import uvicorn
 
-    thread = threading.Thread(target=uvicorn.run, args=(app,), kwargs={"host": "0.0.0.0", "port": 5000})
+    thread = threading.Thread(target=uvicorn.run, args=(app,), kwargs={"host": "0.0.0.0", "port": 4000})
     thread.start()
     return thread
 
