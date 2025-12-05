@@ -46,6 +46,8 @@ services:
       POSTGRES_DB: dashfrog
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d dashfrog"]
       interval: 10s
