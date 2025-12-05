@@ -28,11 +28,14 @@ DASHFROG_OTLP_AUTH_TOKEN=pwd
 DASHFROG_API_PASSWORD=admin
 ```
 
-After editing, restart:
+After editing, recreate containers to pick up new values:
 ```bash
 cd dashfrog
-docker compose restart
+docker compose down -v  # Removes containers and volumes
+docker compose up -d    # Recreates with new values
 ```
+
+**Note:** The `-v` flag removes volumes including the database.
 
 ### What Gets Deployed
 
@@ -44,195 +47,119 @@ The stack includes:
 
 ## Kubernetes (Helm)
 
-### Prerequisites
-- Kubernetes cluster (1.21+)
-- Helm 3.x installed
-- kubectl configured
+### Installation
 
-### Quick Install
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/towlabs/dashfrog.git
+   cd dashfrog
+   ```
 
-Install with defaults (includes PostgreSQL and Prometheus):
-
-```bash
-helm install dashfrog oci://ghcr.io/towlabs/dashfrog \
-  --version 0.1.0 \
-  -n dashfrog --create-namespace
-```
-
-Access via port-forward:
-```bash
-kubectl port-forward -n dashfrog svc/dashfrog 8000:8000
-```
-
-### Production Install
-
-1. **Create secrets:**
+2. **Create secrets:**
    ```bash
    kubectl create namespace dashfrog
 
    kubectl create secret generic dashfrog-secrets \
      --namespace dashfrog \
-     --from-literal=postgres-password=$(openssl rand -base64 32) \
-     --from-literal=api-password=YOUR_SECURE_PASSWORD \
-     --from-literal=api-secret-key=$(openssl rand -hex 32) \
-     --from-literal=otlp-auth-token=$(openssl rand -hex 32)
+     --from-literal=postgres-password=YOUR_POSTGRES_PASSWORD \
+     --from-literal=api-password=YOUR_API_PASSWORD \
+     --from-literal=api-secret-key=YOUR_SECRET_KEY \
+     --from-literal=otlp-auth-token=YOUR_OTLP_TOKEN
    ```
 
-2. **Create values.yaml:**
-   ```yaml
-   api:
-     secrets:
-       existingSecret: dashfrog-secrets
+   Replace the placeholder values with your own secure passwords. You'll need `otlp-auth-token` and `postgres-password` to configure your application.
 
-     ingress:
-       enabled: true
-       className: nginx
-       hosts:
-         - host: dashfrog.yourdomain.com
-           paths:
-             - path: /
-               pathType: Prefix
-       tls:
-         - secretName: dashfrog-tls
-           hosts:
-             - dashfrog.yourdomain.com
-
-   postgresql:
-     enabled: true
-     auth:
-       existingSecret: dashfrog-secrets
-       secretKeys:
-         adminPasswordKey: postgres-password
-
-   prometheus:
-     enabled: true
-     persistence:
-       enabled: true
-       size: 50Gi
-   ```
-
-3. **Install with custom values:**
+3. **Install the chart:**
    ```bash
-   helm install dashfrog oci://ghcr.io/towlabs/dashfrog \
-     --version 0.1.0 \
+   helm install dashfrog dashfrog/deploy/helm/dashfrog \
      -n dashfrog \
-     -f values.yaml
+     --set api.secrets.existingSecret=dashfrog-secrets \
+     --set postgresql.auth.existingSecret=dashfrog-secrets
    ```
 
-### Using External Services
+### Accessing DashFrog
 
-To use managed PostgreSQL or Prometheus:
-
-```yaml
-postgresql:
-  enabled: false  # Don't deploy PostgreSQL
-
-externalPostgresql:
-  host: postgres.example.com
-  port: 5432
-  database: dashfrog
-  username: dashfrog
-  existingSecret: external-postgres-secret
-  existingSecretPasswordKey: password
-
-prometheus:
-  enabled: false  # Don't deploy Prometheus
-
-externalPrometheus:
-  endpoint: http://prometheus.example.com:9090
-```
-
-### Upgrading
-
+**Option 1: Port Forward (testing)**
 ```bash
-helm repo update
-helm upgrade dashfrog oci://ghcr.io/towlabs/dashfrog \
-  --version 0.2.0 \
-  -n dashfrog \
-  -f values.yaml
+kubectl port-forward -n dashfrog svc/dashfrog 8000:8000
 ```
 
-## Configuring Your Application
+Then access at http://localhost:8000
+
+**Option 2: Ingress**
+
+Create your own Ingress resource pointing to service `dashfrog` on port `8000` in the `dashfrog` namespace.
+
+### Configuring Your Application
 
 After deploying DashFrog, configure your application to send telemetry.
 
-### Required Environment Variables
-
-Set these where your app runs:
+**Set these environment variables** where your application runs:
 
 ```bash
-# Telemetry
-DASHFROG_OTLP_ENDPOINT=grpc://localhost:4317  # Or your DashFrog host
-DASHFROG_OTLP_AUTH_TOKEN=pwd                   # Match deployment
-
-# Database (for metadata registration)
-DASHFROG_POSTGRES_HOST=localhost              # Or your DashFrog host
-DASHFROG_POSTGRES_PASSWORD=postgres           # Match deployment
+# OTLP endpoint
+DASHFROG_OTLP_ENDPOINT=grpc://dashfrog.dashfrog.svc.cluster.local:4317
+# Authentication token (from the secret you created in step 2)
+DASHFROG_OTLP_AUTH_TOKEN=<otlp-auth-token>
+# PostgreSQL connection (for metadata registration)
+DASHFROG_POSTGRES_HOST=dashfrog-postgresql.dashfrog.svc.cluster.local
+DASHFROG_POSTGRES_PASSWORD=<postgres-password>
 ```
 
-> **Important:** `DASHFROG_OTLP_AUTH_TOKEN` and `DASHFROG_POSTGRES_PASSWORD` must match the values from your DashFrog deployment.
-
-### SDK Setup
-
+**In your application code:**
 ```python
 from dashfrog import setup
 
 setup()  # Reads from environment variables
 ```
 
-By default, `setup()` uses the same credentials from the deployment. If you customized the deployment, set matching environment variables in your application.
+### Advanced Configuration
 
-## Monitoring & Troubleshooting
+**Use external PostgreSQL or Prometheus:**
 
-### Health Checks
+Create a `values.yaml`:
+```yaml
+postgresql:
+  enabled: false
 
-Check if services are running:
-```bash
-# Docker Compose
-docker compose ps
+externalPostgresql:
+  host: postgres.example.com
+  port: 5432
+  database: dashfrog
+  username: dashfrog
+  password: your-password
 
-# API health endpoint
-curl http://localhost:8000/api/health
+prometheus:
+  enabled: false
 
-# Kubernetes
-kubectl get pods -n dashfrog
+externalPrometheus:
+  endpoint: http://prometheus.example.com:9090
 ```
 
-### Logs
+**Adjust resource limits:**
+```yaml
+api:
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
 
-**Docker Compose:**
-```bash
-docker compose logs -f                 # All services
-docker compose logs -f dashfrog-api    # Just API
+prometheus:
+  persistence:
+    enabled: true
+    size: 100Gi
 ```
 
-**Kubernetes:**
+**Upgrading:**
 ```bash
-kubectl logs -n dashfrog -l app=dashfrog -f
+git pull
+
+# Upgrade the release
+helm upgrade dashfrog ./deploy/helm/dashfrog -n dashfrog --reuse-values
+
+# Force pods to restart and pull the new image
+kubectl rollout restart deployment/dashfrog -n dashfrog
 ```
-
-### Common Issues
-
-**Connection refused on localhost:5432:**
-- Make sure Postgres port is mapped in docker-compose.yml
-- Check `DASHFROG_POSTGRES_HOST` is set correctly in your app
-
-**OTLP authentication fails:**
-- Verify `DASHFROG_OTLP_AUTH_TOKEN` matches between deployment and app
-- Check collector logs: `docker compose logs otel-collector`
-
-**Data not appearing in UI:**
-- Check if metrics are reaching Prometheus: `curl http://localhost:9090/api/v1/label/__name__/values`
-- Verify OTLP collector is receiving data: `docker compose logs otel-collector`
-
-## Ports Reference
-
-DashFrog uses these fixed ports:
-
-- `8000` - API/UI
-- `4317` - OTLP gRPC
-- `4318` - OTLP HTTP
-- `5432` - PostgreSQL (for SDK metadata registration)
-- `9090` - Prometheus
-
-To change ports, edit `docker-compose.yml` directly.

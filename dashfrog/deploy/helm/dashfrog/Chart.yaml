@@ -9,9 +9,9 @@ keywords:
   - opentelemetry
   - metrics
   - monitoring
-home: https://github.com/dashfrog/dashfrog
+home: https://github.com/towlabs/dashfrog
 sources:
-  - https://github.com/dashfrog/dashfrog
+  - https://github.com/towlabs/dashfrog
 maintainers:
   - name: DashFrog Team
 dependencies:

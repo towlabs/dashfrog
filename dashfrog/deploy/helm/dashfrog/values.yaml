@@ -8,7 +8,6 @@ api:
   image:
     repository: ghcr.io/towlabs/dashfrog
     pullPolicy: IfNotPresent
-    tag: ""  # Defaults to Chart.appVersion
 
   imagePullSecrets: []
   nameOverride: ""
@@ -137,6 +136,10 @@ otelCollector:
 # PostgreSQL configuration (Bitnami chart)
 postgresql:
   enabled: true
+  image:
+    registry: docker.io
+    repository: bitnami/postgresql
+    tag: "latest"
   auth:
     username: dashfrog
     database: dashfrog

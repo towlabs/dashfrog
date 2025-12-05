@@ -10,6 +10,8 @@ DashFrog is open-source observability built around your customers, not your infr
 
 It sits on OpenTelemetry but abstracts away the complexity. Customer namespaces are auto-created as you push data. Anyone on your team can explore what's happening with a customer — no PromQL, no trace IDs.
 
+**Not a replacement for dev observability.** Keep using Datadog, Grafana, or whatever you use for infrastructure monitoring. DashFrog complements them by organizing telemetry per customer — making it easy for support, account managers, and customers themselves to understand what's happening.
+
 **Key Features:**
 - 🎯 **Customer-first** - Organize telemetry by customer, not infrastructure
 - ⚡ **Zero config** - Customer namespaces auto-created as data arrives
