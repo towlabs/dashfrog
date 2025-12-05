@@ -6,7 +6,7 @@ api:
   replicaCount: 1
 
   image:
-    repository: dashfrog/dashfrog
+    repository: ghcr.io/towlabs/dashfrog
     pullPolicy: IfNotPresent
     tag: ""  # Defaults to Chart.appVersion
 
