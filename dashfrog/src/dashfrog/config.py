@@ -23,14 +23,14 @@ class Config(BaseModel):
     """
 
     # Database
-    postgres_host: str = environ.get("DASHFROG_POSTGRES_HOST", "postgres")
+    postgres_host: str = environ.get("DASHFROG_POSTGRES_HOST", "localhost")
     postgres_port: int = int(environ.get("DASHFROG_POSTGRES_PORT", "5432"))
     postgres_dbname: str = environ.get("DASHFROG_POSTGRES_DBNAME", "dashfrog")
     postgres_user: str = environ.get("DASHFROG_POSTGRES_USER", "postgres")
     postgres_password: str = environ.get("DASHFROG_POSTGRES_PASSWORD", "postgres")
 
     # Telemetry
-    otlp_endpoint: str = environ.get("DASHFROG_OTLP_ENDPOINT", "grpc://otel-collector:4317")
+    otlp_endpoint: str = environ.get("DASHFROG_OTLP_ENDPOINT", "grpc://localhost:4317")
     otlp_auth_token: str | None = environ.get("DASHFROG_OTLP_AUTH_TOKEN", "pwd")
     prometheus_endpoint: str = environ.get("DASHFROG_PROMETHEUS_ENDPOINT", "http://prometheus:9090")
 

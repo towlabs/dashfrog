@@ -16,12 +16,6 @@ jobs:
   test-and-lint:
     runs-on: ubuntu-latest
     env:
-      DASHFROG_POSTGRES_HOST: localhost
-      DASHFROG_POSTGRES_PORT: 5432
-      DASHFROG_POSTGRES_DBNAME: dashfrog
-      DASHFROG_POSTGRES_USER: postgres
-      DASHFROG_POSTGRES_PASSWORD: postgres
-      DASHFROG_OTLP_ENDPOINT: localhost:4317
       DASHFROG_PROMETHEUS_ENDPOINT: http://localhost:9090
       DASHFROG_CLUSTER: dashfrog-test
       DASHFROG_ENVIRONMENT: test
