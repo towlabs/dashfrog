@@ -16,19 +16,39 @@ It sits on OpenTelemetry but abstracts away the complexity. Customer namespaces 
 - 🔍 **No query languages** - Explore without PromQL or trace IDs
 - 📊 **Shareable insights** - Give customers visibility into their own data
 
-## Deploying DashFrog
+## Try the Demo
 
-**Quick start:**
+See DashFrog in action with a 2-minute demo:
+
+**Step 1: Install DashFrog**
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/towlabs/dashfrog/main/bin/deploy)"
 ```
 
 This installs DashFrog with Docker Compose and exposes:
-- **API** on http://localhost:8000 (login: `admin` / `admin`)
+- **API/UI** on http://localhost:8000 (login: `admin` / `admin`)
 - **OTLP endpoints** on ports 4317 (gRPC) and 4318 (HTTP)
 
-Once installed, proceed to the next section to start pushing data.
+**Step 2: Run the demo**
+
+```bash
+# Create a directory and install dependencies
+mkdir dashfrog-demo && cd dashfrog-demo
+python -m venv .venv && source .venv/bin/activate
+pip install dashfrog requests
+
+# Download and run the demo script
+wget https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/demo-app/demo.py
+python demo.py
+```
+
+The demo will:
+1. Generate flows and metrics for 3 sample customers
+2. Create status page notebooks with live data
+3. Print direct links to view the notebooks
+
+Open the links in your browser to explore the data!
 
 > **For production:** See the [Deployment Guide](docs/deployment.md) for Kubernetes, custom configuration, and security hardening.
 
@@ -39,7 +59,7 @@ Once installed, proceed to the next section to start pushing data.
 Install the DashFrog SDK:
 
 ```bash
-pip install dashfrog fastapi
+pip install dashfrog
 ```
 
 Initialize DashFrog in your application:
@@ -120,25 +140,14 @@ Metrics data is automatically available in notebooks for querying and visualizat
 
 ## Notebooks
 
-Notebooks are customer-specific dashboards built with a block-based editor. Each notebook combines metrics and flows to give you (or your customers) a complete view of what's happening.
+Build customer-specific dashboards with a block-based editor. Combine metrics and flows to create views you can share publicly with customers or use internally for support.
 
-### Key Features
+**Features:**
+- Drill-down into historical data by clicking any metric or flow
+- Share public notebooks via URL
+- Add time annotations for releases, incidents, and events
 
-**Drill-down** - Click any metric or flow to explore historical data and dig deeper
-
-**Shareable** - Make a notebook public and share the URL directly with your customer
-
-**Time annotations** - Mark releases, incidents, or important events on the timeline for context
-
-### Use Cases
-
-**Support dashboards** - Give your support team a single page to understand what's happening with a customer
-
-**Customer visibility** - Share a public notebook so customers can see their own metrics and workflows
-
-**Incident review** - Add time annotations to document what happened during an outage
-
-**Release tracking** - Annotate deployment windows to see before/after impact
+→ See [Notebooks documentation](docs/notebooks.md) for details
 
 
 ## Try the Demo
@@ -146,7 +155,7 @@ Notebooks are customer-specific dashboards built with a block-based editor. Each
 Want to see DashFrog in action? Download and run demo scripts that simulate data imports with flows and metrics.
 
 ```bash
-pip install dashfrog
+pip install dashfrog fastapi  # fastapi required for async demo
 
 # Download demo scripts
 wget https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/demo-app/sync_flow.py
@@ -163,17 +172,12 @@ These scripts generate flows and metrics for multiple customers. Some imports su
 
 ## Roadmap
 
-See [GitHub Issues](link) for what's planned.
-
 Ideas we're exploring:
 - Helpdesk integrations (Zendesk, Intercom)
 - Alerting rules
 - External API data sources
 
-## Community
-
-- [Discord](link)
-- [Contributing](link)
+See [GitHub Issues](https://github.com/towlabs/dashfrog/issues) for what's planned.
 
 ## License
 
