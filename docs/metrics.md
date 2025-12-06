@@ -121,41 +121,6 @@ active_connections.set_periodically(
 2. **DashFrog calls it periodically** - Every `period_in_seconds`, your callback runs
 3. **Yield one GaugeValue per customer** - Return the current value for each tenant/label combination
 
-**Example: Tracking queue depth**
-
-```python
-from dashfrog.metrics import Gauge, GaugeValue
-
-queue_depth = Gauge(
-    name="job_queue_depth",
-    labels=["queue_name"],
-    pretty_name="Job Queue Depth",
-    unit="count"
-)
-
-def get_queue_depths(timeout_seconds: int):
-    # Query Redis/database for current queue sizes
-    queues = redis.hgetall("queue_depths")  # {'customer:acme:high': '5', 'customer:acme:low': '2'}
-
-    for key, depth in queues.items():
-        # Parse customer_id and queue_name from key
-        parts = key.split(":")
-        customer_id = parts[1]
-        queue_name = parts[2]
-
-        yield GaugeValue(
-            value=int(depth),
-            tenant=customer_id,
-            labels={"queue_name": queue_name}
-        )
-
-# Poll queue depths every 15 seconds
-queue_depth.set_periodically(
-    period_in_seconds=15,
-    callback=get_queue_depths
-)
-```
-
 **Common use cases:**
 - Active connections or sessions
 - Queue depth/length
@@ -163,13 +128,6 @@ queue_depth.set_periodically(
 - Memory or CPU usage
 - Cache size
 - Pool utilization (database connections, thread pools)
-
-**Key differences from Counter/Histogram:**
-- **Pull-based, not push** - You don't call `.record()`, DashFrog calls your callback
-- **Sampled periodically** - Values are fetched on a schedule, not on every event
-- **Current state** - Reports the value at the time of sampling, not accumulated
-- **Can decrease** - Unlike counters, gauges can go up or down
-- **Multiple values per callback** - One callback yields values for all customers
 
 ## Metric Parameters
 
