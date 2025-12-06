@@ -130,9 +130,9 @@ Build customer-specific dashboards with a block-based editor. Combine metrics an
 ## Roadmap
 
 Ideas we're exploring:
+- External data sources(API, Prometheus, ...)
 - Helpdesk integrations (Zendesk, Intercom)
 - Alerting rules
-- External data sources(API, Prometheus, ...)
 
 ## License
 

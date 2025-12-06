@@ -7,7 +7,7 @@ Customer-scoped dashboards that combine metrics and flows. Each notebook belongs
 - **Block-based editor** - Drag and arrange metric blocks, flow blocks, and text
 - **Drill-down** - Click any visualization to see historical data
 - **Public sharing** - Generate URLs for customer-facing status pages
-- **Time windows** - Relative (last 24h) or absolute date ranges
+- **Time windows** - Relative or absolute date ranges
 - **Annotations** - Mark deployments, incidents, or events on timelines
 
 ## Use Cases

@@ -20,7 +20,10 @@ A flow represents a customer-scoped workflow — like processing an order, impor
 ### Starting a Flow
 
 ```python
-from dashfrog import flow, step
+from dashfrog import flow, step, setup
+
+# Initialize DashFrog
+setup()
 
 # Start a flow for a customer
 with flow.start(
@@ -36,6 +39,8 @@ with flow.start(
     with step.start("store"):
         store_results()
 ```
+
+**For a complete flow example**, see [`basic_flow.py`](https://github.com/towlabs/dashfrog/blob/main/dashfrog/demo-app/basic_flow.py)
 
 ### Flow Parameters
 
@@ -59,51 +64,7 @@ with flow.start(
     pass
 ```
 
-These attributes:
-- Appear in the DashFrog UI for filtering and search
-- Can be queried in notebooks
-- Help identify and debug specific flows
-
-## Steps
-
-Steps represent logical operations within a flow. They track:
-- Step name
-- Start/end time
-- Success/failure status
-- Custom attributes
-
-```python
-with flow.start(name="order_processing", tenant="customer-123"):
-    # Step 1: Validate order
-    with step.start("validate_order"):
-        validate_order(order)
-
-    # Step 2: Charge payment
-    with step.start("charge_payment"):
-        charge_card(payment_info)
-
-    # Step 3: Fulfill order
-    with step.start("fulfill_order"):
-        ship_items(order)
-```
-
-### Error Handling
-
-Exceptions are automatically captured:
-
-```python
-with flow.start(name="import", tenant="acme-corp"):
-    try:
-        with step.start("validate"):
-            if not is_valid(data):
-                raise ValueError("Invalid data format")
-    except ValueError as e:
-        # Exception is captured in the step
-        # Flow is marked as failed
-        print(f"Validation failed: {e}")
-```
-
-The flow and step will show as "failed" in DashFrog with the error details.
+These attributes appear in the DashFrog UI for filtering and search.
 
 ## Distributed Flows
 
@@ -124,8 +85,12 @@ If you're using instrumented HTTP clients, context propagates automatically:
 
 **Service A:**
 ```python
-from dashfrog import flow, step
+from dashfrog import flow, with_requests
 import requests
+
+# Initialize DashFrog
+setup()
+with_requests()
 
 with flow.start(name="order_processing", tenant="customer-123"):
     # This HTTP call automatically propagates flow context
@@ -134,10 +99,14 @@ with flow.start(name="order_processing", tenant="customer-123"):
 
 **Service B:**
 ```python
-from dashfrog import step
+from dashfrog import step, with_fastapi
 from fastapi import FastAPI
 
 app = FastAPI()
+
+# Initialize DashFrog
+setup()
+with_fastapi(app)
 
 @app.post("/process")
 async def process_order(order: dict):
@@ -148,11 +117,11 @@ async def process_order(order: dict):
     return {"status": "success"}
 ```
 
-**For a complete synchronous flow example**, see [`sync_flow.py`](https://github.com/towlabs/dashfrog/blob/main/dashfrog/demo-app/sync_flow.py)
+**For a complete distributed flow example**, see [`distributed_flow.py`](https://github.com/towlabs/dashfrog/blob/main/dashfrog/demo-app/distributed_flow.py)
 
 ### Async Task Flows (Advanced)
 
-For async tasks where a flow starts in one service but completes in another, use `end_on_exit=False`:
+For async tasks where a flow starts in one service but completes asynchronously in another, use `end_on_exit=False`:
 
 **Use case:** API enqueues a Celery task, worker processes it. The flow should remain open until the worker finishes.
 
@@ -160,9 +129,6 @@ For async tasks where a flow starts in one service but completes in another, use
 
 **API (Producer):**
 ```python
-from dashfrog import flow, step
-from celery import current_app
-
 @app.post("/process-data/{customer_id}")
 async def process_data_endpoint(customer_id: str, data: dict):
     # Start flow but don't end it when context exits
@@ -170,15 +136,10 @@ async def process_data_endpoint(customer_id: str, data: dict):
         name="async_data_processing",
         tenant=customer_id,
         end_on_exit=False  # Flow stays open
-    ) as flow_id:
-        with step.start("validate_request"):
-            validate(data)
-
-        with step.start("enqueue_task"):
-            # Send task to worker
-            process_data_task.apply_async(
-                args=[customer_id, data]
-            )
+    ):
+        process_data_task.apply_async(
+            args=[customer_id, data]
+        )
 
     # Flow is still "running" after returning response
     return {"status": "processing", "flow_id": flow_id}
@@ -204,9 +165,7 @@ def process_data_task(customer_id: str, data: dict):
         notify_customer(customer_id, "Processing complete")
 
     # Explicitly end the flow when done
-    flow.end()
+    flow.success()
 
     return {"status": "success"}
 ```
-
-**For a complete asynchronous flow example with Celery**, see [`async_flow.py`](https://github.com/towlabs/dashfrog/blob/main/dashfrog/demo-app/async_flow.py)
