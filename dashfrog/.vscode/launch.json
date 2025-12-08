@@ -59,6 +59,10 @@
             "args": ["dashfrog.api:app", "--reload"],
             "console": "integratedTerminal",
             "justMyCode": false,
+            "env": {
+                "DASHFROG_POSTGRES_HOST": "postgres",
+                "DASHFROG_OTLP_ENDPOINT": "grpc://otel-collector:4317"
+            }
         },
         {
             "name": "Python: Current File",
@@ -69,7 +73,9 @@
             "justMyCode": false,
             "cwd": "${workspaceFolder}",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}/src"
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "DASHFROG_POSTGRES_HOST": "postgres",
+                "DASHFROG_OTLP_ENDPOINT": "grpc://otel-collector:4317"
             }
         }
     ]

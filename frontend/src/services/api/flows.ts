@@ -123,6 +123,7 @@ const Flows = {
 		end: Date,
 		labels: Filter[],
 		notebookId: string,
+		flowName?: string,
 	) => {
 		const response = await fetchWithAuth(`/api/flows/search`, {
 			method: "POST",
@@ -135,6 +136,7 @@ const Flows = {
 				tenant,
 				labels,
 				notebook_id: notebookId,
+				flow_name: flowName,
 			}),
 		});
 		const data = (await response.json()) as FlowApiResponse[];
