@@ -10,9 +10,18 @@ NC='\033[0m' # No Color
 
 # Parse arguments
 DEV_MODE=false
-if [[ "$1" == "--dev" ]]; then
-    DEV_MODE=true
-fi
+WITH_DEMO=false
+
+for arg in "$@"; do
+    case $arg in
+        --dev)
+            DEV_MODE=true
+            ;;
+        --with-demo)
+            WITH_DEMO=true
+            ;;
+    esac
+done
 
 # Configuration
 GITHUB_REPO="towlabs/dashfrog"
@@ -157,7 +166,39 @@ else
     echo ""
 fi
 
+
+# Start demo if requested
+if [ "$WITH_DEMO" = true ]; then
+    echo -e "${BLUE}🚀 Starting demo...${NC}"
+    echo ""
+
+    # Download demo script
+    curl -fsSL "${BASE_URL}/dashfrog/demo-app/demo.py" -o demo.py
+
+    # Run demo using docker (uses defaults from config.py)
+    echo -e "${BLUE}Installing dependencies and starting demo...${NC}"
+    docker run \
+        --network host \
+        -v "$(pwd)/demo.py:/app/demo.py" \
+        python:3.12-slim \
+        bash -c "pip install -q dashfrog requests && python -u /app/demo.py"
+
+    # Wait a moment for demo to start
+    sleep 2
+
+    echo ""
+    echo -e "${GREEN}✓ Demo is running!${NC}"
+    echo ""
+    echo -e "${BLUE}The demo will generate data and create notebooks.${NC}"
+    echo -e "${BLUE}View notebook links:${NC} docker logs dashfrog-demo"
+    echo ""
+    echo -e "${BLUE}Follow live output:${NC} docker logs -f dashfrog-demo"
+    echo -e "${BLUE}Stop demo:${NC} docker stop dashfrog-demo && docker rm dashfrog-demo"
+    echo ""
+fi
+
 # Print success message
+echo ""
 echo -e "${GREEN}╔═══════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║     🎉 Installation Complete! 🎉      ║${NC}"
 echo -e "${GREEN}╚═══════════════════════════════════════╝${NC}"
@@ -172,4 +213,4 @@ echo "   - DASHFROG_API_SECRET_KEY"
 echo "   - DASHFROG_POSTGRES_PASSWORD"
 echo "   - DASHFROG_OTLP_AUTH_TOKEN"
 echo "   - DASHFROG_API_PASSWORD"
-echo "   Then run: docker compose restart"
+echo "   Then run: docker compose down -v && docker compose up -d"

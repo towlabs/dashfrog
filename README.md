@@ -22,36 +22,16 @@ It sits on OpenTelemetry but abstracts away the complexity. Customer namespaces 
 
 See DashFrog in action with a 2-minute demo:
 
-**Step 1: Install DashFrog**
-
 ```bash
-# setup demo dir
-mkdir dashfrog-demo && cd dashfrog-demo
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/towlabs/dashfrog/main/bin/deploy)"
+curl -fsSL https://raw.githubusercontent.com/towlabs/dashfrog/main/bin/deploy | bash -s -- --with-demo
 ```
 
-This installs DashFrog with Docker Compose and exposes:
-- **API/UI** on http://localhost:8000 (login: `admin` / `admin`)
-- **OTLP endpoints** on ports 4317 (gRPC) and 4318 (HTTP)
+This will:
+1. Install DashFrog with Docker Compose
+2. Start the demo generating sample data
+3. Create status page notebooks for 3 customers
 
-**Step 2: Run the demo**
-
-```bash
-# Install dependencies
-python -m venv .venv && source .venv/bin/activate
-pip install dashfrog requests
-
-# Download and run the demo script
-wget https://raw.githubusercontent.com/towlabs/dashfrog/main/dashfrog/demo-app/demo.py
-python demo.py
-```
-
-The demo will:
-1. Generate flows and metrics for 3 sample customers
-2. Create status page notebooks with live data
-3. Print direct links to view the notebooks
-
-Open the links in your browser to explore the data!
+Access the UI at **http://localhost:8000** (login: `admin` / `admin`)
 
 > **For production:** See the [Deployment Guide](docs/deployment.md) for Kubernetes, custom configuration, and security hardening.
 
