@@ -8,7 +8,7 @@ Customer-scoped dashboards that combine metrics and flows. Each notebook belongs
 - **Drill-down** - Click any visualization to see historical data
 - **Public sharing** - Generate URLs for customer-facing status pages
 - **Time windows** - Relative or absolute date ranges
-- **Annotations** - Mark deployments, incidents, or events on timelines
+- **Annotations** - Add notes and context (will appear on charts in future releases)
 
 ## Use Cases
 

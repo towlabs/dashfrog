@@ -113,6 +113,7 @@ Ideas we're exploring:
 - External data sources(API, Prometheus, ...)
 - Helpdesk integrations (Zendesk, Intercom)
 - Alerting rules
+- Frontend SDK for embedding components in apps
 
 ## License
 
