@@ -268,7 +268,7 @@ export function getSlashMenuItems<
 	});
 	const multiColumnItems = getMultiColumnSlashMenuItems(editor);
 	return [
-		...combineByGroup(defaultItems, multiColumnItems),
 		...additionalItems,
+		...combineByGroup(defaultItems, multiColumnItems),
 	];
 }
