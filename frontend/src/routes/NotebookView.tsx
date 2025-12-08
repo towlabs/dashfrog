@@ -24,14 +24,6 @@ export default function NotebookView() {
 
 	const tenantName = tenant ? decodeURIComponent(tenant) : "";
 
-	const fetchComments = useNotebooksStore((state) => state.fetchComments);
-
-	// Fetch comments when start or end dates change
-	useEffect(() => {
-		if (!notebookId) return;
-		void fetchComments(notebookId);
-	}, [notebookId, fetchComments]);
-
 	useEffect(() => {
 		const fetchNotebook = async () => {
 			if (!tenantName || !notebookId) return;

@@ -256,13 +256,14 @@ def create_status_page_notebook(customer_id: str, api_url: str = "http://localho
                 {"names": ["data_import"], "filters": [{"label": "env", "value": "prod"}]},
                 {"names": ["data_import"], "filters": [{"label": "env", "value": "prod"}]},
             ],
-            "metricBlocksFilters": [],
+            "metricBlocksFilters": [
+                {"names": [metric_name], "filters": []}
+                for metric_name in ["computation_duration", "computation_count", "monthly_quota"]
+            ],
             "isPublic": False,
         }
 
-        response = requests.post(
-            f"{api_url}/api/notebooks/{notebook_id}/update", headers=headers, json=update_payload
-        )
+        response = requests.post(f"{api_url}/api/notebooks/{notebook_id}/update", headers=headers, json=update_payload)
         response.raise_for_status()
 
         NOTEBOOKS_CREATED.add(customer_id)

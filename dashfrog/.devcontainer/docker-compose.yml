@@ -16,22 +16,16 @@ services:
     extends:
       file: ../docker-compose.test.yml
       service: postgres
-    profiles:
-      - services
 
   otel-collector:
     extends:
       file: ../docker-compose.test.yml
       service: otel-collector
-    profiles:
-      - services
 
   prometheus:
     extends:
       file: ../docker-compose.test.yml
       service: prometheus
-    profiles:
-      - services
 
 networks:
   dashfrog:

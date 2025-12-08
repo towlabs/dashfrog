@@ -126,8 +126,9 @@ export const FlowStatusBlock = createReactBlockSpec(
 							endDate,
 							filters,
 							currentNotebook.id,
+							flowName,
 						);
-						setSelectedFlows(flows.filter((flow) => flow.name === flowName));
+						setSelectedFlows(flows);
 					} catch (_) {
 						setSelectedFlows([]);
 					}

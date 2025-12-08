@@ -164,6 +164,7 @@ class FlowSearchRequest(BaseModel):
     """Request body for searching/listing flows."""
 
     notebook_id: UUID
+    flow_name: str | None = Field(None, description="Name of the flow to get details for")
     start: datetime = Field(..., description="Start datetime for filtering flow events")
     end: datetime = Field(..., description="End datetime for filtering flow events")
     labels: list[LabelFilter] = Field(default_factory=list, description="Label filters as key-value pairs")
@@ -210,6 +211,9 @@ async def search_flows(
         FlowEvent.tenant == request.tenant,
     ]
 
+    if request.flow_name is not None:
+        base_filters.append(FlowEvent.flow_metadata["flow_name"].astext == request.flow_name)
+
     # Add label filters
     for label_filter in request.labels:
         base_filters.append(
@@ -230,7 +234,9 @@ async def search_flows(
             request.tenant,
             request.start,
             request.end,
-            flow_filter=BlockFilters(names=[], filters=request.labels),
+            flow_filter=BlockFilters(
+                names=[] if request.flow_name is None else [request.flow_name], filters=request.labels
+            ),
         )
 
         return list(flow_generator(session, base_filters))
