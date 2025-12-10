@@ -1,6 +1,6 @@
 # DashFrog
 
-A Grafana your support team can atually use.
+A Grafana your support team can actually use.
 
 ![DashFrog Status Page](docs/assets/main.png)
 
