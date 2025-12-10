@@ -1,6 +1,6 @@
 # DashFrog
 
-Customer-scoped observability for B2B SaaS
+A Grafana your support team can atually use.
 
 ![DashFrog Status Page](docs/assets/main.png)
 
